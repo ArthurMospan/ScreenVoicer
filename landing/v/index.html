@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Варіанти лендінгу</title>
+<meta name="theme-color" content="#09090b">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' fill='none' stroke='%23ff8a4c' stroke-width='7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 22v-8a8 8 0 0 1 8-8h8M42 6h8a8 8 0 0 1 8 8v8M58 42v8a8 8 0 0 1-8 8h-8M22 58h-8a8 8 0 0 1-8-8v-8M22 28v8M32 20v24M42 28v8'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&display=swap">
+<style>
+/* Internal page: every landing variant under /v/<letter>/, so the owner can compare them on a phone. Not indexed. */
+:root { --bg: #09090b; --text: #f5f5f7; --muted: #a8a8b4; --faint: #7c7c88; --line: rgba(255,255,255,.1); --accent: #ff8a4c; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 400 16px/1.5 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; }
+main { max-width: 720px; margin: 0 auto; padding: 56px 16px 64px; }
+.brand { display: inline-flex; align-items: center; gap: 10px; font-weight: 600; letter-spacing: -.02em; color: inherit; text-decoration: none; }
+.brand svg { width: 22px; height: 22px; }
+.brand span span { color: var(--accent); }
+h1 { margin: 40px 0 8px; font-size: clamp(32px, 7vw, 48px); line-height: 1.05; letter-spacing: -.03em; font-weight: 650; }
+.lead { margin: 0 0 36px; color: var(--muted); font-size: 17px; }
+ol { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+li a { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 4px 12px; align-items: baseline; padding: 20px 4px; border-bottom: 1px solid var(--line); color: inherit; text-decoration: none; transition: background-color .2s ease; }
+li a:hover { background: rgba(255,255,255,.04); }
+li a:focus-visible { outline: 2px solid #fff; outline-offset: -2px; border-radius: 6px; }
+.k { font-size: 22px; font-weight: 650; color: var(--accent); letter-spacing: -.02em; }
+.n { font-size: 18px; font-weight: 600; letter-spacing: -.015em; }
+.d { grid-column: 2 / 4; color: var(--muted); font-size: 15px; }
+.tag { font-size: 12px; font-weight: 500; color: #d4d4da; padding: 3px 9px; border-radius: 999px; background: rgba(255,255,255,.08); white-space: nowrap; }
+.note { margin-top: 28px; color: var(--faint); font-size: 14px; }
+.wip { opacity: .45; pointer-events: none; }
+</style>
+</head>
+<body>
+<main>
+  <a class="brand" href="../"><svg viewBox="0 0 64 64" fill="none" stroke="#ff8a4c" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 22v-8a8 8 0 0 1 8-8h8M42 6h8a8 8 0 0 1 8 8v8M58 42v8a8 8 0 0 1-8 8h-8M22 58h-8a8 8 0 0 1-8-8v-8M22 28v8M32 20v24M42 28v8"/></svg><span>Screen<span>Voicer</span></span></a>
+  <h1>Варіанти лендінгу</h1>
+  <p class="lead">Відкрийте кожен, погортайте до кінця й напишіть букву того, що подобається.</p>
+  <ol>
+    <li><a href="a/"><span class="k">A</span><span class="n">Анімація на першому екрані</span><span class="tag">зараз на сайті</span><span class="d">Весь процес за 14 секунд на макеті робочого столу, нижче три великі плани.</span></a></li>
+    <li><a href="b/"><span class="k">B</span><span class="n">Історія під час гортання</span><span></span><span class="d">Панель одразу під заголовком, при гортанні опускається й проходить чотири кроки.</span></a></li>
+    <li><a href="c/"><span class="k">C</span><span class="n">Початок B, далі A</span><span></span><span class="d">Панель опускається в екран і передає естафету анімації та розділам з A.</span></a></li>
+    <li><a class="wip" aria-disabled="true"><span class="k">D</span><span class="n">Один фільм</span><span class="tag">готується</span><span class="d">Уся сторінка — одна сцена: шість розділів, камера наближається до деталей.</span></a></li>
+    <li><a class="wip" aria-disabled="true"><span class="k">E</span><span class="n">Типографіка</span><span class="tag">готується</span><span class="d">Величезні фрази, а інтерфейс — маленькими точними вставками.</span></a></li>
+    <li><a class="wip" aria-disabled="true"><span class="k">F</span><span class="n">Розділи у дві колонки</span><span class="tag">готується</span><span class="d">Як сторінка Mac: текст з одного боку, великий план інтерфейсу з іншого.</span></a></li>
+    <li><a class="wip" aria-disabled="true"><span class="k">G</span><span class="n">Сторінка — це екран</span><span class="tag">готується</span><span class="d">Перший екран — затемнений робочий стіл, а заголовок і кнопки лежать прямо на ньому.</span></a></li>
+  </ol>
+  <p class="note">Ефекти гортання найкраще видно на комп’ютері. На телефоні частина варіантів показує кроки окремими кадрами.</p>
+</main>
+</body>
+</html>
