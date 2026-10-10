@@ -160,6 +160,8 @@ namespace ScreenVoicer.Services
                 UseShellExecute = false,
                 WindowStyle = ProcessWindowStyle.Hidden
             };
+            // The installer starts the new app with this environment: a test override must not follow it there.
+            start.Environment.Remove("SV_VERSION_OVERRIDE");
             Process.Start(start);
             Log.Info($"[Update] Installer scheduled: {installerPath}");
         }

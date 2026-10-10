@@ -85,6 +85,11 @@ namespace ScreenVoicer
                 Shutdown(await CheckUpdateFromCommandLineAsync());
                 return;
             }
+            if (e.Args.Contains("--update"))
+            {
+                Shutdown(await UpdateFromCommandLineAsync());
+                return;
+            }
 
             RegisterExceptionHandlers();
             if (!AcquireSingleInstance())
@@ -934,6 +939,33 @@ namespace ScreenVoicer
                 _updateProgress = null;
                 TrayMenuStateChanged?.Invoke(this, EventArgs.Empty);
                 _notifications?.ShowToast("Не вдалося оновитися", ex.Message, ToastKind.Error, 8000);
+            }
+        }
+
+        /// <summary>
+        /// <c>ScreenVoicer.exe --update</c>: the same update as the tray button, without the UI. Close the running
+        /// copy first — the installer waits for it.
+        /// </summary>
+        private static async Task<int> UpdateFromCommandLineAsync()
+        {
+            try
+            {
+                var update = await UpdateService.CheckAsync();
+                if (update == null)
+                {
+                    Console.WriteLine($"Up to date ({UpdateService.CurrentVersion}).");
+                    return 0;
+                }
+                string installer = await UpdateService.DownloadAsync(update, null);
+                UpdateService.LaunchInstallerAfterExit(installer);
+                Console.WriteLine($"Installing {update.Version} from {installer}.");
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                Log.Error("[Update] Command-line update failed", ex);
+                Console.WriteLine("Failed: " + ex.Message);
+                return 1;
             }
         }
 
