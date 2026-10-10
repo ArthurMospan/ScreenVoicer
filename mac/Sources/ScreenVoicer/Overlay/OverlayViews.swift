@@ -136,6 +136,7 @@ final class CanvasView: NSView {
 
     override func draw(_ dirtyRect: NSRect) {
         guard let controller, let ctx = NSGraphicsContext.current?.cgContext else { return }
+        if let clip, clip.isEmpty { return }
         ctx.saveGState()
         if let clip { ctx.clip(to: clip) }
         AnnotationRenderer.draw(controller.items, in: ctx)

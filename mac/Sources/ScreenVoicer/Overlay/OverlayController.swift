@@ -284,7 +284,6 @@ final class OverlayController: NSObject, NSTextFieldDelegate {
             frameView.selection = nil
             model.hintVisible = false
             canvas.clip = nil
-            canvas.isHidden = false
             canvas.needsDisplay = true
             return
         }
@@ -295,12 +294,11 @@ final class OverlayController: NSObject, NSTextFieldDelegate {
             frameView.selection = s
             model.hintVisible = false
             canvas.clip = s
-            canvas.isHidden = false
         } else {
             dimView.update(hole: nil)
             frameView.selection = nil
             model.hintVisible = !isSelecting
-            canvas.isHidden = true // ink lives only inside a selection
+            canvas.clip = .zero // ink shows only inside a selection (the canvas still takes the clicks that select)
         }
         canvas.needsDisplay = true
     }
