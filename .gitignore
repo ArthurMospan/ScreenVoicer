@@ -16,3 +16,7 @@ installer_output/
 # Local scratch
 *.log
 *.tmp
+
+# Cloudflare local dev state
+.wrangler/
+node_modules/
