@@ -157,6 +157,7 @@ struct OverlayChrome: View {
             }
             .onPreferenceChange(MicAnchorKey.self) { model.microphoneAnchor = $0 }
         }
+        .ignoresSafeArea() // the notch inset is applied by hand (topInset), so hit rects match the window
     }
 
     private func flyoutCenter(anchor: CGRect, container: CGSize) -> CGPoint {
@@ -467,6 +468,7 @@ private struct CommentField: View {
                     .allowsHitTesting(false)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .frame(minHeight: 34)
     }
 }

@@ -202,6 +202,8 @@ struct MenuChipStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         HoverBody { hover in
             configuration.label
+                .lineLimit(1)
+                .fixedSize()
                 .font(Theme.font(12.5, .semibold))
                 .foregroundColor(on || hover ? .white : Color(rgb: 0xE6E6EC))
                 .padding(.horizontal, 11)

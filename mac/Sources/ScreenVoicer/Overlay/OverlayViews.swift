@@ -142,6 +142,9 @@ final class CanvasView: NSView {
         ctx.restoreGState()
     }
 
+    // keys the controller did not take: swallow them instead of beeping
+    override func keyDown(with event: NSEvent) {}
+
     override func mouseDown(with event: NSEvent) {
         controller?.mouseDown(at: convert(event.locationInWindow, from: nil), clickCount: event.clickCount)
     }

@@ -65,6 +65,16 @@ jobs:
         run: |
           mac/build/ScreenVoicer.app/Contents/MacOS/ScreenVoicer --snapshots snapshots
 
+      - name: UI test (real windows, capture, mouse and keys)
+        if: always()
+        timeout-minutes: 5
+        run: |
+          export SV_DATA_DIR="$HOME/sv-ui"
+          mkdir -p "$SV_DATA_DIR"
+          ln -sfn ~/sv-models "$SV_DATA_DIR/models"
+          printf '{"OutputDirectory":"%s","PermissionsGuideShown":true}' "$SV_DATA_DIR/shots" > "$SV_DATA_DIR/settings.json"
+          mac/build/ScreenVoicer.app/Contents/MacOS/ScreenVoicer --ui-test snapshots/ui
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:

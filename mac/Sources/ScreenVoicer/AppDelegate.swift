@@ -56,6 +56,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MenuHost {
         initializeStatusItem()
         LoginItem.refreshIfEnabled()
         startModelLoading()
+        if let output = Self.uiTestOutput {
+            Task { exit(await UITest.run(app: self, output: output)) }
+            return
+        }
         startUpdateChecks()
 
         if !autostart {
@@ -662,6 +666,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MenuHost {
             }
         }
     }
+
+    // MARK: - UI test hooks (--ui-test)
+
+    static var uiTestOutput: URL?
+    var overlayForTest: OverlayController? { overlay }
+    var historyForTest: HistoryService { history }
+    var settingsForTest: Settings { settings }
+    var isMenuOpenForTest: Bool { trayMenu.map { !$0.isClosing } ?? false }
+    func openMenuForTest() { toggleTrayMenu() }
+    func closeMenuForTest() { trayMenu?.closeMenu() }
+    func closeGalleryForTest() { gallery?.window.close() }
 
     // MARK: - Exit
 

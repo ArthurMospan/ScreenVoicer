@@ -206,17 +206,10 @@ struct GalleryView: View {
             ZStack(alignment: .bottom) {
                 if model.filtered.isEmpty && model.loaded {
                     emptyState.frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if RenderMode.snapshot {
+                    grid.frame(maxHeight: .infinity, alignment: .top) // offscreen rendering can't draw a scroll view
                 } else {
-                    ScrollView {
-                        LazyVGrid(columns: columns, alignment: .leading, spacing: 0) {
-                            ForEach(model.filtered) { item in
-                                GalleryCard(item: item, model: model).padding(8)
-                            }
-                        }
-                        .padding(.horizontal, 14)
-                        .padding(.top, 12)
-                        .padding(.bottom, 90)
-                    }
+                    ScrollView { grid }
                 }
 
                 if !model.selected.isEmpty { selectionBar.padding(.bottom, 22) }
@@ -250,6 +243,17 @@ struct GalleryView: View {
         }
     }
 
+    private var grid: some View {
+        LazyVGrid(columns: columns, alignment: .leading, spacing: 0) {
+            ForEach(model.filtered) { item in
+                GalleryCard(item: item, model: model).padding(8)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.top, 12)
+        .padding(.bottom, 90)
+    }
+
     private var header: some View {
         HStack(spacing: 0) {
             HStack(spacing: 12) {
@@ -270,11 +274,13 @@ struct GalleryView: View {
                             .foregroundColor(Theme.faint)
                             .allowsHitTesting(false)
                     }
-                    TextField("", text: $model.query)
-                        .textFieldStyle(.plain)
-                        .font(Theme.font(13))
-                        .foregroundColor(Theme.ink)
-                        .focused($searchFocused)
+                    if !RenderMode.snapshot {
+                        TextField("", text: $model.query)
+                            .textFieldStyle(.plain)
+                            .font(Theme.font(13))
+                            .foregroundColor(Theme.ink)
+                            .focused($searchFocused)
+                    }
                 }
             }
             .padding(.horizontal, 12)
@@ -302,7 +308,13 @@ struct GalleryView: View {
                 .buttonStyle(PrimaryButtonStyle())
                 .help("Сховати галерею і зробити знімок")
 
-                if model.startDelayedCapture != nil {
+                if model.startDelayedCapture != nil && RenderMode.snapshot {
+                    GlyphIcon(icon: .timer, size: 15, weight: 2)
+                        .frame(width: 34, height: 34)
+                        .background(RoundedRectangle(cornerRadius: 11, style: .continuous).fill(Color(argb: 0x14FFFFFF)))
+                        .overlay(RoundedRectangle(cornerRadius: 11, style: .continuous).strokeBorder(Theme.glassEdge, lineWidth: 1))
+                        .padding(.leading, 8)
+                } else if model.startDelayedCapture != nil {
                     Menu {
                         ForEach([3, 5, 10], id: \.self) { seconds in
                             Button("Знімок через \(seconds) с") { model.startDelayedCapture?(seconds) }

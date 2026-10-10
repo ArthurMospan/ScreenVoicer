@@ -150,6 +150,8 @@ final class OverlayController: NSObject, NSTextFieldDelegate {
         panel.setFrame(frame, display: false)
     }
 
+    var panelForTest: NSPanel? { panel }
+
     func show() {
         panel.makeKeyAndOrderFront(nil)
         panel.orderFrontRegardless()

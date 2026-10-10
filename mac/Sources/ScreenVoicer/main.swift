@@ -73,6 +73,11 @@ if arguments.contains("--update") {
     }
 }
 
+if let directory = argument(after: "--ui-test") {
+    Log.echoToConsole = true
+    AppDelegate.uiTestOutput = URL(fileURLWithPath: directory, isDirectory: true)
+}
+
 let application = NSApplication.shared
 let appDelegate = MainActor.assumeIsolated { AppDelegate() }
 application.delegate = appDelegate
