@@ -61,6 +61,7 @@ namespace ScreenVoicer
         private enum CaptureTrigger
         {
             Hotkey,
+            TrayClick,
             TrayMenu,
             Delayed,
             Gallery
@@ -107,6 +108,7 @@ namespace ScreenVoicer
             _ = _history.GetHistoryAsync(); // so the tray menu can show the count right away
             RegisterHotkey(); // usable right away
             InitializeTrayIcon();
+            OfferInsertHotkeyOnce();
             StartupManager.RefreshEntryIfEnabled();
             StartModelLoading();
             StartUpdateChecks();
@@ -244,6 +246,69 @@ namespace ScreenVoicer
                     OnAction = OpenHotkeyWindow
                 });
             }
+        }
+
+        /// <summary>
+        /// Once, a few seconds after start: offer Insert (one key nobody uses) instead of the three-key default.
+        /// Mac keyboards have no Insert key, so the Mac app doesn't offer it.
+        /// </summary>
+        private void OfferInsertHotkeyOnce()
+        {
+            if (_settings == null || _settings.InsertHintShown || HotkeyText != SettingsService.DefaultHotkey)
+            {
+                return;
+            }
+
+            var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(8) };
+            timer.Tick += (_, _) =>
+            {
+                timer.Stop();
+                if (_settings.InsertHintShown || HotkeyText != SettingsService.DefaultHotkey)
+                {
+                    return;
+                }
+                _settings.InsertHintShown = true;
+                _settings.Save();
+                _notifications!.Show(new ToastOptions
+                {
+                    Title = "Знімок однією клавішею?",
+                    Message = $"Клавішею Insert майже ніхто не користується. Можна робити знімок нею замість {HotkeyText}.",
+                    Kind = ToastKind.Info,
+                    DurationMs = 15000,
+                    ActionText = "Обрати Insert",
+                    OnAction = () => ApplyHotkey(HotkeyGesture.Insert)
+                });
+            };
+            timer.Start();
+        }
+
+        /// <summary>Registers a new capture shortcut and remembers it; on failure the old one stays.</summary>
+        private bool ApplyHotkey(HotkeyGesture gesture)
+        {
+            if (_hotkey == null || _settings == null)
+            {
+                return false;
+            }
+
+            HotkeyGesture.TryParse(HotkeyText, out var previous);
+            _hotkey.Unregister();
+            if (!_hotkey.Register(gesture.Modifiers, gesture.Key))
+            {
+                if (previous.IsValid)
+                {
+                    _hotkey.Register(previous.Modifiers, previous.Key);
+                }
+                _notifications!.ShowToast("Гаряча клавіша зайнята",
+                    $"{gesture} вже використовує інша програма. Оберіть іншу комбінацію.", ToastKind.Warning, 7000);
+                return false;
+            }
+
+            HotkeyText = gesture.ToString();
+            _settings.Hotkey = HotkeyText;
+            _settings.Save();
+            UpdateTrayStatus();
+            _notifications!.ShowToast("Гаряча клавіша змінена", $"Тепер знімок — {HotkeyText}.", ToastKind.Success, 3500);
+            return true;
         }
 
         private void StartModelLoading()
@@ -451,19 +516,66 @@ namespace ScreenVoicer
                 Icon = AppIcons.CreateTrayIcon(),
                 Visible = true
             };
+            // A click on the icon is the quickest way to a screenshot; the menu lives on the right button.
             _notifyIcon.MouseUp += (_, args) =>
             {
-                if (args.Button is Forms.MouseButtons.Left or Forms.MouseButtons.Right)
+                if (args.Button == Forms.MouseButtons.Right)
                 {
                     ToggleTrayMenu();
                 }
-            };
-            _notifyIcon.DoubleClick += (_, _) =>
-            {
-                _trayMenu?.CloseMenu();
-                TriggerCapture(CaptureTrigger.TrayMenu);
+                else if (args.Button == Forms.MouseButtons.Left)
+                {
+                    if (_trayMenu != null && !_trayMenu.IsClosing)
+                    {
+                        _trayMenu.CloseMenu();
+                        return;
+                    }
+                    // the click that closed the menu (by moving focus) is not a capture request
+                    if (DateTime.UtcNow - _trayMenuClosedAt < TimeSpan.FromMilliseconds(250))
+                    {
+                        return;
+                    }
+                    TriggerCapture(CaptureTrigger.TrayClick);
+                }
             };
             UpdateTrayStatus();
+            PromoteTrayIconOnce();
+        }
+
+        /// <summary>Windows 11 puts a new icon behind «^»: bring ours onto the taskbar once (see TrayIconPromoter).</summary>
+        private void PromoteTrayIconOnce()
+        {
+            if (_settings == null || _settings.TrayIconPromoted || Environment.ProcessPath is not { } exe)
+            {
+                return;
+            }
+
+            Task.Run(async () =>
+            {
+                // Explorer writes its entry for a new icon a moment after the icon appears.
+                for (int attempt = 0; attempt < 10; attempt++)
+                {
+                    await Task.Delay(1500);
+                    if (!TrayIconPromoter.TryPromote(exe))
+                    {
+                        continue;
+                    }
+
+                    _ = Dispatcher.BeginInvoke(() =>
+                    {
+                        _settings.TrayIconPromoted = true;
+                        _settings.Save();
+                        if (_notifyIcon != null)
+                        {
+                            // re-adding the icon makes Explorer apply the setting right away
+                            _notifyIcon.Visible = false;
+                            _notifyIcon.Visible = true;
+                        }
+                        Log.Info("[Tray] Icon moved out of the overflow.");
+                    });
+                    return;
+                }
+            });
         }
 
         /// <summary>The glass tray menu (Views/TrayMenuWindow); a second click on the icon closes it.</summary>
@@ -559,7 +671,7 @@ namespace ScreenVoicer
             {
                 ModelState.Downloading => $"ScreenVoicer — модель {t.DownloadProgress:P0}",
                 ModelState.Failed => "ScreenVoicer — голос недоступний",
-                _ => $"ScreenVoicer — {HotkeyText}"
+                _ => $"ScreenVoicer\nКлік або {HotkeyText} — знімок, правий клік — меню"
             };
             _notifyIcon.Text = tip.Length > 120 ? tip[..120] : tip;
             TrayMenuStateChanged?.Invoke(this, EventArgs.Empty);
@@ -678,6 +790,7 @@ namespace ScreenVoicer
                 int settleMs = trigger switch
                 {
                     CaptureTrigger.Hotkey => hadToasts ? 120 : 0,
+                    CaptureTrigger.TrayClick => hadToasts ? 150 : 120, // the icon's tooltip has to go first
                     CaptureTrigger.Delayed => hadToasts ? 150 : 60,
                     _ => 280
                 };

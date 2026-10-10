@@ -30,6 +30,8 @@ struct HotkeyGesture: Equatable {
             (kVK_F18, "F18"), (kVK_F19, "F19"), (kVK_F20, "F20"),
             (kVK_Space, "Space"), (kVK_Home, "Home"), (kVK_End, "End"), (kVK_PageUp, "PageUp"),
             (kVK_PageDown, "PageDown"), (kVK_ForwardDelete, "Delete"),
+            // a PC keyboard's Insert arrives as Help on macOS (MacBooks have neither)
+            (kVK_Help, "Insert"),
             (kVK_ANSI_Grave, "`"), (kVK_ANSI_Minus, "-"), (kVK_ANSI_Equal, "="), (kVK_ANSI_LeftBracket, "["),
             (kVK_ANSI_RightBracket, "]"), (kVK_ANSI_Backslash, "\\"), (kVK_ANSI_Semicolon, ";"),
             (kVK_ANSI_Quote, "'"), (kVK_ANSI_Comma, ","), (kVK_ANSI_Period, "."), (kVK_ANSI_Slash, "/")
@@ -38,9 +40,10 @@ struct HotkeyGesture: Equatable {
         return list.map { (UInt32($0.0), $0.1) }
     }()
 
-    private static let functionKeys: Set<UInt32> = Set([
+    /// Keys that are fine without a modifier (nobody types them), as on Windows.
+    private static let standaloneKeys: Set<UInt32> = Set([
         kVK_F1, kVK_F2, kVK_F3, kVK_F4, kVK_F5, kVK_F6, kVK_F7, kVK_F8, kVK_F9, kVK_F10, kVK_F11, kVK_F12,
-        kVK_F13, kVK_F14, kVK_F15, kVK_F16, kVK_F17, kVK_F18, kVK_F19, kVK_F20
+        kVK_F13, kVK_F14, kVK_F15, kVK_F16, kVK_F17, kVK_F18, kVK_F19, kVK_F20, kVK_Help
     ].map { UInt32($0) })
 
     /// Shortcuts macOS or every app needs (Windows has its own list).
@@ -58,7 +61,7 @@ struct HotkeyGesture: Equatable {
     }
 
     var isValid: Bool {
-        Self.keyName(keyCode) != nil && (!modifiers.isEmpty || Self.functionKeys.contains(keyCode))
+        Self.keyName(keyCode) != nil && (!modifiers.isEmpty || Self.standaloneKeys.contains(keyCode))
     }
 
     var isReserved: Bool { Self.reserved.contains(storageText) }

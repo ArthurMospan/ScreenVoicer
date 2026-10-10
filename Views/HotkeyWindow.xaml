@@ -44,7 +44,7 @@
                 <StackPanel VerticalAlignment="Center">
                     <TextBlock Text="Гаряча клавіша для знімка" FontFamily="{StaticResource DisplayFont}" FontSize="18" FontWeight="SemiBold"
                                Foreground="{StaticResource InkBrush}"/>
-                    <TextBlock Text="Натисніть нову комбінацію, наприклад Ctrl+Shift+X або F9." Foreground="{StaticResource MutedBrush}"
+                    <TextBlock Text="Натисніть нову комбінацію, наприклад Ctrl+Shift+X, F9 або Insert." Foreground="{StaticResource MutedBrush}"
                                FontSize="13" Margin="0,2,0,0" TextWrapping="Wrap"/>
                 </StackPanel>
             </StackPanel>
@@ -53,6 +53,17 @@
                     Padding="12" MinHeight="78" Margin="0,18,0,0">
                 <WrapPanel x:Name="KeysPanel" HorizontalAlignment="Center" VerticalAlignment="Center"/>
             </Border>
+
+            <!-- One key instead of three: Insert is almost never used (Mac keyboards have none, so only here) -->
+            <Grid Margin="2,12,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" FontSize="12.5" TextWrapping="Wrap" VerticalAlignment="Center" Foreground="{StaticResource MutedBrush}"
+                           Text="Порада: Insert — одна клавіша замість трьох, нею майже ніхто не користується."/>
+                <Button Grid.Column="1" Style="{StaticResource ChipButton}" Margin="10,0,0,0" Content="Обрати Insert" Click="OnInsertClick"/>
+            </Grid>
 
             <TextBlock x:Name="TxtStatus" Margin="2,12,0,0" FontSize="12.5" TextWrapping="Wrap" Foreground="{StaticResource MutedBrush}" MinHeight="18"/>
 

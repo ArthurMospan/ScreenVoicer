@@ -30,6 +30,12 @@ namespace ScreenVoicer.Services
         /// <summary>Last version the "update available" toast was shown for (it shows once per version).</summary>
         string? UpdateNotifiedVersion { get; set; }
 
+        /// <summary>The one-time "take screenshots with Insert?" offer was already shown.</summary>
+        bool InsertHintShown { get; set; }
+
+        /// <summary>The tray icon was moved out of the Windows 11 «^» overflow once (later the user's choice wins).</summary>
+        bool TrayIconPromoted { get; set; }
+
         void Save();
     }
 }

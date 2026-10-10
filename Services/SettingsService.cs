@@ -23,6 +23,8 @@ namespace ScreenVoicer.Services
         public string Hotkey { get; set; } = DefaultHotkey;
         public bool ModelHintShown { get; set; }
         public string? UpdateNotifiedVersion { get; set; }
+        public bool InsertHintShown { get; set; }
+        public bool TrayIconPromoted { get; set; }
 
         public SettingsService(string? dataDirectory = null)
         {
@@ -66,6 +68,8 @@ namespace ScreenVoicer.Services
                 UseGpu = data.UseGpu ?? true;
                 ModelHintShown = data.ModelHintShown;
                 UpdateNotifiedVersion = data.UpdateNotifiedVersion;
+                InsertHintShown = data.InsertHintShown;
+                TrayIconPromoted = data.TrayIconPromoted;
                 if (!string.IsNullOrWhiteSpace(data.Hotkey) && HotkeyGesture.TryParse(data.Hotkey, out _))
                 {
                     Hotkey = data.Hotkey;
@@ -93,7 +97,9 @@ namespace ScreenVoicer.Services
                         UseGpu = UseGpu,
                         Hotkey = Hotkey,
                         ModelHintShown = ModelHintShown,
-                        UpdateNotifiedVersion = UpdateNotifiedVersion
+                        UpdateNotifiedVersion = UpdateNotifiedVersion,
+                        InsertHintShown = InsertHintShown,
+                        TrayIconPromoted = TrayIconPromoted
                     };
 
                     // Write-then-rename so a crash mid-write can never leave a truncated settings file.
@@ -119,6 +125,8 @@ namespace ScreenVoicer.Services
             public string? Hotkey { get; set; }
             public bool ModelHintShown { get; set; }
             public string? UpdateNotifiedVersion { get; set; }
+            public bool InsertHintShown { get; set; }
+            public bool TrayIconPromoted { get; set; }
         }
     }
 }

@@ -66,7 +66,7 @@ enum UITest {
 
     private static func overlayFlow(_ app: AppDelegate, _ output: URL) async {
         let before = await app.historyForTest.all().count
-        app.capture()
+        app.clickMenuBarIconForTest() // a left click on the menu-bar icon takes the screenshot
         await wait(2.5)
         guard let overlay = app.overlayForTest, let panel = overlay.panelForTest else {
             check("overlay opens", false)

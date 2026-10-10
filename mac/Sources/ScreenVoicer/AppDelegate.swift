@@ -9,7 +9,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MenuHost {
     private static let showGalleryNotification = Notification.Name("ua.com.mospan.screenvoicer.showGallery")
     private static let languages = [("uk", "Українська"), ("en", "English"), ("auto", "Автовизначення (повільніше)")]
 
-    private enum CaptureTrigger { case hotkey, menu, delayed, gallery }
+    private enum CaptureTrigger { case hotkey, trayClick, menu, delayed, gallery }
 
     private var settings: Settings!
     private var history: HistoryService!
@@ -261,7 +261,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MenuHost {
         updateStatusItem()
     }
 
-    @objc private func statusItemClicked() { toggleTrayMenu() }
+    /// A click on the icon is the quickest way to a screenshot; the menu lives on the right button (or ⌃-click).
+    @objc private func statusItemClicked() {
+        let event = NSApp.currentEvent
+        let wantsMenu = event?.type == .rightMouseUp || event?.type == .rightMouseDown
+            || event?.modifierFlags.contains(.control) == true
+        statusItemClick(menu: wantsMenu)
+    }
+
+    private func statusItemClick(menu wantsMenu: Bool) {
+        if wantsMenu {
+            toggleTrayMenu()
+            return
+        }
+        if let menu = trayMenu, !menu.isClosing {
+            menu.closeMenu()
+            return
+        }
+        // the click that closed the menu (by moving focus) is not a capture request
+        if Date().timeIntervalSince(trayMenuClosedAt) < 0.25 { return }
+        triggerCapture(.trayClick)
+    }
 
     /// The glass menu (TrayMenu.swift); a second click on the icon closes it.
     private func toggleTrayMenu() {
@@ -296,7 +316,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MenuHost {
         switch whisper.state {
         case .downloading: tip = "ScreenVoicer — модель \(Formats.percent(whisper.downloadProgress))"
         case .failed: tip = "ScreenVoicer — голос недоступний"
-        default: tip = "ScreenVoicer — \(Self.hotkeyText)"
+        default: tip = "ScreenVoicer\nКлік або \(Self.hotkeyText) — знімок, правий клік — меню"
         }
         statusItem.button?.toolTip = tip
         menuStateChanged()
@@ -490,6 +510,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MenuHost {
             let settleMs: UInt64
             switch trigger {
             case .hotkey: settleMs = hadToasts ? 120 : 0
+            case .trayClick: settleMs = hadToasts ? 150 : 120 // the icon's highlight has to go first
             case .delayed: settleMs = hadToasts ? 150 : 60
             default: settleMs = 280
             }
@@ -679,7 +700,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MenuHost {
     var historyForTest: HistoryService { history }
     var settingsForTest: Settings { settings }
     var isMenuOpenForTest: Bool { trayMenu.map { !$0.isClosing } ?? false }
-    func openMenuForTest() { toggleTrayMenu() }
+    func openMenuForTest() { statusItemClick(menu: true) }
+    func clickMenuBarIconForTest() { statusItemClick(menu: false) }
     func closeMenuForTest() { trayMenu?.closeMenu() }
     func closeGalleryForTest() { gallery?.window.close() }
 
