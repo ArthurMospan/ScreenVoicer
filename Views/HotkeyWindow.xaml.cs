@@ -189,6 +189,14 @@ namespace ScreenVoicer.Views
             Keyboard.Focus(this);
         }
 
+        private void OnInsertClick(object sender, RoutedEventArgs e)
+        {
+            _candidate = HotkeyGesture.Insert;
+            ShowKeys(_candidate.Modifiers, _candidate.Key);
+            ShowStatus("Натисніть «Зберегти» або Enter.", Muted);
+            Keyboard.Focus(this);
+        }
+
         private void OnSaveClick(object sender, RoutedEventArgs e) => Save();
 
         private void OnCancelClick(object sender, RoutedEventArgs e) => Close();

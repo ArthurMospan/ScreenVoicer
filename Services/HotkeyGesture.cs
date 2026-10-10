@@ -36,7 +36,10 @@ namespace ScreenVoicer.Services
 
         /// <summary>Keys that are fine as a hotkey without any modifier (nobody types them).</summary>
         private static bool IsStandaloneKey(Key key) =>
-            key is >= Key.F1 and <= Key.F24 or Key.Snapshot or Key.Pause or Key.Scroll;
+            key is >= Key.F1 and <= Key.F24 or Key.Snapshot or Key.Pause or Key.Scroll or Key.Insert;
+
+        /// <summary>One key instead of three: Insert is almost never used, so the app offers it.</summary>
+        public static HotkeyGesture Insert => new(User32.KeyModifiers.None, Key.Insert);
 
         public static bool IsModifierKey(Key key) =>
             key is Key.LeftCtrl or Key.RightCtrl or Key.LeftAlt or Key.RightAlt or Key.LeftShift or Key.RightShift
