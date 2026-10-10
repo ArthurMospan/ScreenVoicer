@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleIdentifier</key>
+    <string>ua.com.mospan.screenvoicer</string>
+    <key>CFBundleName</key>
+    <string>ScreenVoicer</string>
+    <key>CFBundleDisplayName</key>
+    <string>ScreenVoicer</string>
+    <key>CFBundleExecutable</key>
+    <string>ScreenVoicer</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>__VERSION__</string>
+    <key>CFBundleVersion</key>
+    <string>__BUILD__</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>uk</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>14.0</string>
+    <key>LSUIElement</key>
+    <true/>
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.productivity</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>NSPrincipalClass</key>
+    <string>NSApplication</string>
+    <key>NSSupportsAutomaticTermination</key>
+    <false/>
+    <key>NSSupportsSuddenTermination</key>
+    <false/>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>ScreenVoicer записує ваш голосовий коментар до знімка, поки ви утримуєте Пробіл. Голос розпізнається тільки на цьому Mac.</string>
+    <key>NSHumanReadableCopyright</key>
+    <string>© Arthur Mospan · MIT</string>
+</dict>
+</plist>

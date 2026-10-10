@@ -1,0 +1,79 @@
+name: macOS
+
+# Builds and tests the Mac app on every push that touches mac/, and serves the release workflow
+# (workflow_call) so a tag publishes the Windows and Mac assets together.
+on:
+  push:
+    branches: ['**']
+    paths: ['mac/**', '.github/workflows/mac.yml', 'CHANGELOG.md']
+  pull_request:
+    paths: ['mac/**']
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        required: true
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 40
+    env:
+      HAS_CERT: ${{ secrets.MAC_CERT_P12 != '' }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Toolchain
+        run: |
+          sw_vers
+          xcodebuild -version
+          swift --version
+
+      - name: Build, sign, pack
+        env:
+          MAC_CERT_P12: ${{ secrets.MAC_CERT_P12 }}
+          MAC_CERT_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
+        run: |
+          chmod +x mac/scripts/build.sh
+          mac/scripts/build.sh "${{ inputs.version }}"
+
+      - name: Same certificate on every build (permissions survive updates)
+        if: env.HAS_CERT == 'true'
+        run: |
+          codesign -d -r- mac/build/ScreenVoicer.app 2>&1 | tee dr.txt
+          grep -qi 'identifier "ua.com.mospan.screenvoicer"' dr.txt
+          grep -qi 'H"15d381e51d5e41b6e5bf780ab8f9dd6f5946327c"' dr.txt
+
+      - name: Whisper model cache
+        uses: actions/cache@v4
+        with:
+          path: ~/sv-models
+          key: whisper-base-v3
+
+      - name: Self-test
+        run: |
+          say -o speech.aiff "Hello, this is a test of the screen voicer application. The save button does not work."
+          afconvert -f WAVE -d LEI16@16000 -c 1 speech.aiff speech.wav
+          export SV_DATA_DIR="$HOME/sv-data"
+          mkdir -p "$SV_DATA_DIR" ~/sv-models
+          ln -sfn ~/sv-models "$SV_DATA_DIR/models"
+          mac/build/ScreenVoicer.app/Contents/MacOS/ScreenVoicer --selftest --model base --lang en --wav speech.wav --expect test
+
+      - name: Snapshots
+        if: always()
+        run: |
+          mac/build/ScreenVoicer.app/Contents/MacOS/ScreenVoicer --snapshots snapshots
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: snapshots
+          path: snapshots
+          if-no-files-found: ignore
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ScreenVoicer-macOS
+          path: mac/build/ScreenVoicer-macOS.zip
+          if-no-files-found: error
