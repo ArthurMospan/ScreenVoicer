@@ -15,7 +15,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Resources\AppIcon.ico</ApplicationIcon>
 
-    <Version>1.10.0</Version>
+    <Version>1.11.0</Version>
     <Product>ScreenVoicer</Product>
     <Company>ScreenVoicer</Company>
     <Description>Screenshots with voice comments for bug reports and AI assistants</Description>

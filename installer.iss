@@ -3,7 +3,7 @@
 ; CI (.github/workflows/release.yml) passes the version from the git tag: iscc /DMyAppVersion=1.2.3 installer.iss
 #define MyAppName "ScreenVoicer"
 #ifndef MyAppVersion
-  #define MyAppVersion "1.10.0"
+  #define MyAppVersion "1.11.0"
 #endif
 #define MyAppPublisher "ScreenVoicer"
 #define MyAppExeName "ScreenVoicer.exe"
