@@ -1,0 +1,1221 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ScreenVoicer — скриншот із голосовим коментарем</title>
+<meta name="description" content="Виділіть частину екрана, скажіть, що не так, і вставте знімок із коментарем у чат, задачу чи ШІ. Голос розпізнається на вашому комп’ютері. Безкоштовно для Windows і macOS.">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#050505">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' fill='none' stroke='%23ff8a4c' stroke-width='7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 22v-8a8 8 0 0 1 8-8h8M42 6h8a8 8 0 0 1 8 8v8M58 42v8a8 8 0 0 1-8 8h-8M22 58h-8a8 8 0 0 1-8-8v-8M22 28v8M32 20v24M42 28v8'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap" rel="stylesheet">
+<script>
+  // Pick the layout before the first paint: the full-bleed film, or stacked stills (phones, reduced motion).
+  (function () {
+    var d = document.documentElement, w = d.clientWidth || innerWidth, h = innerHeight;
+    var still = /static/.test(location.hash) || matchMedia('(prefers-reduced-motion: reduce)').matches;
+    d.dataset.mode = (!still && w >= 700 && h >= 520 && h <= 1500 && h <= w * 1.15) ? 'motion' : 'static';
+    d.style.setProperty('--vh', h + 'px');
+  })();
+</script>
+<style>
+  :root {
+    --bg: #050505;
+    --fg: #F5F5F7;
+    --fg2: #A1A1A6;
+    --fg3: #86868B;
+    --accent: #FF8A4C;
+    --glass: rgba(32, 32, 40, .65);
+    --edge: rgba(255, 255, 255, .18);
+    --gut: 32px;
+    --vh: 100vh;
+    --ease: cubic-bezier(.22, .61, .36, 1);
+    --mono: ui-monospace, "Cascadia Mono", "SF Mono", Consolas, monospace;
+  }
+  @media (max-width: 699px) { :root { --gut: 16px; } }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background: var(--bg); -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    font-optical-sizing: auto;
+    font-size: 17px;
+    line-height: 1.47;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: clip;
+  }
+  a { color: inherit; }
+  :focus { outline: none; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 6px; }
+  .wrap { width: 100%; max-width: 1244px; margin: 0 auto; padding: 0 var(--gut); }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+  /* ---------- Navigation (lives on the overlay) ---------- */
+  .nav { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+  .brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
+  .brand svg { width: 22px; height: 22px; }
+  .wm-v { color: var(--accent); }
+  .navlink { font-size: 13px; color: rgba(255, 255, 255, .72); text-decoration: none; transition: color .3s var(--ease); }
+  .navlink:hover { color: var(--fg); }
+
+  /* ---------- Hero copy ---------- */
+  .hero { position: relative; z-index: 2; display: flex; flex-direction: column; }
+  .hero-in { text-align: center; }
+  h1 {
+    font-size: clamp(36px, min(6.3vw, 10vh), 88px);
+    line-height: 1.02;
+    letter-spacing: -.024em;
+    font-weight: 640;
+    text-wrap: balance;
+  }
+  .sub {
+    margin: clamp(18px, 2.6vh, 26px) auto 0;
+    max-width: 40em;
+    font-size: clamp(17px, 1.5vw, 21px);
+    line-height: 1.42;
+    letter-spacing: -.012em;
+    color: var(--fg2);
+    text-wrap: balance;
+  }
+  [data-mode="motion"] .sub { color: rgba(255, 255, 255, .84); }
+  .cta { display: flex; justify-content: center; gap: 12px; margin-top: clamp(26px, 4vh, 38px); }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+    height: 48px; padding: 0 24px; border-radius: 999px;
+    font: inherit; font-size: 15.5px; font-weight: 500; letter-spacing: -.01em; line-height: 1;
+    text-decoration: none; white-space: nowrap; cursor: pointer; border: 0; background: none; color: var(--fg);
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color .35s var(--ease), box-shadow .35s var(--ease), color .35s var(--ease), transform .35s var(--ease);
+  }
+  .btn-pri { background: #fff; color: #000; }
+  .btn-pri:hover { background: #F2F2F4; }
+  .btn-pri:active { transform: scale(.98); }
+  .btn-sec { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .3); }
+  .btn-sec:hover { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .5); }
+  .btn-soon { color: rgba(255, 255, 255, .8); cursor: default; }
+  .btn-soon:hover { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .3); }
+  .tag {
+    font-size: 11px; font-weight: 600; letter-spacing: .01em; line-height: 1;
+    padding: 4px 8px 5px; border-radius: 999px; background: rgba(255, 255, 255, .14); color: #E4E4E9;
+  }
+  .meta { margin-top: 18px; font-size: 13px; letter-spacing: -.003em; color: var(--fg3); }
+  [data-mode="motion"] .meta { color: rgba(255, 255, 255, .7); }
+  .meta span { white-space: nowrap; }
+  .meta i { font-style: normal; margin: 0 .45em; opacity: .55; }
+  .meta .mid { margin-right: .2em; }
+  .hero-slot { margin-top: clamp(44px, 9vh, 96px); }
+  .hero-obj { display: none; position: relative; overflow: hidden; margin: clamp(48px, 9vh, 88px) calc(-1 * var(--gut)) 0; }
+  .hero-obj .tb { left: 0; top: 0; transform-origin: 0 0; }
+
+  /* ---------- The film: a sticky full-bleed screen ---------- */
+  .track { position: relative; }
+  .stage { display: none; }
+  [data-mode="motion"] .track { height: calc(var(--vh) * 7.6); }
+  [data-mode="motion"] .hero { position: absolute; left: 0; right: 0; top: 0; height: var(--vh); }
+  [data-mode="motion"] .hero-in { flex: 1; display: flex; flex-direction: column; justify-content: center; padding-bottom: 6vh; }
+  [data-mode="motion"] .stage { display: block; position: sticky; top: 0; height: var(--vh); overflow: hidden; background: var(--bg); }
+  [data-mode="motion"] .hero-slot { display: block; }
+  [data-mode="static"] .hero-in { padding-top: clamp(40px, 9vh, 112px); }
+  [data-mode="static"] .hero-slot { display: none; }
+  [data-mode="static"] .hero-obj { display: block; }
+  .stage .scene, .stage .ui { opacity: 0; }                 /* shown once the script has placed them */
+  .stage.off * { animation-play-state: paused !important; }
+
+  /* A quiet arrival */
+  @media (prefers-reduced-motion: no-preference) {
+    .nav, .hero-in > h1, .hero-in > .sub, .hero-in > .cta, .hero-in > .meta, .hero-obj { animation: rise 1.2s var(--ease) both; }
+    .hero-in > h1 { animation-delay: .1s; }
+    .hero-in > .sub { animation-delay: .2s; }
+    .hero-in > .cta { animation-delay: .3s; }
+    .hero-in > .meta { animation-delay: .36s; }
+    .hero-obj { animation-delay: .5s; }
+    [data-mode="motion"] .stage .ui { animation: appear 1.4s .55s var(--ease) both; }
+    [data-mode="motion"] .stage .scene { animation: appear 1.8s var(--ease) both; }
+  }
+  @keyframes rise { from { opacity: 0; transform: translateY(14px); } }
+  @keyframes appear { from { opacity: 0; } }
+
+  /* ---------- Scene: a 1440 x 900 screen with a light web app ---------- */
+  .box { position: absolute; left: 0; top: 0; width: 1440px; height: 900px; transform-origin: 0 0; }
+  .scene {
+    position: absolute; left: 0; top: 0; width: 1440px; height: 900px; transform-origin: 0 0; overflow: hidden;
+    background: #F2F2F5; font-size: 13px; line-height: 1.35; letter-spacing: -.003em; color: #1D1D22; text-align: left;
+    font-optical-sizing: none; font-variation-settings: "opsz" 14;
+  }
+  .ui {
+    position: absolute; inset: 0; overflow: hidden; text-align: left; font-size: 14px; line-height: 1; color: #ECECF1;
+    font-optical-sizing: none; font-variation-settings: "opsz" 14;
+  }
+  .veil { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; }
+  .app { position: absolute; inset: 0; }
+  .app svg { display: block; }
+  .ln-i { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+
+  .side { position: absolute; left: 0; top: 0; bottom: 0; width: 232px; background: #FBFBFC; border-right: 1px solid #E7E7EB; padding: 20px 14px; }
+  .abrand { display: flex; align-items: center; gap: 10px; height: 28px; padding: 0 8px; font-size: 15px; font-weight: 650; letter-spacing: -.015em; }
+  .abrand .lg { width: 24px; height: 24px; border-radius: 7px; background: #1D1D22; color: #fff; display: grid; place-items: center; }
+  .abrand .lg svg { width: 15px; height: 15px; }
+  .anav { list-style: none; margin-top: 30px; display: grid; gap: 2px; }
+  .anav li { display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 10px; border-radius: 9px; color: #55555E; font-size: 13.5px; font-weight: 500; }
+  .anav li.on { background: #ECECF0; color: #1D1D22; font-weight: 600; }
+  .anav svg { width: 16px; height: 16px; color: #8E8E96; }
+  .anav li.on svg { color: #1D1D22; }
+  .anav .sep { height: 1px; background: #ECECEF; margin: 12px 10px; padding: 0; }
+  .me { position: absolute; left: 22px; bottom: 20px; display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 500; color: #3A3A42; }
+  .av { width: 28px; height: 28px; border-radius: 50%; background: #E4E4E9; display: grid; place-items: center; font-size: 10.5px; font-weight: 650; color: #55555E; }
+
+  .topb { position: absolute; left: 232px; right: 0; top: 0; height: 60px; background: #fff; border-bottom: 1px solid #E9E9ED; }
+  .search { position: absolute; left: 32px; top: 14px; width: 280px; height: 32px; border-radius: 10px; background: #EEEEF2; display: flex; align-items: center; gap: 8px; padding: 0 12px; color: #9A9AA3; }
+  .search svg { width: 15px; height: 15px; }
+  .search kbd { margin-left: auto; font: inherit; font-size: 11px; color: #A8A8B0; }
+  .bell { position: absolute; right: 80px; top: 18px; width: 24px; height: 24px; color: #6E6E78; }
+  .tav { position: absolute; right: 32px; top: 16px; width: 28px; height: 28px; border-radius: 50%; background: #D9DCE6; display: grid; place-items: center; font-size: 10.5px; font-weight: 650; color: #4A4F63; }
+
+  .crumbs { position: absolute; left: 336px; top: 92px; font-size: 12.5px; color: #8A8A94; }
+  .crumbs b { color: #55555E; font-weight: 500; }
+  .ptitle { position: absolute; left: 336px; top: 110px; display: flex; align-items: center; gap: 12px; font-size: 24px; font-weight: 650; letter-spacing: -.025em; }
+  .ptitle .st { font-size: 12px; font-weight: 600; letter-spacing: 0; padding: 4px 9px; border-radius: 7px; color: #1E8E50; background: #E8F5EE; }
+  .psub { position: absolute; left: 336px; top: 148px; font-size: 13px; color: #8A8A94; }
+  .act { position: absolute; top: 108px; height: 34px; padding: 0 14px; border-radius: 9px; display: flex; align-items: center; font-size: 12.5px; font-weight: 600; }
+  .act.ghost { right: 240px; color: #3A3A42; box-shadow: inset 0 0 0 1px #D9D9E0; background: #fff; }
+  .act.dark { right: 104px; color: #fff; background: #1D1D22; }
+
+  .card { position: absolute; background: #fff; border: 1px solid #E8E8EC; border-radius: 14px; padding: 24px; }
+  .card h3 { font-size: 16px; font-weight: 650; letter-spacing: -.015em; }
+  .tbl { position: absolute; left: 24px; right: 24px; top: 58px; }
+  .tr { position: absolute; left: 0; right: 0; display: flex; align-items: center; height: 44px; border-bottom: 1px solid #EEEEF2; font-size: 13.5px; }
+  .tr.hd { height: 28px; font-size: 11.5px; font-weight: 600; color: #8A8A94; text-transform: uppercase; letter-spacing: .04em; border-bottom: 1px solid #E8E8EC; }
+  .tr.ft { border-bottom: 0; font-weight: 650; }
+  .tr .c1 { flex: 1; }
+  .tr .c2 { width: 70px; text-align: center; color: #6E6E78; }
+  .tr .c3 { width: 90px; text-align: right; color: #6E6E78; }
+  .tr .c4 { width: 90px; text-align: right; }
+  .tr.ft .c4 { color: #1D1D22; }
+  .tr .c1 small { display: block; font-size: 11.5px; color: #8A8A94; margin-top: 1px; }
+  .sum .r { position: absolute; left: 24px; right: 24px; display: flex; justify-content: space-between; font-size: 13.5px; color: #55555E; }
+  .sum .r b { color: #1D1D22; font-weight: 500; }
+  .sum .hr { position: absolute; left: 24px; right: 24px; top: 154px; height: 1px; background: #E8E8EC; }
+  .sum .tot { position: absolute; left: 24px; right: 24px; top: 170px; display: flex; justify-content: space-between; align-items: baseline; font-size: 15px; font-weight: 600; }
+  .sum .tot b { font-size: 20px; font-weight: 650; letter-spacing: -.02em; }
+  .sum .gb { position: absolute; left: 24px; right: 24px; top: 212px; height: 36px; border-radius: 9px; box-shadow: inset 0 0 0 1px #D9D9E0; display: flex; align-items: center; justify-content: center; font-size: 12.5px; font-weight: 600; color: #3A3A42; }
+  .cust .who { position: absolute; left: 24px; top: 58px; display: flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 600; }
+  .cust .who .av { width: 36px; height: 36px; font-size: 12px; }
+  .cust .ln { position: absolute; left: 24px; right: 24px; display: flex; justify-content: space-between; font-size: 13px; color: #55555E; }
+  .cust .ln b { color: #1D1D22; font-weight: 500; }
+  .hist .ev { position: absolute; left: 24px; right: 24px; height: 44px; display: flex; align-items: center; gap: 14px; font-size: 13.5px; }
+  .hist .ev i { width: 10px; height: 10px; border-radius: 50%; background: #1D1D22; flex: none; box-shadow: 0 0 0 3px #fff; }
+  .hist .ev i.o { background: #D9D9E0; }
+  .hist .ev span { margin-left: auto; color: #8A8A94; font-size: 12.5px; }
+  .hist .line { position: absolute; left: 28px; top: 70px; width: 2px; height: 140px; background: #ECECF0; }
+
+  /* Overlay: dim, selection, ink */
+  .ov { position: absolute; left: 0; top: 0; width: 1440px; height: 900px; overflow: visible; }
+  .size {
+    position: absolute; left: 0; top: 0; padding: 3px 7px 4px; border-radius: 7px;
+    background: rgba(20, 20, 26, .85); box-shadow: inset 0 0 0 1px var(--edge);
+    color: #fff; font-size: 11.5px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; opacity: 0;
+  }
+
+  /* Glass: one flat tint, blur, one thin even edge */
+  .glass {
+    background: var(--glass);
+    -webkit-backdrop-filter: blur(30px) saturate(140%);
+    backdrop-filter: blur(30px) saturate(140%);
+    box-shadow: inset 0 0 0 1px var(--edge), 0 5px 28px rgba(0, 0, 0, .35);
+  }
+
+  /* Toolbar */
+  .tb {
+    position: absolute; left: 50%; top: 0; transform-origin: 50% 0;
+    display: flex; align-items: center; height: 46px; padding: 5px; border-radius: 23px;
+    color: #ECECF1; white-space: nowrap; font-size: 14px; line-height: 1;
+  }
+  .b { position: relative; flex: none; width: 34px; height: 34px; margin: 0 1px; border-radius: 17px; display: flex; align-items: center; justify-content: center; }
+  .b.on { background: rgba(255, 255, 255, .22); color: #fff; }
+  .b.w46 { width: 46px; }
+  .b.w16 { width: 16px; margin: 0 2px 0 -3px; }
+  .i { display: block; flex: none; width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .i16 { width: 16px; height: 16px; }
+  .chev { width: 10px; height: 10px; stroke-width: 2.6; opacity: .7; margin: 1px 0 0 2px; }
+  .b.w16 .chev { margin: 1px 0 0; }
+  .dv { flex: none; width: 1px; height: 18px; margin: 0 5px; background: rgba(255, 255, 255, .16); }
+  .dot { flex: none; width: 14px; height: 14px; border-radius: 50%; background: #EF4444; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .35); }
+  .mic .rec { position: absolute; inset: 0; opacity: 0; }
+  .mic .ring, .mic .disc { position: absolute; inset: 0; border-radius: 50%; background: #FF4D5E; }
+  .mic .ring { animation: pulse .7s ease-in-out infinite alternate; }
+  .mic .lvl { position: absolute; inset: 0; border-radius: 50%; box-shadow: inset 0 0 0 2px #FF8E99; animation: lvl 1.3s ease-in-out infinite; }
+  .mic .i { position: relative; color: #F4F4F5; }
+  .fld { position: relative; flex: none; width: 300px; height: 34px; margin: 0 6px 0 4px; display: flex; align-items: center; color: #F4F4F7; overflow: hidden; contain: strict; }
+  .ph { position: absolute; left: 4px; top: 0; bottom: 0; display: flex; align-items: center; color: #CFCFD6; }
+  .txt { white-space: pre; }
+  .caret { flex: none; width: 1.5px; height: 18px; margin-left: 1px; background: #FFC68A; border-radius: 1px; animation: blink 1.1s steps(1) infinite; }
+  .save { position: relative; flex: none; width: 34px; height: 34px; margin: 0 1px; border-radius: 11px; background: rgba(255, 255, 255, .34); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .5); display: flex; align-items: center; justify-content: center; color: #fff; }
+  .save .i { stroke-width: 2.4; position: relative; }
+  .save .hl { position: absolute; inset: 0; border-radius: inherit; background: rgba(255, 255, 255, .32); opacity: 0; }
+
+  /* Status pill and captions: the same glass family */
+  .pill { position: absolute; left: 50%; top: 0; transform-origin: 50% 0; display: flex; align-items: center; gap: 9px; height: 29px; padding: 0 14px 1px 12px; border-radius: 15px; white-space: nowrap; font-size: 12.5px; font-weight: 600; color: #FF8E99; opacity: 0; }
+  .wave { display: flex; align-items: center; gap: 2px; height: 14px; }
+  .wave i { display: block; width: 2px; height: 14px; border-radius: 1px; background: #FF4D5E; transform: scaleY(.3); animation: wv 1s ease-in-out infinite; }
+  .wave i:nth-child(1) { animation-duration: .9s; animation-delay: -.3s; }
+  .wave i:nth-child(2) { animation-duration: 1.15s; animation-delay: -.7s; }
+  .wave i:nth-child(3) { animation-duration: .8s; animation-delay: -.1s; }
+  .wave i:nth-child(4) { animation-duration: 1.05s; animation-delay: -.5s; }
+  .wave i:nth-child(5) { animation-duration: .95s; animation-delay: -.85s; }
+  .cap { position: absolute; left: 0; top: 0; transform-origin: 0 0; display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 15px 1px 13px; border-radius: 16px; white-space: nowrap; font-size: 13.5px; font-weight: 600; letter-spacing: -.005em; color: #F4F4F7; opacity: 0; }
+  .cap i { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+  .cap kbd { font: inherit; }
+
+  /* Cursor (over everything) */
+  .cur { position: absolute; left: 0; top: 0; width: 24px; height: 24px; transform-origin: 0 0; opacity: 0; }
+  .cur svg { position: absolute; left: 0; top: 0; display: block; width: 24px; height: 24px; }
+  .cur .ca { width: 22px; height: 30px; display: none; }
+  .cur.arrow .ca { display: block; }
+  .cur.arrow .cx { display: none; }
+
+  /* Toast */
+  .toast { position: absolute; right: 24px; bottom: 24px; width: 376px; border-radius: 16px; color: #F3F3F6; opacity: 0; background: rgba(28, 28, 34, .8); line-height: 1.3; transform-origin: 100% 100%; overflow: hidden; }
+  .toast .row { display: flex; align-items: center; padding: 13px 10px 11px 14px; }
+  .toast .bdg { flex: none; width: 44px; height: 44px; margin-right: 12px; border-radius: 12px; background: rgba(255, 255, 255, .08); box-shadow: inset 0 0 0 1px var(--edge); display: grid; place-items: center; color: #4ADE80; }
+  .toast .bdg .i { width: 20px; height: 20px; stroke-width: 2.2; }
+  .toast .tx { flex: 1; min-width: 0; }
+  .toast .tt { font-size: 13.5px; font-weight: 600; }
+  .toast .msg { margin-top: 3px; font-size: 12.5px; line-height: 18px; color: #A9A9B6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .toast .x { flex: none; align-self: flex-start; width: 24px; height: 24px; margin: -4px 0 0 6px; display: grid; place-items: center; color: #8C8C99; }
+  .toast .x .i { width: 13px; height: 13px; stroke-width: 2.4; }
+  .toast .acts { display: flex; justify-content: flex-end; gap: 6px; padding: 0 12px 13px; }
+  .chip { height: 28px; padding: 0 12px; border-radius: 14px; display: flex; align-items: center; font-size: 11.5px; font-weight: 600; }
+  .chip.fro { background: rgba(255, 255, 255, .08); box-shadow: inset 0 0 0 1px var(--edge); color: #ECECF1; }
+  .chip.wh { background: rgba(255, 255, 255, .92); color: #1D1D22; }
+  .toast .bar { position: absolute; left: 12px; right: 12px; bottom: 0; height: 2px; background: var(--accent); opacity: .6; transform-origin: 0 50%; }
+
+  /* Chat window: where the clipboard lands */
+  .chat { position: absolute; right: 32px; top: 50%; width: 470px; height: 600px; border-radius: 14px; background: #17171B; color: #E8E8ED; overflow: hidden; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .09), 0 24px 60px rgba(0, 0, 0, .45); transform-origin: 100% 50%; opacity: 0; font-size: 13.5px; line-height: 1.4; }
+  .chat .chh { position: absolute; left: 0; right: 0; top: 0; height: 60px; display: flex; align-items: center; gap: 12px; padding: 0 18px; border-bottom: 1px solid rgba(255, 255, 255, .07); }
+  .chat .cav { width: 34px; height: 34px; border-radius: 50%; background: #2A2A31; display: grid; place-items: center; color: #FFC68A; flex: none; }
+  .chat .cav .i { width: 17px; height: 17px; stroke-width: 1.9; }
+  .chat .chn { font-weight: 600; font-size: 14px; }
+  .chat .chs { font-size: 12px; color: #8E8E99; }
+  .chat .mout { position: absolute; right: 18px; top: 82px; width: 296px; padding: 6px 6px 8px; border-radius: 14px 14px 4px 14px; background: #2B2F3D; transform-origin: 100% 0; opacity: 0; }
+  .chat .mout svg { display: block; width: 284px; height: 208px; border-radius: 9px; }
+  .chat .mdl { margin: 9px 6px 0; font: 11.5px/1.55 var(--mono); color: #A9B0C2; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .chat .mdl b { color: #E8E8ED; font-weight: 600; }
+  .chat .mout small { display: block; text-align: right; padding: 4px 6px 0; font-size: 11px; color: #8E95A8; }
+  .chat .typing { position: absolute; left: 18px; top: 404px; display: flex; gap: 4px; padding: 12px 14px; border-radius: 14px 14px 14px 4px; background: #26262E; opacity: 0; }
+  .chat .typing i { width: 6px; height: 6px; border-radius: 50%; background: #8E8E99; }
+  .chat .typing.go i { animation: tdot 1.2s ease-in-out infinite; }
+  .chat .typing i:nth-child(2) { animation-delay: .15s; }
+  .chat .typing i:nth-child(3) { animation-delay: .3s; }
+  .chat .comp { position: absolute; left: 14px; right: 14px; bottom: 14px; height: 44px; border-radius: 22px; background: #222228; display: flex; align-items: center; padding: 0 16px; color: #8A8A96; }
+  .chat .comp .i { width: 18px; height: 18px; margin-left: auto; color: #A8A8B4; }
+
+  @keyframes pulse { from { opacity: .6; transform: scale(1); } to { opacity: .06; transform: scale(1.42); } }
+  @keyframes lvl { 0%, 100% { transform: scale(1.04); opacity: .5; } 40% { transform: scale(1.22); opacity: .9; } 70% { transform: scale(1.1); opacity: .6; } }
+  @keyframes wv { 0%, 100% { transform: scaleY(.25); } 50% { transform: scaleY(1); } }
+  @keyframes blink { 0%, 55% { opacity: 1; } 56%, 100% { opacity: 0; } }
+  @keyframes tdot { 0%, 60%, 100% { transform: translateY(0); opacity: .5; } 30% { transform: translateY(-4px); opacity: 1; } }
+
+  /* ---------- Static stills (phones, reduced motion) ---------- */
+  .frames { display: none; padding-top: clamp(40px, 8vh, 72px); }
+  [data-mode="static"] .frames { display: block; }
+  .frames ol { list-style: none; display: grid; grid-template-columns: minmax(0, 1fr); gap: clamp(48px, 9vh, 96px); max-width: 1040px; margin: 0 auto; }
+  .frame { position: relative; overflow: hidden; border-radius: 18px; background: #0E0E11; }
+  .frame .cap, .frame .veil { display: none; }
+  .frames figcaption { display: flex; align-items: flex-start; gap: 14px; margin: 20px auto 0; max-width: 820px; font-size: clamp(17px, 1.5vw, 21px); line-height: 1.35; letter-spacing: -.012em; font-weight: 600; color: var(--fg); }
+  .frames figcaption .num { flex: none; width: 24px; height: 24px; margin-top: 1px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .22); display: grid; place-items: center; font-size: 12px; font-weight: 600; color: var(--fg2); }
+
+  /* ---------- Macro feature rows ---------- */
+  .feats { padding-top: clamp(80px, 12vh, 140px); }
+  .feats ul { list-style: none; }
+  .feat { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: clamp(28px, 5vw, 80px); align-items: center; padding: clamp(40px, 6vh, 64px) 0; border-top: 1px solid rgba(255, 255, 255, .1); }
+  .feat:first-child { border-top: 0; padding-top: 0; }
+  .feat h2 { font-size: clamp(26px, 2.6vw, 36px); line-height: 1.12; letter-spacing: -.022em; font-weight: 640; text-wrap: balance; }
+  .feat p { margin-top: 12px; max-width: 24em; font-size: clamp(16px, 1.3vw, 18px); line-height: 1.47; letter-spacing: -.01em; color: var(--fg2); text-wrap: pretty; }
+  .panel { position: relative; overflow: hidden; border-radius: 18px; background: #0E0E11; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08); }
+  .fit { position: relative; width: 100%; overflow: hidden; contain: layout paint; }
+  .mstage { position: absolute; left: 0; top: 0; transform-origin: 0 0; overflow: hidden; font-size: 13px; line-height: 1.35; color: #1D1D22; text-align: left; font-optical-sizing: none; font-variation-settings: "opsz" 14; }
+  .mstage .tb, .mstage .pill, .mstage .toast { left: auto; right: auto; top: auto; bottom: auto; transform-origin: 0 0; }
+  .lite { position: absolute; inset: 0; background: #F2F2F5; }
+  .lite i { position: absolute; display: block; border-radius: 5px; }
+  .dimall { position: absolute; inset: 0; background: rgba(0, 0, 0, .55); }
+  .cover { position: absolute; left: 0; top: 0; overflow: visible; }
+  .flyout { position: absolute; left: 50%; top: 18px; transform: translateX(-50%); display: flex; padding: 5px; border-radius: 22px; color: #ECECF1; }
+  .flyout .b { margin: 0 1px; }
+  .fcard { position: absolute; left: 56px; top: 92px; width: 528px; height: 280px; border-radius: 14px; background: #fff; box-shadow: inset 0 0 0 1px #E8E8EC; color: #1D1D22; }
+  .fcard .fh { position: absolute; left: 24px; top: 22px; font-size: 16px; font-weight: 650; letter-spacing: -.015em; }
+  .fcard .fl { position: absolute; left: 24px; font-size: 12.5px; font-weight: 600; color: #3A3A42; }
+  .fcard .fi { position: absolute; left: 24px; height: 38px; border-radius: 9px; box-shadow: inset 0 0 0 1px #D9D9E0; display: flex; align-items: center; padding: 0 12px; font-size: 13.5px; }
+  .fcard .fck { position: absolute; left: 24px; display: flex; align-items: center; gap: 9px; font-size: 13px; color: #3A3A42; }
+  .fcard .fck i { position: static; flex: none; width: 16px; height: 16px; border-radius: 5px; box-shadow: inset 0 0 0 1px #C9C9D2; background: #fff; }
+  .fcard .fb { position: absolute; left: 24px; width: 120px; height: 36px; border-radius: 9px; background: #E3E3E9; color: #9A9AA3; display: grid; place-items: center; font-size: 13px; font-weight: 600; }
+  .ed { position: absolute; inset: 0; background: #fff; color: #1D1D22; }
+  .ed .edt { position: absolute; left: 0; right: 0; top: 0; height: 38px; background: #EEF0F3; display: flex; align-items: center; gap: 8px; padding: 0 16px; font-size: 12.5px; font-weight: 500; color: #4B5563; }
+  .ed .edt i { width: 12px; height: 12px; border-radius: 4px; background: #1D1D22; }
+  .ed .el { position: absolute; left: 24px; font-size: 12.5px; font-weight: 600; color: #3A3A42; }
+  .ed .ei { position: absolute; left: 24px; right: 24px; border-radius: 9px; box-shadow: inset 0 0 0 1px #D9D9E0; padding: 0 12px; display: flex; align-items: center; font-size: 13.5px; }
+  .ed .ei.focus { box-shadow: inset 0 0 0 1.5px #1D1D22, 0 0 0 3px rgba(29, 29, 34, .08); }
+  .ed pre { position: absolute; left: 36px; top: 160px; font: 12.5px/20px var(--mono); color: #55555E; white-space: pre; opacity: 0; }
+  .ed pre b { color: #1D1D22; font-weight: 600; }
+  .ed .ecar { position: absolute; left: 37px; top: 162px; width: 1.5px; height: 16px; background: #1D1D22; opacity: 0; }
+  .ed .eb { position: absolute; left: 24px; bottom: 22px; height: 34px; padding: 0 16px; border-radius: 9px; background: #1D1D22; color: #fff; display: grid; place-items: center; font-weight: 600; font-size: 13px; }
+  .keys { position: absolute; display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 14px; background: rgba(18, 18, 22, .9); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12), 0 12px 30px rgba(0, 0, 0, .3); opacity: 0; color: #7C7C88; font: 500 13px/1 var(--mono); }
+  .keys kbd { display: inline-grid; place-items: center; min-width: 38px; height: 34px; padding: 0 11px; border-radius: 8px; background: #26262C; color: #F4F4F7; font: inherit; box-shadow: inset 0 -2px 0 rgba(0, 0, 0, .45), inset 0 0 0 1px rgba(255, 255, 255, .1); }
+  .keys kbd.down { background: #F4F4F7; color: #0B0B0D; box-shadow: none; transform: translateY(1px); }
+
+  /* ---------- Privacy, final, footer ---------- */
+  .privacy { padding-top: clamp(130px, 20vh, 240px); text-align: center; }
+  .statement {
+    max-width: 15.5em; margin: 0 auto;
+    font-size: clamp(30px, 4.6vw, 62px); line-height: 1.06; letter-spacing: -.026em; font-weight: 650; text-wrap: balance;
+  }
+  .statement span { color: var(--fg3); }
+  .note { margin: clamp(22px, 3vh, 30px) auto 0; max-width: 32em; font-size: clamp(17px, 1.45vw, 20px); line-height: 1.45; letter-spacing: -.012em; color: var(--fg2); text-wrap: balance; }
+  .also { margin: 14px auto 0; font-size: 14px; color: var(--fg3); letter-spacing: -.005em; }
+
+  .final { padding: clamp(150px, 24vh, 280px) 0 clamp(130px, 20vh, 220px); text-align: center; }
+  .final .mark { width: 64px; height: 64px; margin: 0 auto 30px; display: block; }
+  .final h2 { font-size: clamp(40px, 5vw, 64px); line-height: 1; letter-spacing: -.035em; font-weight: 650; }
+  .final .sub { margin-top: 18px; }
+
+  .foot { padding: 0 0 44px; }
+  .foot p { padding-top: 22px; border-top: 1px solid rgba(255, 255, 255, .08); font-size: 12.5px; color: var(--fg3); text-align: center; }
+  .foot a { text-decoration: none; color: var(--fg2); transition: color .3s var(--ease); }
+  .foot a:hover { color: var(--fg); }
+  .foot i { font-style: normal; margin: 0 .55em; color: #48484D; }
+
+  /* ---------- Small screens ---------- */
+  @media (max-width: 699px) {
+    .nav { height: 56px; }
+    [data-mode="static"] .hero-in { padding-top: 40px; }
+    .cta { flex-direction: column; align-items: stretch; gap: 10px; max-width: 420px; margin-left: auto; margin-right: auto; }
+    .btn { height: 50px; font-size: 16px; }
+    .meta { line-height: 1.75; }
+    .meta > span { display: block; }
+    .meta .mid { display: none; }
+    .frame { border-radius: 16px; }
+    .frames figcaption { margin-top: 16px; font-size: 17px; }
+    .feat { grid-template-columns: 1fr; gap: 22px; padding: 44px 0; }
+    .feat p { max-width: none; }
+    .panel { border-radius: 14px; }
+    .statement { font-size: clamp(30px, 8.6vw, 40px); }
+    .foot p { line-height: 1.8; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .mic .ring, .mic .lvl, .wave i, .caret, .chat .typing.go i { animation: none; }
+    .mic .ring { opacity: .25; transform: scale(1.25); }
+    .wave i:nth-child(1) { transform: scaleY(.45); }
+    .wave i:nth-child(2) { transform: scaleY(.9); }
+    .wave i:nth-child(3) { transform: scaleY(.6); }
+    .wave i:nth-child(4) { transform: scaleY(1); }
+    .wave i:nth-child(5) { transform: scaleY(.4); }
+    .btn { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Icon sprite (24-unit grid, stroked with currentColor) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <path id="g-region" d="M4 9V6.5A2.5 2.5 0 0 1 6.5 4H9M15 4h2.5A2.5 2.5 0 0 1 20 6.5V9M20 15v2.5a2.5 2.5 0 0 1-2.5 2.5H15M9 20H6.5A2.5 2.5 0 0 1 4 17.5V15"/>
+    <path id="g-screen" d="M4.5 5h15A1.5 1.5 0 0 1 21 6.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 15.5v-9A1.5 1.5 0 0 1 4.5 5zM9 20.5h6M12 17v3.5"/>
+    <path id="g-timer" d="M12 21a7.5 7.5 0 1 0 0-15 7.5 7.5 0 0 0 0 15zM12 10v3.5l2.5 1.5M9.5 2.5h5M19 6.5l1.5-1.5"/>
+    <path id="g-pen" d="M15 5.5l3.5 3.5L9 18.5 4.5 19.5 5.5 15zM13 7.5l3.5 3.5"/>
+    <path id="g-hl" d="M14.5 4.5l5 5-7 7-5-5zM7.5 11.5L5.5 17 7 18.5l5.5-2M4 20.5h7"/>
+    <path id="g-arrow" d="M5.5 18.5l13-13M10 5.5h8.5V14"/>
+    <path id="g-rect" d="M6.5 5h11A2.5 2.5 0 0 1 20 7.5v9a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 16.5v-9A2.5 2.5 0 0 1 6.5 5z"/>
+    <path id="g-text" d="M5 7.5V5h14v2.5M12 5v14M9 19h6"/>
+    <path id="g-num" d="M12 3.5a8.5 8.5 0 1 1 0 17 8.5 8.5 0 0 1 0-17zM10.5 9.5L12.5 8v8.5"/>
+    <path id="g-eraser" d="M9 20h11M5.7 14.3l8.6-8.6a2 2 0 0 1 2.8 0l2.2 2.2a2 2 0 0 1 0 2.8L11 19H8.4zM9.5 10.5l5 5"/>
+    <path id="g-chev" d="M6.5 9.5L12 15l5.5-5.5"/>
+    <path id="g-undo" d="M9 14L4.5 9.5 9 5M4.5 9.5H14a5.5 5.5 0 0 1 0 11h-3"/>
+    <path id="g-redo" d="M15 14l4.5-4.5L15 5M19.5 9.5H10a5.5 5.5 0 0 0 0 11h3"/>
+    <path id="g-mic" d="M12 3.5a3 3 0 0 1 3 3V12a3 3 0 0 1-6 0V6.5a3 3 0 0 1 3-3zM5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v2.5"/>
+    <path id="g-check" d="M5 12.5l4.5 4.5L19 7.5"/>
+    <path id="g-close" d="M6.5 6.5l11 11M17.5 6.5l-11 11"/>
+    <path id="g-send" d="M4.5 12L20 4.5 16 20l-4-6.5zM12 13.5l8-9"/>
+    <path id="g-spark" d="M12 4v3M12 17v3M4 12h3M17 12h3M6.3 6.3l2.1 2.1M15.6 15.6l2.1 2.1M6.3 17.7l2.1-2.1M15.6 8.4l2.1-2.1"/>
+    <path id="g-bell" d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 1.5h-15zM10 20.5h4"/>
+    <path id="g-logo" d="M6 22v-8a8 8 0 0 1 8-8h8M42 6h8a8 8 0 0 1 8 8v8M58 42v8a8 8 0 0 1-8 8h-8M22 58h-8a8 8 0 0 1-8-8v-8M22 28v8M32 20v24M42 28v8"/>
+    <!-- The selected region, as it lands in the chat: the summary card with the red loop -->
+    <symbol id="shot" viewBox="0 0 440 322">
+      <rect width="440" height="322" fill="#F2F2F5"/>
+      <rect x="32.5" y="34.5" width="375" height="267" rx="14" fill="#fff" stroke="#E8E8EC"/>
+      <g font-family="Inter, 'Segoe UI', sans-serif" fill="#55555E" font-size="13.5">
+        <text x="56" y="71" font-size="16" font-weight="650" fill="#1D1D22">Підсумок</text>
+        <text x="56" y="110">Товари</text><text x="384" y="110" text-anchor="end" fill="#1D1D22">2 750 ₴</text>
+        <text x="56" y="142">Знижка</text><text x="384" y="142" text-anchor="end" fill="#1D1D22">0 ₴</text>
+        <text x="56" y="174">Доставка</text><text x="384" y="174" text-anchor="end" fill="#1D1D22">0 ₴</text>
+        <path d="M56 188.5H384" stroke="#E8E8EC"/>
+        <text x="56" y="222" font-size="15" font-weight="600" fill="#1D1D22">Разом</text>
+        <text x="384" y="223" text-anchor="end" font-size="20" font-weight="650" fill="#1D1D22">2 400 ₴</text>
+        <rect x="56.5" y="246.5" width="327" height="35" rx="9" fill="#fff" stroke="#D9D9E0"/>
+        <text x="220" y="268" text-anchor="middle" font-size="12.5" font-weight="600" fill="#3A3A42">Надіслати рахунок</text>
+      </g>
+      <path d="M290 212C292 193 322 186 352 189C388 192 412 203 410 219C408 240 374 248 342 246C308 244 282 236 284 217C285 205 302 197 322 196" fill="none" stroke="#EF4444" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+  </defs>
+</svg>
+
+<main>
+  <section class="track" id="top">
+
+    <!-- The sticky screen: a frozen, dimmed desktop, driven by scroll -->
+    <div class="stage" aria-hidden="true">
+      <div class="scene">
+        <div class="app">
+          <div class="side">
+            <div class="abrand"><span class="lg"><svg viewBox="0 0 24 24" class="ln-i"><path d="M4.5 7.5l7.5-4 7.5 4v9l-7.5 4-7.5-4zM4.5 7.5l7.5 4 7.5-4M12 11.5v9"/></svg></span>Орбіта</div>
+            <ul class="anav">
+              <li><svg viewBox="0 0 24 24" class="ln-i"><path d="M4.5 4.5h6v6h-6zM13.5 4.5h6v6h-6zM4.5 13.5h6v6h-6zM13.5 13.5h6v6h-6z"/></svg>Огляд</li>
+              <li class="on"><svg viewBox="0 0 24 24" class="ln-i"><path d="M5 7.5h14l-1 11H6zM9 7.5V6a3 3 0 0 1 6 0v1.5"/></svg>Замовлення</li>
+              <li><svg viewBox="0 0 24 24" class="ln-i"><path d="M4.5 7.5l7.5-4 7.5 4v9l-7.5 4-7.5-4zM4.5 7.5l7.5 4 7.5-4M12 11.5v9"/></svg>Товари</li>
+              <li><svg viewBox="0 0 24 24" class="ln-i"><path d="M12 11.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM5 19.5a7 7 0 0 1 14 0"/></svg>Клієнти</li>
+              <li><svg viewBox="0 0 24 24" class="ln-i"><path d="M4 19h16M6 15l4-5 4 3 4-7"/></svg>Аналітика</li>
+              <li class="sep"></li>
+              <li><svg viewBox="0 0 24 24" class="ln-i"><path d="M4 7h9M17 7h3M4 17h3M11 17h9M15 4.5v5M9 14.5v5"/></svg>Налаштування</li>
+            </ul>
+            <div class="me"><span class="av">ОК</span>Олена Коваль</div>
+          </div>
+          <div class="topb">
+            <div class="search"><svg viewBox="0 0 24 24" class="ln-i"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4"/></svg>Пошук<kbd>Ctrl K</kbd></div>
+            <svg class="bell ln-i" viewBox="0 0 24 24"><use href="#g-bell"/></svg>
+            <div class="tav">ОК</div>
+          </div>
+          <div class="crumbs">Замовлення&nbsp; / &nbsp;<b>№ 4821</b></div>
+          <div class="ptitle">Замовлення № 4821 <span class="st">Оплачено</span></div>
+          <div class="psub">10 жовтня 2026, 14:02 · Нова пошта, відділення № 12</div>
+          <div class="act ghost">Повернути кошти</div>
+          <div class="act dark">Відправити</div>
+
+          <div class="card" style="left:336px;top:184px;width:584px;height:316px">
+            <h3>Товари</h3>
+            <div class="tbl">
+              <div class="tr hd" style="top:0"><span class="c1">Товар</span><span class="c2">К-сть</span><span class="c3">Ціна</span><span class="c4">Сума</span></div>
+              <div class="tr" style="top:28px"><span class="c1">Навушники Pulse<small>Чорні · арт. PL-200</small></span><span class="c2">2</span><span class="c3">1 200 ₴</span><span class="c4">2 400 ₴</span></div>
+              <div class="tr" style="top:72px"><span class="c1">Чохол Pulse Case<small>Сірий · арт. PC-01</small></span><span class="c2">1</span><span class="c3">350 ₴</span><span class="c4">350 ₴</span></div>
+              <div class="tr" style="top:116px"><span class="c1">Доставка<small>Нова пошта</small></span><span class="c2">—</span><span class="c3">0 ₴</span><span class="c4">0 ₴</span></div>
+              <div class="tr ft" style="top:160px"><span class="c1">Разом за товари</span><span class="c4">2 750 ₴</span></div>
+            </div>
+          </div>
+          <div class="card sum" style="left:960px;top:184px;width:376px;height:268px">
+            <h3>Підсумок</h3>
+            <div class="r" style="top:62px"><span>Товари</span><b>2 750 ₴</b></div>
+            <div class="r" style="top:94px"><span>Знижка</span><b>0 ₴</b></div>
+            <div class="r" style="top:126px"><span>Доставка</span><b>0 ₴</b></div>
+            <div class="hr"></div>
+            <div class="tot"><span>Разом</span><b>2 400 ₴</b></div>
+            <div class="gb">Надіслати рахунок</div>
+          </div>
+          <div class="card cust" style="left:960px;top:476px;width:376px;height:212px">
+            <h3>Клієнт</h3>
+            <div class="who"><span class="av">ОК</span>Олена Коваль</div>
+            <div class="ln" style="top:116px"><span>Email</span><b>olena.koval@example.com</b></div>
+            <div class="ln" style="top:144px"><span>Телефон</span><b>+380 67 123 45 67</b></div>
+            <div class="ln" style="top:172px"><span>Місто</span><b>Київ</b></div>
+          </div>
+          <div class="card hist" style="left:336px;top:524px;width:584px;height:256px">
+            <h3>Історія</h3>
+            <div class="line"></div>
+            <div class="ev" style="top:56px"><i></i>Замовлення створено<span>14:02</span></div>
+            <div class="ev" style="top:100px"><i></i>Оплату отримано<span>14:05</span></div>
+            <div class="ev" style="top:144px"><i></i>Передано на склад<span>15:10</span></div>
+            <div class="ev" style="top:188px"><i class="o"></i>Очікує відправлення<span>—</span></div>
+          </div>
+        </div>
+
+        <svg class="ov" viewBox="0 0 1440 900">
+          <path class="dim" fill="#000" fill-opacity=".55" fill-rule="evenodd" d="M0 0H1440V900H0Z"/>
+          <g class="ink" fill="none" stroke="#EF4444" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0">
+            <path d="M1218 362C1220 343 1250 336 1280 339C1316 342 1340 353 1338 369C1336 390 1302 398 1270 396C1236 394 1210 386 1212 367C1213 355 1230 347 1250 346"/>
+          </g>
+          <rect class="frs" fill="none" stroke="#000" stroke-opacity=".4" stroke-width="3" width="0" height="0"/>
+          <rect class="fr" fill="none" stroke="#fff" stroke-width="1.25" width="0" height="0"/>
+        </svg>
+        <div class="size">0×0</div>
+      </div>
+
+      <div class="veil vo"></div>
+      <div class="ui">
+        <!-- The toolbar: the one object of the opening -->
+        <div class="tb glass">
+          <span class="b on"><svg class="i" viewBox="0 0 24 24"><use href="#g-region"/></svg></span>
+          <span class="b"><svg class="i" viewBox="0 0 24 24"><use href="#g-screen"/></svg></span>
+          <span class="b"><svg class="i" viewBox="0 0 24 24"><use href="#g-timer"/></svg></span>
+          <span class="dv"></span>
+          <span class="b w46"><svg class="i" viewBox="0 0 24 24"><use href="#g-pen"/></svg><svg class="i chev" viewBox="0 0 24 24"><use href="#g-chev"/></svg></span>
+          <span class="b w46"><span class="dot"></span><svg class="i chev" viewBox="0 0 24 24"><use href="#g-chev"/></svg></span>
+          <span class="b"><svg class="i" viewBox="0 0 24 24"><use href="#g-undo"/></svg></span>
+          <span class="b"><svg class="i" viewBox="0 0 24 24"><use href="#g-redo"/></svg></span>
+          <span class="dv"></span>
+          <span class="b mic"><span class="rec"><span class="ring"></span><span class="lvl"></span><span class="disc"></span></span><svg class="i" viewBox="0 0 24 24"><use href="#g-mic"/></svg></span>
+          <span class="b w16"><svg class="i chev" viewBox="0 0 24 24"><use href="#g-chev"/></svg></span>
+          <span class="fld"><span class="caret"></span><span class="ph">Говоріть або напишіть коментар</span><span class="txt"></span></span>
+          <span class="save"><span class="hl"></span><svg class="i" viewBox="0 0 24 24"><use href="#g-check"/></svg></span>
+          <span class="b"><svg class="i i16" viewBox="0 0 24 24"><use href="#g-close"/></svg></span>
+        </div>
+
+        <div class="pill glass"><span class="wave"><i></i><i></i><i></i><i></i><i></i></span>Говоріть… щоб зупинити — Пробіл або мікрофон</div>
+
+        <div class="toast glass">
+          <div class="row">
+            <div class="bdg"><svg class="i" viewBox="0 0 24 24"><use href="#g-check"/></svg></div>
+            <div class="tx">
+              <div class="tt">Скопійовано в буфер обміну</div>
+              <div class="msg">«Разом не збігається, має бути 2 750 ₴»</div>
+            </div>
+            <div class="x"><svg class="i" viewBox="0 0 24 24"><use href="#g-close"/></svg></div>
+          </div>
+          <div class="acts"><span class="chip fro">Копіювати</span><span class="chip wh">Галерея</span></div>
+          <div class="bar"></div>
+        </div>
+
+        <div class="chat">
+          <div class="chh"><span class="cav"><svg class="i" viewBox="0 0 24 24"><use href="#g-spark"/></svg></span><div><div class="chn">Асистент</div><div class="chs">Онлайн</div></div></div>
+          <div class="mout">
+            <svg viewBox="0 0 440 322"><use href="#shot"/></svg>
+            <pre class="mdl">[C:\AI_Screenshots\screenshot_20261010_143207_512.png]
+<b>**Comment:**</b> Разом не збігається, має бути 2 750 ₴</pre>
+            <small>14:32</small>
+          </div>
+          <div class="typing"><i></i><i></i><i></i></div>
+          <div class="comp">Напишіть повідомлення…<svg class="i" viewBox="0 0 24 24"><use href="#g-send"/></svg></div>
+        </div>
+
+        <!-- Captions: glass pills near the action -->
+        <div class="cap glass"><i></i>Alt + Shift + S. Виділіть потрібне.</div>
+        <div class="cap glass"><i></i>Обведіть, що не так.</div>
+        <div class="cap glass"><i></i>Утримуйте Пробіл і говоріть.</div>
+        <div class="cap glass"><i></i>Enter. PNG збережено, Markdown — у буфері.</div>
+        <div class="cap glass"><i></i>Вставте в чат, задачу чи ШІ.</div>
+
+        <div class="cur">
+          <svg class="cx" viewBox="0 0 24 24">
+            <path d="M12 2.5v7M12 14.5v7M2.5 12h7M14.5 12h7" stroke="#000" stroke-opacity=".55" stroke-width="3.2" stroke-linecap="round"/>
+            <path d="M12 2.5v7M12 14.5v7M2.5 12h7M14.5 12h7" stroke="#fff" stroke-width="1.3" stroke-linecap="round"/>
+          </svg>
+          <svg class="ca" viewBox="0 0 22 30"><path d="M2 2v22.5l5.6-5.3 3.6 8.3 3.6-1.6-3.6-8.1H19z" fill="#fff" stroke="#000" stroke-width="1.4" stroke-linejoin="round"/></svg>
+        </div>
+      </div>
+      <div class="veil ve"></div>
+    </div>
+
+    <!-- Opening view: the copy sits on the overlay -->
+    <header class="hero">
+      <nav class="nav wrap" aria-label="Головна навігація">
+        <a class="brand" href="#top" aria-label="ScreenVoicer">
+          <svg viewBox="0 0 64 64" fill="none" stroke="#FF8A4C" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#g-logo"/></svg>
+          <span aria-hidden="true">Screen<span class="wm-v">Voicer</span></span>
+        </a>
+        <a class="navlink" href="https://github.com/ArthurMospan/ScreenVoicer">GitHub</a>
+      </nav>
+      <div class="hero-in wrap">
+        <h1>Скриншот, який<br> пояснює себе сам.</h1>
+        <p class="sub">Виділіть, скажіть, збережіть. Знімок із&nbsp;коментарем&nbsp;— уже в&nbsp;буфері обміну.</p>
+        <div class="cta" data-cta>
+          <a class="btn btn-pri" data-os="win" href="https://github.com/ArthurMospan/ScreenVoicer/releases/latest/download/ScreenVoicer-Setup.exe">Завантажити для Windows</a>
+          <a class="btn btn-sec" data-os="mac" href="https://github.com/ArthurMospan/ScreenVoicer/releases/latest/download/ScreenVoicer-macOS.zip">Завантажити для Mac</a>
+        </div>
+        <p class="meta"><span>Безкоштовно<i aria-hidden="true">·</i>Windows 10/11</span><i class="mid" aria-hidden="true">·</i> <span>macOS 14+<i aria-hidden="true">·</i>Відкритий код</span></p>
+        <div class="hero-slot" aria-hidden="true"></div>
+        <div class="hero-obj" aria-hidden="true"></div>
+      </div>
+    </header>
+  </section>
+
+  <!-- The same five beats, in words -->
+  <ol class="sr steps" aria-label="Як це працює">
+    <li>Alt + Shift + S (на Mac ⌥⇧S) — екран завмирає. Виділіть потрібне.</li>
+    <li>Обведіть, що не так.</li>
+    <li>Утримуйте Пробіл і говоріть — текст з’явиться в полі коментаря.</li>
+    <li>Enter. PNG збережено, Markdown зі шляхом і коментарем — у буфері обміну.</li>
+    <li>Вставте в чат, задачу чи ШІ.</li>
+  </ol>
+
+  <!-- Stills with captions: phones and reduced motion -->
+  <section class="frames" aria-hidden="true">
+    <div class="wrap"><ol></ol></div>
+  </section>
+
+  <!-- Macro feature rows -->
+  <section class="feats" id="features">
+    <div class="wrap">
+      <ul>
+        <li class="feat">
+          <div class="ft"><h2>Говоріть — текст з’явиться сам.</h2><p>Утримуйте Пробіл і скажіть, що не так. Whisper розпізнає українську та англійську на вашому комп’ютері.</p></div>
+          <div class="panel" role="img" aria-label="Крупний план панелі: мікрофон червоний, сказане з’являється текстом у полі коментаря.">
+            <div class="fit" style="aspect-ratio:560/200">
+              <div class="mstage" id="fV" style="width:560px;height:200px" aria-hidden="true">
+                <div class="lite">
+                  <i style="left:24px;top:22px;width:512px;height:156px;background:#fff;border-radius:12px;box-shadow:inset 0 0 0 1px #E8E8EC"></i>
+                  <i style="left:48px;top:44px;width:150px;height:12px;background:#C9C9D2"></i>
+                  <i style="left:48px;top:70px;width:330px;height:9px;background:#E3E3E9"></i>
+                  <i style="left:48px;top:88px;width:280px;height:9px;background:#E3E3E9"></i>
+                  <i style="left:48px;top:122px;width:120px;height:32px;background:#1D1D22;border-radius:8px"></i>
+                  <i style="left:400px;top:44px;width:112px;height:112px;background:#F0F0F4;border-radius:10px"></i>
+                </div>
+                <div class="dimall"></div>
+                <span data-tb style="left:-223px;top:40px"></span>
+                <span data-pill style="left:84px;top:96px"></span>
+              </div>
+            </div>
+          </div>
+        </li>
+        <li class="feat">
+          <div class="ft"><h2>Покажіть, де саме.</h2><p>Перо, маркер, стрілка, рамка, текст і мітки 1-2-3 — прямо на знімку.</p></div>
+          <div class="panel" role="img" aria-label="Крупний план: на виділеній формі з’являються рамка, мітки 1 і 2, маркер, підпис і стрілка; активний інструмент підсвічується.">
+            <div class="fit" style="aspect-ratio:640/400">
+              <div class="mstage" id="fD" style="width:640px;height:400px" aria-hidden="true">
+                <div class="lite">
+                  <i style="left:0;top:0;width:640px;height:52px;border-radius:0;background:#fff;box-shadow:inset 0 -1px 0 #E9E9ED"></i>
+                  <i style="left:28px;top:18px;width:96px;height:16px;background:#C9C9D2"></i>
+                  <i style="left:400px;top:20px;width:56px;height:12px;background:#D9D9E0"></i>
+                  <i style="left:472px;top:20px;width:56px;height:12px;background:#D9D9E0"></i>
+                  <i style="left:544px;top:20px;width:56px;height:12px;background:#D9D9E0"></i>
+                  <div class="fcard">
+                    <div class="fh">Доставка</div>
+                    <div class="fl" style="top:58px">Місто</div>
+                    <div class="fi" style="top:78px;width:364px">Львів</div>
+                    <div class="fl" style="top:130px">Відділення</div>
+                    <div class="fi" style="top:150px;width:364px">Відділення № 12</div>
+                    <div class="fck" style="top:208px"><i></i>Дзвінок перед доставкою</div>
+                    <div class="fb" style="top:232px">Зберегти</div>
+                  </div>
+                </div>
+                <svg class="cover" width="640" height="400" viewBox="0 0 640 400"><path fill="rgba(0,0,0,.55)" fill-rule="evenodd" d="M0 0H640V400H0ZM40 76V388H600V76Z"/><rect x="40" y="76" width="560" height="312" fill="none" stroke="rgba(0,0,0,.4)" stroke-width="3"/><rect x="40" y="76" width="560" height="312" fill="none" stroke="#fff" stroke-width="1.25"/></svg>
+                <svg class="cover" width="640" height="400" viewBox="0 0 640 400" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                  <path id="d-hl" d="M80 309H80" stroke="#FACC15" stroke-opacity=".45" stroke-width="22" stroke-linecap="butt"/>
+                  <rect id="d-rect" x="72" y="234" width="0" height="0" rx="8" stroke="#EF4444" stroke-width="3.5"/>
+                  <path id="d-arw" d="" stroke="#EF4444" stroke-width="3.5"/>
+                  <text id="d-txt" x="300" y="348" fill="#EF4444" stroke="none" font-family="Inter, 'Segoe UI', sans-serif" font-size="17" font-weight="700"></text>
+                  <g id="d-m1" style="transform-origin:470px 261px"><circle cx="470" cy="261" r="13" fill="#EF4444"/><text x="470" y="266" text-anchor="middle" fill="#fff" stroke="none" font-family="Inter, 'Segoe UI', sans-serif" font-size="14" font-weight="700">1</text></g>
+                  <g id="d-m2" style="transform-origin:322px 309px"><circle cx="322" cy="309" r="13" fill="#EF4444"/><text x="322" y="314" text-anchor="middle" fill="#fff" stroke="none" font-family="Inter, 'Segoe UI', sans-serif" font-size="14" font-weight="700">2</text></g>
+                </svg>
+                <div class="flyout glass" id="d-fly"></div>
+              </div>
+            </div>
+          </div>
+        </li>
+        <li class="feat">
+          <div class="ft"><h2>Enter — і все в буфері.</h2><p>PNG на диску, а шлях і коментар — у Markdown. Вставте в чат, задачу чи ШІ.</p></div>
+          <div class="panel" role="img" aria-label="Крупний план: після Enter з’являється сповіщення «Скопійовано в буфер обміну», а в опис задачі вставляється Markdown зі шляхом до PNG і коментарем.">
+            <div class="fit" style="aspect-ratio:640/360">
+              <div class="mstage" id="fC" style="width:640px;height:360px" aria-hidden="true">
+                <div class="ed">
+                  <div class="edt"><i></i>Нова задача</div>
+                  <div class="el" style="top:54px">Назва</div>
+                  <div class="ei" style="top:74px;height:38px">Замовлення 4821: сума в підсумку</div>
+                  <div class="el" style="top:128px">Опис</div>
+                  <div class="ei" id="c-desc" style="top:148px;height:150px"></div>
+                  <pre id="c-pre">[C:\AI_Screenshots\screenshot_20261010_143207_512.png]
+<b>**Comment:**</b> Разом не збігається, має бути 2 750 ₴</pre>
+                  <i class="ecar" id="c-car"></i>
+                  <div class="eb">Створити</div>
+                </div>
+                <div class="keys" id="c-k1" style="left:420px;top:150px"><kbd>Enter</kbd></div>
+                <span data-toast style="right:20px;top:20px"></span>
+              </div>
+            </div>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="privacy">
+    <div class="wrap">
+      <h2 class="statement">Голос не покидає ваш комп’ютер. <span>Нічого не завантажується.</span></h2>
+      <p class="note">Whisper працює офлайн, українською та англійською. Без акаунта і&nbsp;без хмари.</p>
+      <p class="also">А ще: галерея з пошуком, таймер 3 / 5 / 10 с, автооновлення.</p>
+    </div>
+  </section>
+
+  <section class="final">
+    <div class="wrap">
+      <svg class="mark" viewBox="0 0 64 64" fill="none" stroke="#FF8A4C" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#g-logo"/></svg>
+      <h2>Screen<span class="wm-v">Voicer</span></h2>
+      <p class="sub">Перший знімок — Alt + Shift + S (на Mac ⌥⇧S).</p>
+      <div class="cta" data-cta>
+        <a class="btn btn-pri" data-os="win" href="https://github.com/ArthurMospan/ScreenVoicer/releases/latest/download/ScreenVoicer-Setup.exe">Завантажити для Windows</a>
+        <a class="btn btn-sec" data-os="mac" href="https://github.com/ArthurMospan/ScreenVoicer/releases/latest/download/ScreenVoicer-macOS.zip">Завантажити для Mac</a>
+      </div>
+      <p class="meta"><span>Безкоштовно<i aria-hidden="true">·</i>Windows 10/11</span><i class="mid" aria-hidden="true">·</i> <span>macOS 14+<i aria-hidden="true">·</i>Відкритий код</span></p>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap"><p>ScreenVoicer<i aria-hidden="true">·</i><a href="https://github.com/ArthurMospan/ScreenVoicer/blob/main/LICENSE">MIT</a><i aria-hidden="true">·</i><a href="https://github.com/ArthurMospan/ScreenVoicer">GitHub</a></p></div>
+</footer>
+
+<script>
+(() => {
+  'use strict';
+  const root = document.documentElement;
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+
+  /* ---- maths and cached style writes ---- */
+  const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+  const seg = (t, a, b) => clamp((t - a) / (b - a));
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const inOut = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  const out = t => 1 - Math.pow(1 - t, 3);
+  const pop = t => { const c = 1.4; return t <= 0 ? 0 : 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); };
+  const fade = (t, a, b, c, d) => seg(t, a, b) * (1 - seg(t, c, d));
+  const r2 = v => Math.round(v * 100) / 100;
+  const set = (el, k, v) => { const c = '_s' + k; if (el[c] !== v) { el[c] = v; el.style[k] = v; } };
+  const op = (el, v) => { v = r2(clamp(v)); set(el, 'opacity', String(v)); set(el, 'visibility', v > 0 ? 'visible' : 'hidden'); };
+  const tf = (el, v) => set(el, 'transform', v);
+  const at = (el, k, v) => { const c = '_a' + k; v = String(v); if (el[c] !== v) { el[c] = v; el.setAttribute(k, v); } };
+  const tx = (el, v) => { if (el._t !== v) { el._t = v; el.textContent = v; } };
+  const cl = (el, c, on) => { const k = '_c' + c; on = !!on; if (el[k] !== on) { el[k] = on; el.classList.toggle(c, on); } };
+  const trackAt = (keys, p) => {
+    if (p <= keys[0][0]) return keys[0][1];
+    for (let i = 1; i < keys.length; i++) {
+      if (p <= keys[i][0]) { const a = keys[i - 1], b = keys[i]; const t = inOut(seg(p, a[0], b[0])); return [lerp(a[1][0], b[1][0], t), lerp(a[1][1], b[1][1], t)]; }
+    }
+    return keys[keys.length - 1][1];
+  };
+
+  /* ---- Film constants ---- */
+  const W = 1440, H = 900;
+  const K = 7.6, PI = 1 / (K - 1);                 // track height in viewports; the copy has left at PI
+  const B = [[.165, .30], [.30, .42], [.42, .59], [.59, .71], [.71, .90]];   // select, draw, speak, save, paste
+  const FADE = [.915, .985];
+  const pB = (i, t) => B[i][0] + t * (B[i][1] - B[i][0]);
+  const SEL = { x: 928, y: 150, w: 440, h: 322 };
+  const CIRC = { x: 1275, y: 367 };
+  const COMMENT = 'Разом не збігається, має бути 2 750 ₴';
+  const STILL = [pB(0, .82), pB(1, .8), pB(2, .7), pB(3, .75), pB(4, .48)];
+  const FULL = { x: 0, y: 0, w: W, h: H };
+  const CROPS = [
+    { x: 700, y: 0, w: 690, h: 520 },
+    { x: 900, y: 126, w: 500, h: 380 },
+    { x: 600, y: 0, w: 560, h: 220 },
+    { x: 960, y: 560, w: 480, h: 340 },
+    { x: 880, y: 100, w: 560, h: 700 }
+  ];
+  const mqReduce = matchMedia('(prefers-reduced-motion: reduce)');
+  const params = new URLSearchParams(location.hash.slice(1));
+  const forced = params.has('p') && !isNaN(+params.get('p')) ? clamp(+params.get('p')) : null;
+
+  const track = $('.track'), stage = $('.stage'), hero = $('.hero'), heroSlot = $('.hero-slot'), heroObj = $('.hero-obj');
+  const frameList = $('.frames ol');
+  const stepText = $$('.steps li').map(li => li.textContent);
+
+  // Pristine copies before anything is touched
+  const boxTpl = (() => { const d = document.createElement('div'); d.className = 'box'; d.append($('.scene', stage).cloneNode(true), $('.ui', stage).cloneNode(true)); return d; })();
+  const tbTpl = $('.tb', stage).cloneNode(true);
+  const pillTpl = $('.pill', stage).cloneNode(true);
+  const toastTpl = $('.toast', stage).cloneNode(true);
+
+  function bind(box) {
+    const q = s => box.querySelector(s);
+    const S = {
+      box, scene: q('.scene'), ui: q('.ui'), ov: q('.ov'), dim: q('.dim'), fr: q('.fr'), frs: q('.frs'), size: q('.size'), ink: q('.ink'), pen: q('.ink path'),
+      tb: q('.tb'), mic: q('.mic'), rec: q('.rec'), ring: q('.ring'), txt: q('.txt'), ph: q('.ph'), caret: q('.caret'), save: q('.save'), hl: q('.hl'),
+      pill: q('.pill'), toast: q('.toast'), bar: q('.bar'), chat: q('.chat'), msg: q('.mout'), typing: q('.typing'), cur: q('.cur'), veil: q('.ve'), vo: q('.vo'), own: [q('.abrand'), q('.search'), q('.bell'), q('.tav')],
+      caps: [...box.querySelectorAll('.cap')], n: -1, e: -1, len: 420, tbw: 741, micX: 321, saveX: 682, capW: [], toastW: 376, toastH: 100, chatW: 470, chatH: 600,
+      p0: { x: 1218, y: 362 }, p1: { x: 1250, y: 346 }
+    };
+    return S;
+  }
+  function measure(S) {
+    try { S.len = S.pen.getTotalLength() || S.len; S.p0 = S.pen.getPointAtLength(0); S.p1 = S.pen.getPointAtLength(S.len); } catch (e) { /* not rendered yet */ }
+    S.pen.style.strokeDasharray = S.len + ' ' + S.len;
+    S.tbw = S.tb.offsetWidth || S.tbw;
+    if (S.mic.offsetWidth) { S.micX = S.mic.offsetLeft + 17; S.saveX = S.save.offsetLeft + 17; }
+    S.capW = S.caps.map(c => c.offsetWidth || 220);
+    S.toastW = S.toast.offsetWidth || S.toastW; S.toastH = S.toast.offsetHeight || S.toastH;
+    S.chatW = S.chat.offsetWidth || S.chatW; S.chatH = S.chat.offsetHeight || S.chatH;
+  }
+
+  /* ---- The film as a pure function of progress p; G describes the screen geometry ---- */
+  function state(S, G, p) {
+    const k = G.kui, ks = G.ks, ox = G.ox, oy = G.oy, vw = G.vw, vh = G.vh, k4 = k.toFixed(4);
+    const V = (x, y) => [ox + x * ks, oy + y * ks];
+    const t1 = seg(p, B[0][0], B[0][1]), t2 = seg(p, B[1][0], B[1][1]), t3 = seg(p, B[2][0], B[2][1]), t4 = seg(p, B[3][0], B[3][1]), t5 = seg(p, B[4][0], B[4][1]);
+
+    // The overlay lifts when the shot is saved
+    const ov = 1 - out(seg(t4, .3, .44));
+    op(S.ov, ov);
+
+    // Toolbar: from the hero slot to the top-centre of the screen
+    const ci = G.hero ? inOut(seg(p, 0, PI)) : 1;
+    const tk = G.hero ? lerp(G.hero.k, k, ci) : k;
+    const tyTop = G.hero ? lerp(G.hero.y - 23 * G.hero.k, 18 * k, ci) : 18 * k;
+    tf(S.tb, `translate(-50%, ${r2(tyTop - (1 - ov) * 8 * k)}px) scale(${tk.toFixed(4)})`);
+    op(S.tb, ov);
+
+    // 1. Select: drag a region open
+    const e = inOut(seg(t1, .14, .74));
+    if (e !== S.e) {
+      S.e = e;
+      const w = SEL.w * e, h = SEL.h * e, x1 = SEL.x + w, y1 = SEL.y + h;
+      at(S.dim, 'd', `M0 0H${W}V${H}H0Z` + (e > 0 ? `M${SEL.x} ${SEL.y}V${r2(y1)}H${r2(x1)}V${SEL.y}Z` : ''));
+      for (const r of [S.fr, S.frs]) { at(r, 'x', SEL.x); at(r, 'y', SEL.y); at(r, 'width', r2(w)); at(r, 'height', r2(h)); }
+      tx(S.size, Math.round(SEL.w * 2 * e) + '×' + Math.round(SEL.h * 2 * e));
+      tf(S.size, `translate(${SEL.x}px, ${SEL.y - 28}px)`);
+    }
+    const frv = e > .002 ? 1 : 0;
+    op(S.fr, frv); op(S.frs, frv);
+    op(S.size, clamp(e * 10) * ov);
+
+    // 2. Draw: a red loop around the wrong total
+    const draw = inOut(seg(t2, .2, .7));
+    at(S.pen, 'stroke-dashoffset', r2(S.len * (1 - draw)));
+    op(S.ink, draw > 0 ? 1 : 0);
+
+    // 3. Speak: the mic becomes a red disc, the words arrive in the field
+    const rec = seg(t3, .12, .17) * (1 - seg(t3, .86, .9));
+    op(S.rec, rec); tf(S.rec, `scale(${(.72 + .28 * out(seg(t3, .12, .2))).toFixed(3)})`);
+    set(S.ring, 'animationPlayState', rec > 0 ? 'running' : 'paused');
+    const pill = seg(t3, .15, .22) * (1 - seg(t3, .84, .9));
+    op(S.pill, pill); tf(S.pill, `translate(-50%, ${r2(72 * k - (1 - pill) * 6 * k)}px) scale(${k4})`);
+    const n = Math.round(COMMENT.length * seg(t3, .22, .78));
+    if (n !== S.n) { S.n = n; S.txt.textContent = COMMENT.slice(0, n); S.ph.style.opacity = n ? 0 : 1; S.caret.style.order = n ? 1 : 0; }
+    set(S.caret, 'visibility', p >= PI && p < pB(3, .3) ? 'visible' : 'hidden');
+
+    // 4. Save: the glass square is pressed, the toast arrives bottom-right
+    const bump = Math.sin(Math.PI * seg(t4, .14, .26));
+    tf(S.save, `scale(${(1 - .1 * bump).toFixed(3)})`); op(S.hl, bump);
+    const to = out(seg(t4, .46, .6));
+    op(S.toast, to * (1 - seg(t5, .5, .6))); tf(S.toast, `translateY(${r2((1 - to) * 16 * k)}px) scale(${k4})`);
+    tf(S.bar, `scaleX(${(1 - .9 * seg(p, pB(3, .6), pB(4, .5))).toFixed(4)})`);
+
+    // 5. Paste: a chat slides in; the image and the Markdown land in it
+    const ch = out(seg(t5, .04, .22));
+    op(S.chat, ch); tf(S.chat, `translate(${r2((1 - ch) * 56 * k)}px, -50%) scale(${k4})`);
+    const m = out(seg(t5, .32, .44));
+    op(S.msg, m); tf(S.msg, `scale(${(.97 + .03 * m).toFixed(3)})`);
+    const typ = seg(t5, .64, .72);
+    op(S.typing, typ); cl(S.typing, 'go', typ > 0);
+
+    // Cursor: drags, draws, clicks the mic, presses the square
+    const tbx = vw / 2 - S.tbw * k / 2, tby = 18 * k + 23 * k + 8 * k;
+    const mic = [tbx + (S.micX + 6) * k, tby], sv = [tbx + (S.saveX + 6) * k, tby];
+    const keys = [[pB(0, .14), V(SEL.x, SEL.y)], [pB(0, .74), V(SEL.x + SEL.w, SEL.y + SEL.h)], [pB(1, .18), V(S.p0.x, S.p0.y)], [pB(1, .7), V(S.p1.x, S.p1.y)],
+      [pB(2, .1), mic], [pB(2, .88), mic], [pB(3, .12), sv], [1, sv]];
+    let cx, cy;
+    if (p >= pB(1, .18) && p <= pB(1, .7)) { let pt; try { pt = S.pen.getPointAtLength(S.len * draw); } catch (err) { pt = S.p0; } [cx, cy] = V(pt.x, pt.y); }
+    else [cx, cy] = trackAt(keys, p);
+    const co = seg(p, pB(0, .04), pB(0, .12)) * (1 - seg(p, pB(3, .3), pB(3, .4)));
+    const cross = p < pB(1, .78), hot = cross ? 12 : 2;
+    cl(S.cur, 'arrow', !cross);
+    op(S.cur, co); tf(S.cur, `translate(${r2(cx - hot * k)}px, ${r2(cy - hot * k)}px) scale(${k4})`);
+
+    // Captions: glass pills beside the action
+    const capA = [
+      seg(t1, 0, .1) * (1 - seg(t1, .9, 1)),
+      seg(t2, 0, .1) * (1 - seg(t2, .9, 1)),
+      seg(t3, .16, .24) * (1 - seg(t3, .9, .97)),
+      seg(t4, .5, .62) * (1 - seg(t5, .45, .55)),
+      seg(t5, .3, .4) * (1 - seg(p, FADE[0], FADE[0] + .03))
+    ];
+    // One calm place for every caption: bottom centre, in the clear band under the app's cards,
+    // kept left of the toast and the chat when they are on screen
+    const capY = vh - 26 * k - 32 * k;
+    const lim = [vw, vw, vw, vw - 24 - S.toastW * k - 20, vw - 32 - S.chatW * k - 24];
+    S.caps.forEach((c, i) => {
+      const a = capA[i], w = (S.capW[i] || 220) * k;
+      const x = Math.max(24, Math.min(vw / 2 - w / 2, lim[i] - w));
+      op(c, a);
+      tf(c, `translate(${r2(x)}px, ${r2(capY + (1 - a) * 6 * k)}px) scale(${k4})`);
+    });
+
+    // Veil: black at the end of the film
+    if (S.veil) op(S.veil, seg(p, FADE[0], FADE[1]));
+  }
+
+  /* ---- Motion mode: the sticky screen ---- */
+  let mode = '', vw = 0, vh = 0, range = 1, G = null, S0 = null;
+  let target = 0, cur = 0, raf = 0, last = 0;
+
+  function layoutMotion() {
+    if (!S0) S0 = bind(stage);
+    measure(S0);
+    const ks = Math.max(vw / W, vh / H);
+    const kui = Math.min(ks, vh / H, (vw - 48) / S0.tbw);
+    const kh = Math.min(1.12, (vw - 64) / S0.tbw);
+    heroSlot.style.height = (46 * kh).toFixed(1) + 'px';
+    const yh = heroSlot.offsetTop + heroSlot.offsetHeight / 2;
+    range = Math.max(1, track.offsetHeight - vh);
+    G = { ks, ox: (vw - W * ks) / 2, oy: (vh - H * ks) / 2, kui, vw, vh, hero: { y: yh, k: kh } };
+    tf(S0.scene, `translate(${r2(G.ox)}px, ${r2(G.oy)}px) scale(${ks.toFixed(4)})`);
+    S0.scene.style.opacity = 1; S0.ui.style.opacity = 1;
+  }
+  function drawMotion(p) {
+    state(S0, G, p);
+    // The opening reads like the real overlay: the app sits deep under the copy (≈ .88 in all),
+    // and the app's own brand, search and avatar step aside while our nav is on screen
+    op(S0.vo, .74 * (1 - seg(p, PI * .4, B[0][0])));
+    const own = seg(p, PI * .5, PI * 1.1);
+    S0.own.forEach(el => op(el, own));
+    const hf = 1 - seg(p, PI * .2, PI * .8);
+    set(hero, 'opacity', hf.toFixed(3));
+    set(hero, 'visibility', hf > 0 ? 'visible' : 'hidden');
+    if (forced !== null) hero.style.transform = `translateY(${-Math.min(p * range, vh * 1.2)}px)`;
+  }
+  const readP = () => clamp(-track.getBoundingClientRect().top / range);
+  function tick(now) {
+    raf = 0;
+    const dt = last ? Math.min(64, now - last) : 16;
+    last = now;
+    cur += (target - cur) * (1 - Math.exp(-dt / 110));
+    if (Math.abs(target - cur) < .0001) cur = target;
+    drawMotion(cur);
+    if (cur !== target) raf = requestAnimationFrame(tick); else last = 0;
+  }
+  function onScroll() {
+    if (mode !== 'motion' || forced !== null) return;
+    target = readP();
+    if (!raf) raf = requestAnimationFrame(tick);
+  }
+
+  /* ---- Static mode: the toolbar under the copy, then five stills ---- */
+  let frames = null, heroTb = null;
+  function buildStatic() {
+    if (frames) return;
+    heroTb = tbTpl.cloneNode(true);
+    heroObj.appendChild(heroTb);
+    frames = STILL.map((pS, i) => {
+      const li = document.createElement('li'), fig = document.createElement('figure'), frame = document.createElement('div');
+      frame.className = 'frame';
+      const box = boxTpl.cloneNode(true);
+      frame.appendChild(box);
+      const cap = document.createElement('figcaption');
+      const num = document.createElement('span'); num.className = 'num'; num.textContent = String(i + 1);
+      cap.append(num, document.createTextNode(stepText[i]));
+      fig.append(frame, cap); li.appendChild(fig); frameList.appendChild(li);
+      const S = bind(box); measure(S);
+      const g = { ks: 1, ox: 0, oy: 0, kui: 1, vw: W, vh: H, hero: null };
+      state(S, g, pS);
+      S.scene.style.opacity = 1; S.ui.style.opacity = 1;
+      return { frame, box, S, g, i, p: pS };
+    });
+    // With motion allowed, each still plays its beat once as it comes into view
+    if (!mqReduce.matches && 'IntersectionObserver' in window) {
+      const play = fr => {
+        const p0 = B[fr.i][0], dur = 2800;
+        let t0 = 0;
+        const step = now => {
+          t0 = t0 || now;
+          const t = clamp((now - t0) / dur);
+          state(fr.S, fr.g, lerp(p0, fr.p, inOut(t) * .7 + t * .3));
+          if (t < 1) requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+      };
+      const io = new IntersectionObserver(entries => {
+        for (const en of entries) {
+          if (!en.isIntersecting) continue;
+          io.unobserve(en.target);
+          play(frames.find(fr => fr.frame === en.target));
+        }
+      }, { threshold: .5 });
+      for (const fr of frames) { state(fr.S, fr.g, B[fr.i][0]); io.observe(fr.frame); }
+    }
+  }
+  function layoutStatic() {
+    const gut = parseFloat(getComputedStyle(root).getPropertyValue('--gut')) || 16;
+    const Wd = heroObj.clientWidth, tbw = heroTb.offsetWidth || 741;
+    let k, tx;
+    if (Wd < 700) { k = Math.min(.86, (Wd - gut) / (tbw - 268)); tx = Wd - gut - tbw * k; }     // a macro of the right half
+    else { k = Math.min(1.1, (Wd - 2 * gut) / tbw); tx = (Wd - tbw * k) / 2; }
+    heroObj.style.height = (46 * k).toFixed(1) + 'px';
+    heroTb.style.transform = `translate(${tx.toFixed(1)}px, 0) scale(${k.toFixed(4)})`;
+    for (const fr of frames) {
+      const fw = fr.frame.clientWidth, box = fw >= 860 ? FULL : CROPS[fr.i], kk = fw / box.w;
+      fr.frame.style.height = (box.h * kk).toFixed(1) + 'px';
+      fr.box.style.transform = `translate(${r2(-box.x * kk)}px, ${r2(-box.y * kk)}px) scale(${kk.toFixed(4)})`;
+      measure(fr.S); state(fr.S, fr.g, fr.S._lastP === undefined ? fr.p : fr.S._lastP);
+    }
+  }
+
+  /* ---- Mode switching and layout ---- */
+  function pickMode() {
+    const w = root.clientWidth, h = innerHeight;
+    const still = params.has('static') || mqReduce.matches;
+    return (!still && w >= 700 && h >= 520 && h <= 1500 && h <= w * 1.15) ? 'motion' : 'static';
+  }
+  function layout() {
+    vw = root.clientWidth; vh = innerHeight;
+    root.style.setProperty('--vh', vh + 'px');
+    const m = pickMode();
+    if (m !== mode) { mode = m; root.dataset.mode = m; hero.style.transform = ''; hero.style.opacity = ''; hero.style.visibility = ''; }
+    if (mode === 'motion') {
+      layoutMotion();
+      if (forced !== null) { cur = target = forced; } else { cur = target = readP(); }
+      drawMotion(cur);
+    } else {
+      buildStatic();
+      layoutStatic();
+    }
+  }
+  let rz = 0;
+  addEventListener('resize', () => { cancelAnimationFrame(rz); rz = requestAnimationFrame(layout); });
+  addEventListener('scroll', onScroll, { passive: true });
+  mqReduce.addEventListener && mqReduce.addEventListener('change', layout);
+  layout();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(layout);
+
+  // Pause the film's own loops when it is off screen
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(es => es.forEach(en => stage.classList.toggle('off', !en.isIntersecting)), { threshold: 0 }).observe(track);
+  }
+
+  /* ---- Macro feature rows: short loops that run only in view ---- */
+  const scenes = [];
+  const smallMQ = matchMedia('(max-width: 699px)');
+  function scene(id, dur, still, setup) {
+    const el = document.getElementById(id);
+    if (!el) return null;
+    const s = { id, el, wrap: el.parentElement, dur, still, t: 0, visible: false, frozen: null };
+    setup(s);
+    scenes.push(s);
+    return s;
+  }
+  const place = (s, v) => { const kk = s.wrap.clientWidth / v.w; tf(s.el, `translate(${r2(-v.x * kk)}px, ${r2(-v.y * kk)}px) scale(${kk.toFixed(5)})`); };
+  const mount = (ph, tpl, cls) => { const n = tpl.cloneNode(true); n.classList.add(cls); n.style.cssText = ph.style.cssText; ph.replaceWith(n); return n; };
+
+  // Toolbar helpers shared by the rows
+  function tbCtl(el, words) {
+    const o = { el, mic: $('.mic', el), rec: $('.rec', el), ring: $('.ring', el), txt: $('.txt', el), ph: $('.ph', el), caret: $('.caret', el), save: $('.save', el), hl: $('.hl', el), n: -1 };
+    o.text = n => { if (n !== o.n) { o.n = n; o.txt.textContent = words.slice(0, n); o.ph.style.opacity = n ? 0 : 1; o.caret.style.order = n ? 1 : 0; } };
+    o.record = r => { op(o.rec, r); tf(o.rec, `scale(${(.72 + .28 * out(r)).toFixed(3)})`); set(o.ring, 'animationPlayState', r > 0 ? 'running' : 'paused'); };
+    return o;
+  }
+
+  // 1. Voice, 9 s
+  scene('fV', 9, 4.2, s => {
+    const tb = tbCtl(mount($('[data-tb]', s.el), tbTpl, 'mtb'), 'Ціна не оновлюється після знижки');
+    const pl = mount($('[data-pill]', s.el), pillTpl, 'mpill');
+    const words = 'Ціна не оновлюється після знижки';
+    s.render = t => {
+      place(s, smallMQ.matches ? { x: 60, y: 14, w: 470, h: 168 } : { x: 0, y: 0, w: 560, h: 200 });
+      tb.record(fade(t, 1.0, 1.1, 5.6, 5.7));
+      const pv = fade(t, 1.1, 1.4, 5.6, 5.9);
+      op(pl, pv); tf(pl, `translateY(${r2((1 - pv) * -5)}px)`);
+      const n = t < 8.2 ? Math.round(words.length * seg(t, 1.6, 5.0)) : 0;
+      tb.text(n);
+      op(tb.txt, 1 - seg(t, 8.0, 8.4));
+      set(tb.caret, 'visibility', t > .4 && t < 8.6 ? 'visible' : 'hidden');
+    };
+  });
+
+  // 2. Marks, 10.5 s
+  scene('fD', 10.5, 7.8, s => {
+    const g = id => document.getElementById(id);
+    const TOOLS = ['pen', 'hl', 'arrow', 'rect', 'text', 'num', 'eraser'];
+    const fly = g('d-fly');
+    fly.innerHTML = TOOLS.map(n => `<span class="b" data-t="${n}"><svg class="i" viewBox="0 0 24 24"><use href="#g-${n}"/></svg></span>`).join('');
+    const btn = {}; $$('[data-t]', fly).forEach(b => { btn[b.dataset.t] = b; });
+    const on = n => TOOLS.forEach(t => cl(btn[t], 'on', t === n));
+    const rect = g('d-rect'), hl = g('d-hl'), arw = g('d-arw'), txt = g('d-txt'), m1 = g('d-m1'), m2 = g('d-m2');
+    const LABEL = 'кнопка неактивна', R = [72, 234, 452, 288], A = [292, 342, 212, 342];
+    s.render = t => {
+      place(s, { x: 0, y: 0, w: 640, h: 400 });
+      on(t < .5 ? 'pen' : t < 2.0 ? 'rect' : t < 2.9 ? 'num' : t < 4.3 ? 'hl' : t < 5.1 ? 'num' : t < 6.7 ? 'text' : t < 9.4 ? 'arrow' : 'pen');
+      const o = 1 - seg(t, 9.4, 9.9);
+      const rp = inOut(seg(t, .7, 1.7));
+      at(rect, 'width', r2((R[2] - R[0]) * rp)); at(rect, 'height', r2((R[3] - R[1]) * rp)); op(rect, t >= .7 ? o : 0);
+      const a1 = seg(t, 2.3, 2.6); op(m1, a1 > 0 ? o : 0); tf(m1, `scale(${r2(pop(a1))})`);
+      at(hl, 'd', `M80 309H${r2(lerp(80, 300, inOut(seg(t, 3.1, 4.0))))}`); op(hl, t >= 3.1 ? o : 0);
+      const a2 = seg(t, 4.5, 4.8); op(m2, a2 > 0 ? o : 0); tf(m2, `scale(${r2(pop(a2))})`);
+      tx(txt, LABEL.slice(0, Math.floor(LABEL.length * seg(t, 5.4, 6.4)))); op(txt, o);
+      const ap = inOut(seg(t, 6.9, 7.5));
+      if (t >= 6.9) {
+        const ex = lerp(A[0], A[2], ap), ey = lerp(A[1], A[3], ap), ang = Math.atan2(ey - A[1], ex - A[0]), L = 12 * clamp(ap * 4);
+        at(arw, 'd', `M${A[0]} ${A[1]}L${r2(ex)} ${r2(ey)}M${r2(ex)} ${r2(ey)}L${r2(ex - L * Math.cos(ang - .5))} ${r2(ey - L * Math.sin(ang - .5))}M${r2(ex)} ${r2(ey)}L${r2(ex - L * Math.cos(ang + .5))} ${r2(ey - L * Math.sin(ang + .5))}`);
+      } else at(arw, 'd', '');
+      op(arw, o);
+    };
+  });
+
+  // 3. Clipboard, 9 s
+  scene('fC', 9, 3.6, s => {
+    const g = id => document.getElementById(id);
+    const toast = mount($('[data-toast]', s.el), toastTpl, 'mtoast');
+    toast.style.transformOrigin = '100% 0';
+    const bar = $('.bar', toast), pre = g('c-pre'), car = g('c-car'), desc = g('c-desc'), k1 = g('c-k1'), kb = $('kbd', k1);
+    s.render = t => {
+      place(s, { x: 0, y: 0, w: 640, h: 360 });
+      const kv = fade(t, .1, .35, .9, 1.15);
+      op(k1, kv); tf(k1, `translateX(-50%) translateY(${r2((1 - out(seg(t, .1, .35))) * 8)}px)`); cl(kb, 'down', t >= .45 && t < .9);
+      const tv = fade(t, .6, 1.0, 6.4, 6.8);
+      op(toast, tv); tf(toast, `translateY(${r2((1 - out(seg(t, .6, 1.0))) * -12)}px)`);
+      tf(bar, `scaleX(${r2(1 - seg(t, 1.0, 6.5))})`);
+      const focus = t >= 1.6 && t < 8.7;
+      cl(desc, 'focus', focus);
+      op(car, focus && t < 2.8 && (t - 1.6) % 1.1 < .6 ? 1 : 0);
+      op(pre, fade(t, 2.8, 3.05, 8.3, 8.7));
+    };
+  });
+
+  const reduced = () => mqReduce.matches;
+  const frameAt = s => (s.frozen !== null ? s.frozen : reduced() ? s.still : s.t);
+  const draw = s => s.render(frameAt(s));
+  for (const [key, v] of params) { const s = scenes.find(x => x.id === key); if (s && v !== '' && !isNaN(+v)) s.frozen = +v; }
+  let mraf = 0, mlast = 0;
+  const loop = now => {
+    mraf = 0;
+    const dt = mlast ? Math.min(.05, (now - mlast) / 1000) : 0;
+    mlast = now;
+    let any = false;
+    for (const s of scenes) {
+      if (s.frozen !== null || reduced() || !s.visible) continue;
+      s.t = (s.t + dt) % s.dur;
+      draw(s);
+      any = true;
+    }
+    if (any && !document.hidden) mraf = requestAnimationFrame(loop); else mlast = 0;
+  };
+  const kick = () => { if (!mraf && !reduced() && !document.hidden) { mlast = 0; mraf = requestAnimationFrame(loop); } };
+  if ('IntersectionObserver' in window) {
+    const vis = new IntersectionObserver(entries => {
+      for (const en of entries) { const s = scenes.find(x => x.wrap === en.target); if (s) { s.visible = en.isIntersecting; if (s.visible && !s.seen) { s.seen = true; s.t = 0; } } }
+      kick();
+    }, { threshold: .2 });
+    scenes.forEach(s => vis.observe(s.wrap));
+  } else { scenes.forEach(s => { s.visible = true; }); kick(); }
+  document.addEventListener('visibilitychange', kick);
+  mqReduce.addEventListener && mqReduce.addEventListener('change', () => { scenes.forEach(draw); kick(); });
+  const ro = new ResizeObserver(() => scenes.forEach(draw));
+  scenes.forEach(s => ro.observe(s.wrap));
+  smallMQ.addEventListener && smallMQ.addEventListener('change', () => scenes.forEach(draw));
+  scenes.forEach(draw);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => scenes.forEach(draw));
+
+  /* ---- The visitor's platform gets the primary button ---- */
+  const ua = navigator.userAgent || '', plat = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '';
+  const isMac = /mac/i.test(plat) && !/iphone|ipad|ipod/i.test(ua) && !(navigator.maxTouchPoints > 1);
+  if (isMac || params.has('mac')) {
+    $$('[data-cta]').forEach(c => {
+      const win = $('[data-os="win"]', c), mac = $('[data-os="mac"]', c);
+      win.classList.replace('btn-pri', 'btn-sec'); mac.classList.replace('btn-sec', 'btn-pri');
+      c.insertBefore(mac, win);
+    });
+  }
+
+  /* ---- #go=<id>: jump to a section (for screenshots) ---- */
+  if (params.has('go')) { const el = document.getElementById(params.get('go')); if (el) requestAnimationFrame(() => el.scrollIntoView()); }
+
+  /* ---- #dbg: report horizontal overflow ---- */
+  if (params.has('dbg')) {
+    const o = document.createElement('div');
+    o.style.cssText = 'position:fixed;z-index:99;left:8px;bottom:8px;padding:6px 10px;border-radius:8px;background:#000;color:#0f0;font:12px/1.3 monospace';
+    document.body.appendChild(o);
+    const upd = () => { o.textContent = `vw ${innerWidth} · doc ${root.scrollWidth} · body ${document.body.scrollWidth}` + (root.scrollWidth > innerWidth ? ' OVERFLOW' : ' ok'); };
+    upd(); setTimeout(upd, 1500);
+  }
+})();
+</script>
+</body>
+</html>
