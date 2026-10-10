@@ -1,0 +1,1402 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ScreenVoicer — скриншот із голосовим коментарем</title>
+<meta name="description" content="Виділіть частину екрана, скажіть, що не так, і вставте знімок із коментарем у чат чи задачу. Голос розпізнається локально. Безкоштовно для Windows.">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#050505">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' fill='none' stroke='%23ff8a4c' stroke-width='7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 22v-8a8 8 0 0 1 8-8h8M42 6h8a8 8 0 0 1 8 8v8M58 42v8a8 8 0 0 1-8 8h-8M22 58h-8a8 8 0 0 1-8-8v-8M22 28v8M32 20v24M42 28v8'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap" rel="stylesheet">
+<script>
+  // Pick the intro layout before the first paint: the scroll story, or stacked frames (phones, reduced motion).
+  (function () {
+    var d = document.documentElement, w = d.clientWidth || innerWidth, h = innerHeight;
+    var still = /static/.test(location.hash) || matchMedia('(prefers-reduced-motion: reduce)').matches;
+    d.dataset.mode = (!still && w >= 700 && h >= 520 && h <= 1500 && h <= w * 1.15) ? 'motion' : 'static';
+    d.style.setProperty('--vh', h + 'px');
+    if (/dbg/.test(location.hash)) addEventListener('error', function (e) {
+      var p = document.createElement('pre');
+      p.style.cssText = 'position:fixed;left:8px;top:8px;z-index:99;max-width:90vw;padding:8px 10px;background:#7f1d1d;color:#fff;font:12px/1.4 monospace;white-space:pre-wrap';
+      p.textContent = e.message + ' @ ' + e.lineno + ':' + e.colno;
+      document.body.appendChild(p);
+    });
+  })();
+</script>
+<style>
+  :root {
+    --bg: #050505;
+    --fg: #F5F5F7;
+    --fg2: #A1A1A6;
+    --fg3: #86868B;
+    --accent: #FF8A4C;
+    --glass: rgba(32, 32, 40, .65);
+    --edge: rgba(255, 255, 255, .18);
+    --gut: 32px;
+    --vh: 100vh;
+    --ease: cubic-bezier(.22, .61, .36, 1);
+    --mono: ui-monospace, "Cascadia Mono", "SF Mono", Consolas, monospace;
+  }
+  @media (max-width: 699px) { :root { --gut: 16px; } }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background: var(--bg); -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    font-optical-sizing: auto;
+    font-size: 17px;
+    line-height: 1.47;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: clip;
+  }
+  a { color: inherit; }
+  :focus { outline: none; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 6px; }
+  .wrap { width: 100%; max-width: 1244px; margin: 0 auto; padding: 0 var(--gut); }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+  /* ---------- Navigation ---------- */
+  .nav { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+  .brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
+  .brand svg { width: 22px; height: 22px; }
+  .wm-v { color: var(--accent); }
+  .navlink { font-size: 13px; color: var(--fg2); text-decoration: none; transition: color .3s var(--ease); }
+  .navlink:hover { color: var(--fg); }
+
+  /* ---------- Hero ---------- */
+  .hero-in { text-align: center; padding-top: clamp(56px, 12.5vh, 150px); }
+  h1 {
+    font-size: clamp(36px, min(6.3vw, 10vh), 88px);
+    line-height: 1.02;
+    letter-spacing: -.024em;
+    font-weight: 640;
+    text-wrap: balance;
+  }
+  .sub {
+    margin: clamp(18px, 2.6vh, 26px) auto 0;
+    max-width: 40em;
+    font-size: clamp(17px, 1.5vw, 21px);
+    line-height: 1.42;
+    letter-spacing: -.012em;
+    color: var(--fg2);
+    text-wrap: balance;
+  }
+  .cta { display: flex; justify-content: center; gap: 12px; margin-top: clamp(26px, 4vh, 38px); }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+    height: 48px; padding: 0 24px; border-radius: 999px;
+    font: inherit; font-size: 15.5px; font-weight: 500; letter-spacing: -.01em; line-height: 1;
+    text-decoration: none; white-space: nowrap; cursor: pointer; border: 0; background: none; color: var(--fg);
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color .35s var(--ease), box-shadow .35s var(--ease), color .35s var(--ease), transform .35s var(--ease);
+  }
+  .btn-pri { background: var(--fg); color: #000; }
+  .btn-pri:hover { background: #fff; }
+  .btn-pri:active { transform: scale(.98); }
+  .btn-sec { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .24); }
+  .btn-sec:hover { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .4); }
+  .meta { margin-top: 18px; font-size: 13px; letter-spacing: -.003em; color: var(--fg3); }
+  .meta span { white-space: nowrap; }
+  .meta i { font-style: normal; margin: 0 .45em; color: #55555A; }
+  .meta .mid { margin-right: .2em; }
+  .hero-slot { margin-top: clamp(52px, 13vh, 140px); }
+  .hero-obj { display: none; position: relative; overflow: hidden; margin: clamp(56px, 10vh, 104px) calc(-1 * var(--gut)) 0; }
+  .hero-obj .tb { left: 0; top: 0; transform-origin: 0 0; }
+
+  /* ---------- Intro: sticky stage (motion) ---------- */
+  .track { position: relative; }
+  .stage { display: none; }
+  [data-mode="motion"] .track { height: calc(var(--vh) * 4.4); }
+  [data-mode="motion"] .hero { position: absolute; left: 0; right: 0; top: 0; height: var(--vh); z-index: 2; }
+  [data-mode="motion"] .stage { display: block; position: sticky; top: 0; height: var(--vh); overflow: hidden; }
+  .stage .scene { opacity: 0; }
+  [data-mode="static"] .hero-slot { display: none; }
+  [data-mode="static"] .hero-obj { display: block; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .nav, .hero-in > h1, .hero-in > .sub, .hero-in > .cta, .hero-in > .meta, .hero-obj { animation: rise 1.2s var(--ease) both; }
+    .hero-in > h1 { animation-delay: .06s; }
+    .hero-in > .sub { animation-delay: .16s; }
+    .hero-in > .cta { animation-delay: .26s; }
+    .hero-in > .meta { animation-delay: .32s; }
+    .hero-obj { animation-delay: .5s; }
+    [data-mode="motion"] .stage { animation: appear 1.6s .5s var(--ease) both; }
+    .instant .nav, .instant .hero-in > *, .instant .hero-obj, .instant .stage { animation: none; }
+  }
+  @keyframes rise { from { opacity: 0; transform: translateY(14px); } }
+  @keyframes appear { from { opacity: 0; } }
+
+  .caps { position: absolute; left: 0; right: 0; top: 0; padding: 0 var(--gut); text-align: center; }
+  .ticks { display: flex; justify-content: center; gap: 6px; height: 2px; margin-bottom: 26px; opacity: 0; }
+  .ticks i { display: block; width: 28px; height: 2px; border-radius: 1px; background: rgba(255, 255, 255, .16); overflow: hidden; }
+  .ticks b { display: block; height: 100%; background: var(--fg); transform-origin: 0 50%; transform: scaleX(0); }
+  .caplist { position: relative; list-style: none; max-width: 940px; margin: 0 auto; }
+  .cap { position: absolute; left: 0; right: 0; top: 0; opacity: 0; }
+  .cap p, .frames figcaption p {
+    font-size: clamp(19px, 1.6vw, 23px); line-height: 1.32; letter-spacing: -.016em; font-weight: 600;
+    color: var(--fg3); text-wrap: balance;
+  }
+  .cap b, .frames figcaption b { color: var(--fg); font-weight: 600; }
+  .md {
+    display: inline-block; margin-top: 16px; padding: 10px 14px; border-radius: 10px;
+    background: #111113; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .07);
+    text-align: left; white-space: pre; font: 12.5px/1.6 var(--mono);
+    color: var(--fg3); max-width: 100%; overflow: hidden; text-overflow: ellipsis;
+  }
+  .md em { font-style: normal; color: #D2D2D7; }
+
+  /* ---------- Intro scene (design size 1200 x 750; everything inside is in scene px) ---------- */
+  .scene {
+    position: absolute; left: 0; top: 0; width: 1200px; height: 750px; transform-origin: 0 0;
+    font-size: 13px; line-height: 1.35; letter-spacing: -.003em; color: #1D1D22; text-align: left;
+    font-optical-sizing: none; font-variation-settings: "opsz" 14;
+  }
+  .screen { position: absolute; inset: 0; border-radius: 18px; overflow: hidden; background: #F5F5F7; }
+  .app { position: absolute; inset: 0; }
+  .app svg { display: block; }
+  .ln-i { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+
+  .side { position: absolute; left: 0; top: 0; bottom: 0; width: 216px; background: #FBFBFC; border-right: 1px solid #E7E7EB; padding: 20px 14px; }
+  .abrand { display: flex; align-items: center; gap: 10px; height: 28px; padding: 0 8px; font-size: 15px; font-weight: 650; letter-spacing: -.015em; }
+  .abrand .lg { width: 24px; height: 24px; border-radius: 7px; background: #1D1D22; color: #fff; display: grid; place-items: center; }
+  .abrand .lg svg { width: 16px; height: 16px; }
+  .anav { list-style: none; margin-top: 30px; display: grid; gap: 2px; }
+  .anav li { display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 10px; border-radius: 9px; color: #55555E; font-size: 13.5px; font-weight: 500; }
+  .anav li.on { background: #ECECF0; color: #1D1D22; font-weight: 600; }
+  .anav svg { width: 16px; height: 16px; color: #8E8E96; }
+  .anav li.on svg { color: #1D1D22; }
+  .anav .sep { height: 1px; background: #ECECEF; margin: 12px 10px; padding: 0; }
+  .me { position: absolute; left: 22px; bottom: 20px; display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 500; color: #3A3A42; }
+  .av { width: 28px; height: 28px; border-radius: 50%; background: #E4E4E9; display: grid; place-items: center; font-size: 10.5px; font-weight: 650; color: #55555E; }
+
+  .topb { position: absolute; left: 216px; right: 0; top: 0; height: 64px; border-bottom: 1px solid #E9E9ED; }
+  .search { position: absolute; left: 32px; top: 16px; width: 280px; height: 32px; border-radius: 10px; background: #EBEBEF; display: flex; align-items: center; gap: 8px; padding: 0 12px; color: #9A9AA3; }
+  .search svg { width: 15px; height: 15px; }
+  .search kbd { margin-left: auto; font: inherit; font-size: 11px; color: #A8A8B0; }
+  .newbtn { position: absolute; left: 790px; top: 16px; height: 32px; padding: 0 14px; border-radius: 10px; background: #1D1D22; color: #fff; display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; }
+  .newbtn svg { width: 14px; height: 14px; }
+  .tav { position: absolute; right: 32px; top: 18px; width: 28px; height: 28px; border-radius: 50%; background: #D9DCE6; display: grid; place-items: center; font-size: 10.5px; font-weight: 650; color: #4A4F63; }
+
+  .ptitle { position: absolute; left: 248px; top: 86px; font-size: 24px; font-weight: 650; letter-spacing: -.025em; }
+  .psub { position: absolute; left: 248px; top: 122px; font-size: 13px; color: #8A8A94; }
+  .segc { position: absolute; right: 32px; top: 94px; display: flex; padding: 3px; border-radius: 10px; background: #EBEBEF; }
+  .segc span { height: 26px; padding: 0 12px; border-radius: 7px; display: flex; align-items: center; font-size: 12.5px; font-weight: 500; color: #6E6E78; }
+  .segc span.on { background: #fff; color: #1D1D22; box-shadow: 0 1px 2px rgba(0, 0, 0, .08); }
+
+  .kpi { position: absolute; top: 156px; width: 296px; height: 94px; background: #fff; border: 1px solid #E8E8EC; border-radius: 14px; padding: 15px 18px; }
+  .kpi .l { font-size: 12.5px; color: #8A8A94; }
+  .kpi .v { margin-top: 7px; font-size: 25px; font-weight: 650; letter-spacing: -.03em; }
+  .kpi .d { position: absolute; right: 16px; top: 15px; font-size: 12px; font-weight: 600; padding: 2px 7px; border-radius: 6px; }
+  .d.up { color: #1E8E50; background: #E8F5EE; }
+  .d.flat { color: #6E6E78; background: #F0F0F3; }
+  .d.bad { color: #D93A43; background: #FCECEE; }
+
+  .card { position: absolute; left: 248px; top: 268px; width: 920px; height: 458px; background: #fff; border: 1px solid #E8E8EC; border-radius: 16px; }
+  .chart { position: absolute; left: 0; top: 0; width: 1200px; height: 750px; overflow: visible; }
+  .chart text { font-family: inherit; }
+
+  .ov { position: absolute; left: 0; top: 0; width: 1200px; height: 750px; overflow: visible; }
+  .size {
+    position: absolute; left: 0; top: 0; padding: 3px 7px 4px; border-radius: 7px;
+    background: rgba(20, 20, 26, .85); box-shadow: inset 0 0 0 1px var(--edge);
+    color: #fff; font-size: 11.5px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; opacity: 0;
+  }
+  .cur { position: absolute; left: -12px; top: -12px; width: 24px; height: 24px; opacity: 0; }
+
+  /* ---------- Shared product UI ---------- */
+  .glass {
+    background: var(--glass);
+    -webkit-backdrop-filter: blur(30px) saturate(140%);
+    backdrop-filter: blur(30px) saturate(140%);
+    box-shadow: inset 0 0 0 1px var(--edge), 0 5px 28px rgba(0, 0, 0, .35);
+  }
+  .tb {
+    position: absolute; display: flex; align-items: center; height: 46px; padding: 5px; border-radius: 23px;
+    color: #ECECF1; white-space: nowrap; font-size: 14px; line-height: 1;
+  }
+  .scene > .tb { left: 600px; top: 14px; transform: translateX(-50%); }
+  .b { position: relative; flex: none; width: 34px; height: 34px; margin: 0 1px; border-radius: 17px; display: flex; align-items: center; justify-content: center; }
+  .b.on { background: rgba(255, 255, 255, .22); color: #fff; }
+  .b.w46 { width: 46px; }
+  .b.chv { width: 16px; margin: 0 2px 0 -3px; }
+  .i { display: block; flex: none; width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .i16 { width: 16px; height: 16px; }
+  .chev { width: 10px; height: 10px; stroke-width: 2.6; opacity: .7; margin: 1px 0 0 2px; }
+  .b.chv .chev { margin: 1px 0 0; }
+  .dv { flex: none; width: 1px; height: 18px; margin: 0 5px; background: rgba(255, 255, 255, .16); }
+  .cdot { flex: none; width: 14px; height: 14px; border-radius: 50%; background: #EF4444; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .35); }
+  .mic .ra { position: absolute; inset: 0; opacity: 0; }
+  .mic .ra i { position: absolute; inset: 0; border-radius: 50%; }
+  .mic .rp { background: #FF4D5E; opacity: 0; }
+  .mic .rl { box-shadow: inset 0 0 0 2px #FF8E99; opacity: 0; }
+  .mic .rd { background: #FF4D5E; }
+  .mic .i { position: relative; }
+  .mic.rec .i { color: #fff; }
+  .fld { position: relative; flex: none; width: 300px; height: 34px; margin: 0 6px 0 4px; overflow: hidden; color: #F4F4F7; contain: strict; }
+  .fld .ph, .fld .txt { position: absolute; left: 4px; top: 0; line-height: 34px; white-space: pre; }
+  .fld .ph { color: #CFCFD6; }
+  .fld .w { opacity: 0; }
+  .fld .caret { position: absolute; left: 4px; top: 8px; width: 1.5px; height: 18px; background: #FFC68A; border-radius: 1px; opacity: 0; }
+  .save { position: relative; flex: none; width: 34px; height: 34px; margin: 0 1px; border-radius: 11px; background: rgba(255, 255, 255, .34); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .5); display: flex; align-items: center; justify-content: center; color: #fff; }
+  .save .i { stroke-width: 2.4; position: relative; }
+  .save .hl { position: absolute; inset: 0; border-radius: inherit; background: rgba(255, 255, 255, .32); opacity: 0; }
+
+  /* intro only: time-based details run on CSS while the state is scroll-driven */
+  .anim .mic.rec .rp { animation: pulse .7s ease-in-out infinite alternate; }
+  .anim .mic.rec .rl { animation: lvl 1.3s ease-in-out infinite; }
+  .anim .caret.on { animation: blink 1.1s steps(1) infinite; }
+  .anim .pill.live .wave i { animation: wv 1s ease-in-out infinite; }
+  .anim .wave i:nth-child(1) { animation-duration: .9s; animation-delay: -.3s; }
+  .anim .wave i:nth-child(2) { animation-duration: 1.15s; animation-delay: -.7s; }
+  .anim .wave i:nth-child(3) { animation-duration: .8s; animation-delay: -.1s; }
+  .anim .wave i:nth-child(4) { animation-duration: 1.05s; animation-delay: -.5s; }
+  .anim .wave i:nth-child(5) { animation-duration: .95s; animation-delay: -.85s; }
+  @keyframes pulse { from { opacity: .6; transform: scale(1); } to { opacity: .06; transform: scale(1.42); } }
+  @keyframes lvl { 0%, 100% { opacity: .5; transform: scale(1.04); } 40% { opacity: .9; transform: scale(1.22); } 70% { opacity: .6; transform: scale(1.1); } }
+  @keyframes wv { 0%, 100% { transform: scaleY(.25); } 50% { transform: scaleY(1); } }
+  @keyframes blink { 0%, 55% { opacity: 1; } 56%, 100% { opacity: 0; } }
+
+  .pillpos { position: absolute; left: 600px; top: 68px; transform: translateX(-50%); }
+  .pill { display: flex; align-items: center; gap: 9px; height: 29px; padding: 0 14px 1px 12px; border-radius: 15px; white-space: nowrap; font-size: 12.5px; font-weight: 600; color: #FF8E99; opacity: 0; }
+  .ch-scene .pill { position: absolute; }
+  .wave { display: flex; align-items: center; gap: 2px; height: 14px; }
+  .wave i { display: block; width: 2px; height: 14px; border-radius: 1px; background: #FF4D5E; transform: scaleY(.3); }
+
+  .fly { position: absolute; display: flex; padding: 4px; border-radius: 21px; color: #ECECF1; }
+
+  .toast { position: absolute; width: 376px; border-radius: 16px; color: #F3F3F6; opacity: 0; background: rgba(28, 28, 34, .8); line-height: 1.3; text-align: left; }
+  .scene .toast { right: 20px; bottom: 20px; }
+  .toast .row { display: flex; align-items: center; padding: 13px 10px 11px 14px; }
+  .toast .bdg { flex: none; width: 44px; height: 44px; margin-right: 12px; border-radius: 12px; background: rgba(255, 255, 255, .08); box-shadow: inset 0 0 0 1px var(--edge); display: grid; place-items: center; color: #4ADE80; }
+  .toast .bdg .i { width: 20px; height: 20px; stroke-width: 2.2; }
+  .toast .tx { flex: 1; min-width: 0; }
+  .toast .tt { font-size: 13.5px; font-weight: 600; }
+  .toast .msg { margin-top: 3px; font-size: 12.5px; line-height: 18px; color: #A9A9B6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .toast .x { flex: none; align-self: flex-start; width: 24px; height: 24px; margin: -4px 0 0 6px; display: grid; place-items: center; color: #8C8C99; }
+  .toast .x .i { width: 13px; height: 13px; stroke-width: 2.4; }
+  .toast .acts { display: flex; justify-content: flex-end; gap: 6px; padding: 0 12px 13px; }
+  .chip { height: 28px; padding: 0 12px; border-radius: 14px; display: flex; align-items: center; font-size: 11.5px; font-weight: 600; }
+  .chip.fro { background: rgba(255, 255, 255, .09); box-shadow: inset 0 0 0 1px var(--edge); color: #ECECF1; }
+  .chip.wh { background: rgba(255, 255, 255, .92); color: #1D1D22; }
+  .toast .bar { position: absolute; left: 12px; right: 12px; bottom: 0; height: 2px; background: var(--accent); opacity: .6; transform-origin: 0 50%; }
+
+  .cursor { position: absolute; left: 0; top: 0; z-index: 30; }
+  .cursor svg { position: absolute; display: block; }
+  .cursor .ca { left: -2px; top: -2px; width: 22px; height: 30px; }
+  .cursor .cx { left: -13px; top: -13px; width: 26px; height: 26px; display: none; }
+  .cursor.cross .ca { display: none; }
+  .cursor.cross .cx { display: block; }
+  .rip { position: absolute; left: -17px; top: -17px; width: 34px; height: 34px; border-radius: 50%; background: rgba(255, 255, 255, .16); box-shadow: 0 0 0 1px rgba(255, 255, 255, .7); opacity: 0; z-index: 29; }
+
+  /* ---------- Intro: stacked frames (static) ---------- */
+  .frames { display: none; padding-top: clamp(88px, 14vh, 140px); }
+  [data-mode="static"] .frames { display: block; }
+  .frames ol { list-style: none; display: grid; grid-template-columns: minmax(0, 1fr); gap: clamp(64px, 10vh, 112px); max-width: 1040px; margin: 0 auto; }
+  .frame { position: relative; overflow: hidden; border-radius: 20px; background: var(--bg); }
+  .frame .scene { position: absolute; }
+  .frames figcaption { margin: 26px auto 0; max-width: 900px; text-align: center; }
+  .frames figcaption .md { display: block; width: fit-content; margin: 16px auto 0; }
+
+  /* ---------- Chapters ---------- */
+  .ch { position: relative; min-height: var(--vh); display: flex; align-items: center; padding: clamp(40px, 7vh, 88px) 0; }
+  .ch-in { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: clamp(36px, 5vw, 80px); align-items: center; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(--gut); }
+  .ch.flip .ch-in { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
+  .ch.flip .ch-text { order: 2; }
+  .ch-text { max-width: 460px; }
+  .eyebrow { display: flex; align-items: center; gap: 12px; font-size: 13px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--fg3); }
+  .eyebrow b { color: var(--accent); font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: .04em; }
+  .ch h2 { margin-top: 20px; font-size: clamp(32px, 3.3vw, 46px); line-height: 1.06; letter-spacing: -.028em; font-weight: 640; }
+  .ch .lead { margin-top: 18px; font-size: clamp(16px, 1.25vw, 18px); line-height: 1.5; letter-spacing: -.01em; color: var(--fg2); max-width: 24em; }
+  .rv { opacity: 0; transform: translateY(14px); transition: opacity 1.1s var(--ease), transform 1.1s var(--ease); }
+  .rv:nth-child(2) { transition-delay: .08s; }
+  .rv:nth-child(3) { transition-delay: .16s; }
+  .rv.in, .instant .rv { opacity: 1; transform: none; }
+  .ch-view {
+    position: relative; width: 100%; aspect-ratio: 4 / 3; max-height: calc(var(--vh) - 176px); min-height: 300px;
+    border-radius: 24px; overflow: hidden; background: #111113; contain: layout paint; will-change: transform;
+  }
+  .ch-view.tall { aspect-ratio: 5 / 4; }
+  .ch-view::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .07); pointer-events: none; }
+  .ch-scene {
+    position: absolute; left: 0; top: 0; width: 0; height: 0; transform-origin: 0 0; pointer-events: none;
+    font-size: 13px; line-height: 1.35; letter-spacing: -.003em; color: #1D1D22; text-align: left;
+    font-optical-sizing: none; font-variation-settings: "opsz" 14;
+  }
+  .ch-scene > * { position: absolute; }
+  .pg { background: #F2F2F5; }
+  .pg i { position: absolute; display: block; border-radius: 8px; }
+  .dimall { background: rgba(0, 0, 0, .55); }
+  .cover { overflow: visible; }
+
+  /* 02: the selected order card */
+  .order { left: 116px; top: 74px; width: 300px; height: 164px; border-radius: 12px; background: #fff; box-shadow: 0 0 0 1px #E5E7EB; color: #111827; font-size: 12.5px; }
+  .order .oh { position: absolute; left: 16px; top: 13px; font-size: 13.5px; font-weight: 650; letter-spacing: -.01em; }
+  .order .or { position: absolute; left: 24px; right: 16px; display: flex; justify-content: space-between; color: #374151; font-variant-numeric: tabular-nums; }
+  .order .or.tot { color: #111827; font-weight: 650; font-size: 13px; }
+  .order .ohr { position: absolute; left: 16px; right: 16px; top: 92px; height: 1px; background: #E5E7EB; }
+  .order .pay { position: absolute; left: 16px; top: 122px; width: 96px; height: 28px; border-radius: 8px; background: #111827; color: #fff; display: grid; place-items: center; font-weight: 600; font-size: 12px; }
+
+  /* 03: the chat */
+  .chatbg { background: #18181D; }
+  .chat { left: 0; top: 0; width: 483px; height: 440px; color: #E8E8ED; font-size: 13px; }
+  .chat .chh { position: absolute; left: 0; right: 0; top: 0; height: 52px; display: flex; align-items: center; gap: 11px; padding: 0 16px; border-bottom: 1px solid rgba(255, 255, 255, .07); }
+  .chat .cav { width: 32px; height: 32px; border-radius: 50%; background: #3F3F46; display: grid; place-items: center; font-weight: 650; font-size: 11.5px; color: #fff; flex: none; }
+  .chat .chn { font-weight: 600; font-size: 13.5px; }
+  .chat .chs { font-size: 11.5px; color: #9A9AA6; }
+  .chat .msg { position: absolute; left: 16px; right: 16px; display: flex; gap: 12px; align-items: flex-start; }
+  .chat .av2 { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 10.5px; font-weight: 650; color: #fff; }
+  .chat .mn { font-size: 12.5px; font-weight: 600; line-height: 16px; }
+  .chat .mn small { font-size: 11px; font-weight: 500; color: #8A8A96; margin-left: 6px; }
+  .chat .mt { margin-top: 2px; font-size: 13px; line-height: 18px; color: #D4D4DA; }
+  .chat .mpaste { display: flex; gap: 12px; align-items: flex-start; margin-top: 8px; }
+  .chat .thumb { flex: none; display: block; width: 150px; height: 84px; border-radius: 8px; box-shadow: 0 0 0 1px rgba(255, 255, 255, .1); }
+  .chat .md2 { flex: 1; min-width: 0; margin: 0; font: 400 11px/15.5px var(--mono); color: #C9C9D2; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .chat .md2 b { font-weight: 600; color: #F4F4F7; }
+  .chat .comp { position: absolute; left: 16px; right: 16px; top: 384px; height: 40px; border-radius: 20px; background: #23232A; display: flex; align-items: center; padding: 0 16px; color: #8A8A96; font-size: 13px; }
+  .chat .comp .i { width: 17px; height: 17px; margin-left: auto; color: #A8A8B4; }
+  .chat .cmsg { transform-origin: 0 0; opacity: 0; }
+
+  /* 04: desktop, taskbar and the tray menu */
+  .desk { background: #30343F; }
+  .lwin { background: #F5F5F7; border-radius: 10px; overflow: hidden; box-shadow: 0 0 0 1px rgba(0, 0, 0, .25), 0 20px 50px rgba(0, 0, 0, .3); }
+  .lwin i { position: absolute; display: block; border-radius: 6px; }
+  .task { background: #1D1E24; box-shadow: 0 -1px 0 rgba(255, 255, 255, .06); color: #E5E7EB; }
+  .task .apps { position: absolute; left: 560px; top: 8px; display: flex; gap: 8px; }
+  .task .apps i { width: 32px; height: 32px; border-radius: 7px; display: grid; place-items: center; }
+  .task .apps i::after { content: ""; width: 18px; height: 18px; border-radius: 5px; background: var(--c); }
+  .task .apps i.cur { background: rgba(255, 255, 255, .08); }
+  .task .ttray { position: absolute; left: 820px; top: 0; height: 48px; display: flex; align-items: center; gap: 12px; font-size: 11.5px; line-height: 15px; text-align: right; }
+  .task .ttray .i { width: 14px; height: 14px; color: #CBD5E1; }
+  .task .ttray .sv { width: 30px; height: 30px; border-radius: 7px; background: rgba(255, 255, 255, .12); display: grid; place-items: center; }
+  .task .ttray .sv svg { width: 18px; height: 18px; }
+  .menu { left: 244px; top: 30px; width: 292px; border-radius: 18px; padding: 12px; color: #F4F4F7; font-size: 13px; }
+  .menu .mh { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 6px; }
+  .menu .mh svg { width: 20px; height: 20px; }
+  .menu .mh b { font-size: 14px; font-weight: 600; letter-spacing: -.01em; }
+  .menu .st { margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 500; color: #A9A9B6; }
+  .menu .st i { width: 7px; height: 7px; border-radius: 50%; background: #4ADE80; }
+  .mbtn { position: relative; display: flex; align-items: center; gap: 10px; height: 40px; margin-top: 8px; padding: 0 8px 0 12px; border-radius: 11px; background: rgba(255, 255, 255, .9); color: #1D1D22; font-weight: 600; font-size: 13.5px; }
+  .mbtn.hov { background: #fff; }
+  .mbtn .i { width: 18px; height: 18px; color: var(--accent); stroke-width: 2; }
+  .mbtn kbd { margin-left: auto; font: 600 11px/1 Inter, system-ui, sans-serif; padding: 6px 7px; border-radius: 7px; background: rgba(0, 0, 0, .07); color: #55555D; letter-spacing: .01em; }
+  .mchips { display: flex; gap: 6px; margin-top: 10px; }
+  .mc { flex: 1; height: 28px; border-radius: 9px; display: grid; place-items: center; font-size: 12px; font-weight: 600; background: rgba(255, 255, 255, .08); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12); color: #ECECF1; }
+  .mc.hov { background: rgba(255, 255, 255, .18); }
+  .mc.on { background: rgba(255, 255, 255, .92); color: #1D1D22; box-shadow: none; }
+  .msep { height: 1px; margin: 12px 4px 6px; background: rgba(255, 255, 255, .1); }
+  .mrow { display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 8px; border-radius: 10px; }
+  .mrow .i { width: 17px; height: 17px; color: #CFCFD6; }
+  .mrow em { margin-left: auto; font-style: normal; font-size: 12px; color: #A9A9B6; }
+  .sg { margin-left: auto; display: flex; padding: 2px; border-radius: 8px; background: rgba(255, 255, 255, .08); }
+  .sg span { height: 22px; padding: 0 8px; border-radius: 6px; display: grid; place-items: center; font-size: 11px; font-weight: 600; color: #A9A9B6; }
+  .sg span.on { background: rgba(255, 255, 255, .92); color: #1D1D22; }
+  .tg { margin-left: auto; position: relative; width: 38px; height: 22px; border-radius: 11px; background: rgba(255, 255, 255, .16); }
+  .tg i { position: absolute; inset: 0; border-radius: 11px; background: var(--accent); opacity: 0; transition: opacity .3s var(--ease); }
+  .tg::after { content: ""; position: absolute; left: 3px; top: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform .3s var(--ease); }
+  .tg.on i { opacity: 1; }
+  .tg.on::after { transform: translateX(16px); }
+
+  /* ---------- After the chapters ---------- */
+  .privacy { padding-top: clamp(100px, 16vh, 200px); text-align: center; }
+  .statement {
+    max-width: 15.5em; margin: 0 auto;
+    font-size: clamp(30px, 4.6vw, 64px); line-height: 1.06; letter-spacing: -.026em; font-weight: 650; text-wrap: balance;
+  }
+  .statement span { color: var(--fg3); }
+  .note { margin: clamp(22px, 3vh, 30px) auto 0; max-width: 32em; font-size: clamp(17px, 1.45vw, 20px); line-height: 1.45; letter-spacing: -.012em; color: var(--fg2); text-wrap: balance; }
+
+  .final { padding: clamp(150px, 24vh, 280px) 0 clamp(130px, 20vh, 220px); text-align: center; }
+  .final .mark { width: 64px; height: 64px; margin: 0 auto 30px; display: block; }
+  .final h2 { font-size: clamp(40px, 5vw, 64px); line-height: 1; letter-spacing: -.035em; font-weight: 650; }
+
+  .foot { padding: 0 0 44px; }
+  .foot p { padding-top: 22px; border-top: 1px solid rgba(255, 255, 255, .08); font-size: 12.5px; color: var(--fg3); text-align: center; }
+  .foot a { text-decoration: none; color: var(--fg2); transition: color .3s var(--ease); }
+  .foot a:hover { color: var(--fg); }
+  .foot i { font-style: normal; margin: 0 .55em; color: #48484D; }
+
+  /* ---------- Narrow screens ---------- */
+  @media (max-width: 899px) {
+    .ch { min-height: 0; padding: clamp(56px, 9vh, 96px) 0; }
+    .ch-in, .ch.flip .ch-in { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+    .ch.flip .ch-text { order: 0; }
+    .ch-text { max-width: 560px; }
+    .ch-view, .ch-view.tall { aspect-ratio: 1 / 1; max-height: none; min-height: 0; border-radius: 18px; }
+  }
+  @media (max-width: 699px) {
+    .nav { height: 56px; }
+    .hero-in { padding-top: 64px; }
+    .cta { flex-direction: column; align-items: stretch; gap: 10px; max-width: 420px; margin-left: auto; margin-right: auto; }
+    .btn { height: 50px; font-size: 16px; }
+    .meta { line-height: 1.75; }
+    .meta > span { display: block; }
+    .meta .mid { display: none; }
+    .frame { border-radius: 16px; }
+    .frames figcaption { margin-top: 20px; text-align: left; }
+    .frames figcaption .md { margin-left: 0; font-size: 11px; padding: 9px 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .frames figcaption p { font-size: 19px; }
+    .statement { font-size: clamp(30px, 8.6vw, 40px); }
+    .ch h2 { font-size: clamp(30px, 8.4vw, 38px); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .anim .mic.rec .rp, .anim .mic.rec .rl, .anim .pill.live .wave i, .anim .caret.on { animation: none; }
+    .anim .mic.rec .rp { opacity: .25; transform: scale(1.25); }
+    .anim .wave i:nth-child(1) { transform: scaleY(.45); }
+    .anim .wave i:nth-child(2) { transform: scaleY(.9); }
+    .anim .wave i:nth-child(3) { transform: scaleY(.6); }
+    .anim .wave i:nth-child(4) { transform: scaleY(1); }
+    .anim .wave i:nth-child(5) { transform: scaleY(.4); }
+    .btn, .rv, .tg i, .tg::after { transition: none; }
+    .rv { opacity: 1; transform: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Icon sprite (24-unit grid, stroked with currentColor) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <path id="g-region" d="M4 9V6.5A2.5 2.5 0 0 1 6.5 4H9M15 4h2.5A2.5 2.5 0 0 1 20 6.5V9M20 15v2.5a2.5 2.5 0 0 1-2.5 2.5H15M9 20H6.5A2.5 2.5 0 0 1 4 17.5V15"/>
+    <path id="g-screen" d="M4.5 5h15A1.5 1.5 0 0 1 21 6.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 15.5v-9A1.5 1.5 0 0 1 4.5 5zM9 20.5h6M12 17v3.5"/>
+    <path id="g-timer" d="M12 21a7.5 7.5 0 1 0 0-15 7.5 7.5 0 0 0 0 15zM12 10v3.5l2.5 1.5M9.5 2.5h5M19 6.5l1.5-1.5"/>
+    <path id="g-pen" d="M15 5.5l3.5 3.5L9 18.5 4.5 19.5 5.5 15zM13 7.5l3.5 3.5"/>
+    <path id="g-hl" d="M14.5 4.5l5 5-7 7-5-5zM7.5 11.5L5.5 17 7 18.5l5.5-2M4 20.5h7"/>
+    <path id="g-arrow" d="M5.5 18.5l13-13M10 5.5h8.5V14"/>
+    <path id="g-rect" d="M6.5 5h11A2.5 2.5 0 0 1 20 7.5v9a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 16.5v-9A2.5 2.5 0 0 1 6.5 5z"/>
+    <path id="g-text" d="M5 7.5V5h14v2.5M12 5v14M9 19h6"/>
+    <path id="g-num" d="M12 3.5a8.5 8.5 0 1 1 0 17 8.5 8.5 0 0 1 0-17zM10.5 9.5L12.5 8v8.5"/>
+    <path id="g-eraser" d="M9 20h11M5.7 14.3l8.6-8.6a2 2 0 0 1 2.8 0l2.2 2.2a2 2 0 0 1 0 2.8L11 19H8.4zM9.5 10.5l5 5"/>
+    <path id="g-chev" d="M6.5 9.5L12 15l5.5-5.5"/>
+    <path id="g-undo" d="M9 14L4.5 9.5 9 5M4.5 9.5H14a5.5 5.5 0 0 1 0 11h-3"/>
+    <path id="g-redo" d="M15 14l4.5-4.5L15 5M19.5 9.5H10a5.5 5.5 0 0 0 0 11h3"/>
+    <path id="g-mic" d="M12 3.5a3 3 0 0 1 3 3V12a3 3 0 0 1-6 0V6.5a3 3 0 0 1 3-3zM5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v2.5"/>
+    <path id="g-check" d="M5 12.5l4.5 4.5L19 7.5"/>
+    <path id="g-close" d="M6.5 6.5l11 11M17.5 6.5l-11 11"/>
+    <path id="g-image" d="M5.5 4.5h13a1.5 1.5 0 0 1 1.5 1.5v12a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18V6a1.5 1.5 0 0 1 1.5-1.5zM4 15.5l4.5-4 4 3.5 2.5-2 5 4M15.5 9.5h.01"/>
+    <path id="g-camera" d="M8.2 7.5l1.4-2h4.8l1.4 2h2.7A1.5 1.5 0 0 1 20 9v8.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5V9a1.5 1.5 0 0 1 1.5-1.5zM12 16.3a3.3 3.3 0 1 0 0-6.6 3.3 3.3 0 0 0 0 6.6z"/>
+    <path id="g-globe" d="M12 20.5a8.5 8.5 0 1 0 0-17 8.5 8.5 0 0 0 0 17zM3.5 12h17M12 3.5c2.4 2.6 2.4 14.4 0 17M12 3.5c-2.4 2.6-2.4 14.4 0 17"/>
+    <path id="g-power" d="M12 4v7.5M6.6 7.6a7.5 7.5 0 1 0 10.8 0"/>
+    <path id="g-send" d="M4.5 12L20 4.5 16 20l-4-6.5zM12 13.5l8-9"/>
+    <path id="g-logo" d="M6 22v-8a8 8 0 0 1 8-8h8M42 6h8a8 8 0 0 1 8 8v8M58 42v8a8 8 0 0 1-8 8h-8M22 58h-8a8 8 0 0 1-8-8v-8M22 28v8M32 20v24M42 28v8"/>
+  </defs>
+</svg>
+
+<main>
+  <section class="track" id="top">
+
+    <!-- The sticky stage: one scene, driven by scroll -->
+    <div class="stage">
+      <div class="scene anim" aria-hidden="true">
+        <div class="screen">
+          <div class="app">
+            <div class="side">
+              <div class="abrand"><span class="lg"><svg viewBox="0 0 24 24" class="ln-i"><path d="M3 12.5h4l2.5-5 4 10 2.5-5H21"/></svg></span>Пульс</div>
+              <ul class="anav">
+                <li class="on"><svg viewBox="0 0 24 24" class="ln-i"><path d="M4.5 4.5h6v6h-6zM13.5 4.5h6v6h-6zM4.5 13.5h6v6h-6zM13.5 13.5h6v6h-6z"/></svg>Огляд</li>
+                <li><svg viewBox="0 0 24 24" class="ln-i"><path d="M3 12h4l3-7 4 14 3-7h4"/></svg>Запити</li>
+                <li><svg viewBox="0 0 24 24" class="ln-i"><path d="M12 4.5l8.5 15h-17zM12 10.5v3.5M12 16.8v.2"/></svg>Помилки</li>
+                <li><svg viewBox="0 0 24 24" class="ln-i"><path d="M4 12.5V4h8.5l8 8-8.5 8.5zM8.5 8.5v.01"/></svg>Релізи</li>
+                <li><svg viewBox="0 0 24 24" class="ln-i"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 1.5h-15zM10 20.5h4"/></svg>Сповіщення</li>
+                <li class="sep"></li>
+                <li><svg viewBox="0 0 24 24" class="ln-i"><path d="M4 7h9M17 7h3M4 17h3M11 17h9M15 4.5v5M9 14.5v5"/></svg>Налаштування</li>
+              </ul>
+              <div class="me"><span class="av">ОК</span>Олена Коваль</div>
+            </div>
+            <div class="topb">
+              <div class="search"><svg viewBox="0 0 24 24" class="ln-i"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4"/></svg>Пошук<kbd>Ctrl K</kbd></div>
+              <div class="newbtn"><svg viewBox="0 0 24 24" class="ln-i"><path d="M12 5v14M5 12h14"/></svg>Новий звіт</div>
+              <div class="tav">ОК</div>
+            </div>
+            <div class="ptitle">Огляд</div>
+            <div class="psub">API · останні 30 днів</div>
+            <div class="segc"><span>7 днів</span><span class="on">30 днів</span><span>Рік</span></div>
+            <div class="kpi" style="left:248px"><div class="l">Запити за добу</div><div class="v">1,24 млн</div><span class="d up">+4,1 %</span></div>
+            <div class="kpi" style="left:560px"><div class="l">Помилки</div><div class="v">0,21 %</div><span class="d flat">−0,03</span></div>
+            <div class="kpi" style="left:872px"><div class="l">Час відповіді, p95</div><div class="v">447 мс</div><span class="d bad">+118 %</span></div>
+            <div class="card"></div>
+            <svg class="chart" viewBox="0 0 1200 750">
+              <text x="276" y="304" font-size="14" font-weight="600" fill="#1D1D22">Час відповіді, p95</text>
+              <g font-size="12" fill="#6E6E78">
+                <path d="M968 300h18" stroke="#1D1D22" stroke-width="2" stroke-linecap="round"/>
+                <text x="994" y="304">Цей місяць</text>
+                <path d="M1070 300h18" stroke="#CDCDD5" stroke-width="2" stroke-linecap="round"/>
+                <text x="1096" y="304">Минулий</text>
+              </g>
+              <g stroke="#EEEEF2" stroke-width="1">
+                <path d="M296 400H1136M296 456H1136M296 512H1136M296 568H1136M296 624H1136"/>
+                <path d="M296 680H1136" stroke="#E2E2E8"/>
+              </g>
+              <g font-size="11.5" fill="#A1A1AA" text-anchor="end">
+                <text x="282" y="404">500</text><text x="282" y="460">400</text><text x="282" y="516">300</text>
+                <text x="282" y="572">200</text><text x="282" y="628">100</text><text x="282" y="684">0</text>
+              </g>
+              <g font-size="11.5" fill="#A1A1AA" text-anchor="middle">
+                <text x="296" y="705">11 вер</text><text x="498.8" y="705">18 вер</text><text x="701.5" y="705">25 вер</text>
+                <text x="904.3" y="705">2 жов</text><text x="1107" y="705">9 жов</text>
+              </g>
+              <path d="M889.8 400V680" stroke="#BDBDC6" stroke-width="1" stroke-dasharray="3 4"/>
+              <rect x="852" y="642" width="76" height="22" rx="6" fill="#F0F0F4"/>
+              <text x="890" y="657" font-size="11.5" font-weight="600" fill="#5A5A64" text-anchor="middle">Реліз 2.4</text>
+              <path class="ln2" fill="none" stroke="#CDCDD5" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+              <path class="ln1" fill="none" stroke="#1D1D22" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+              <rect x="899" y="378" width="68" height="24" rx="7" fill="#1D1D22"/>
+              <text x="933" y="394.5" font-size="12" font-weight="600" fill="#fff" text-anchor="middle">462 мс</text>
+              <circle cx="933.25" cy="421.28" r="5" fill="#fff" stroke="#1D1D22" stroke-width="2"/>
+            </svg>
+          </div>
+
+          <svg class="ov" viewBox="0 0 1200 750">
+            <path class="dim" fill="#000" fill-opacity=".55" fill-rule="evenodd" d="M0 0H1200V750H0Z"/>
+            <rect class="frs" fill="none" stroke="#000" stroke-opacity=".4" stroke-width="3" width="0" height="0"/>
+            <rect class="fr" fill="none" stroke="#fff" stroke-width="1.25" width="0" height="0"/>
+          </svg>
+          <div class="size">0×0</div>
+          <svg class="cur" viewBox="0 0 24 24">
+            <path d="M12 2.5v7M12 14.5v7M2.5 12h7M14.5 12h7" stroke="#000" stroke-opacity=".55" stroke-width="3.2" stroke-linecap="round"/>
+            <path d="M12 2.5v7M12 14.5v7M2.5 12h7M14.5 12h7" stroke="#fff" stroke-width="1.3" stroke-linecap="round"/>
+          </svg>
+          <div class="toast glass"></div>
+        </div>
+
+        <!-- The toolbar: the one object of the opening -->
+        <div class="tb"></div>
+        <div class="pillpos"><div class="pill"></div></div>
+      </div>
+
+      <div class="caps">
+        <div class="ticks" aria-hidden="true"><i><b></b></i><i><b></b></i><i><b></b></i></div>
+        <ol class="caplist">
+          <li class="cap"><p><b>Виділіть.</b> Alt + Shift + S зупиняє екран&nbsp;— обведіть потрібну частину.</p></li>
+          <li class="cap"><p><b>Скажіть.</b> Утримуйте Пробіл і&nbsp;говоріть&nbsp;— текст з’явиться в&nbsp;полі коментаря.</p></li>
+          <li class="cap"><p><b>Збережіть.</b> Enter зберігає PNG і&nbsp;копіює Markdown&nbsp;— для чату, задачі чи&nbsp;ШІ.</p><code class="md">[C:\AI_Screenshots\screenshot_20261010_143207_512.png]
+<em>**Comment:**</em> Стрибок після релізу 2.4, перевір кеш.</code></li>
+        </ol>
+      </div>
+    </div>
+
+    <!-- Opening view -->
+    <header class="hero">
+      <nav class="nav wrap" aria-label="Головна навігація">
+        <a class="brand" href="#top" aria-label="ScreenVoicer">
+          <svg viewBox="0 0 64 64" fill="none" stroke="#FF8A4C" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#g-logo"/></svg>
+          <span aria-hidden="true">Screen<span class="wm-v">Voicer</span></span>
+        </a>
+        <a class="navlink" href="https://github.com/ArthurMospan/ScreenVoicer">GitHub</a>
+      </nav>
+      <div class="hero-in wrap">
+        <h1>Скриншот, який<br> пояснює себе сам.</h1>
+        <p class="sub">Виділіть, скажіть, збережіть. Знімок і&nbsp;коментар&nbsp;— одразу в&nbsp;буфері обміну.</p>
+        <div class="cta" data-cta>
+          <a class="btn btn-pri" data-os="win" href="https://github.com/ArthurMospan/ScreenVoicer/releases/latest/download/ScreenVoicer-Setup.exe">Завантажити для Windows</a>
+          <a class="btn btn-sec" data-os="mac" href="https://github.com/ArthurMospan/ScreenVoicer/releases/latest/download/ScreenVoicer-macOS.zip">Завантажити для Mac</a>
+        </div>
+        <p class="meta"><span>Безкоштовно<i aria-hidden="true">·</i>Windows 10/11</span><i class="mid" aria-hidden="true">·</i> <span>macOS 14+<i aria-hidden="true">·</i>Відкритий код</span></p>
+        <div class="hero-slot" aria-hidden="true"></div>
+        <div class="hero-obj" aria-hidden="true"></div>
+      </div>
+    </header>
+  </section>
+
+  <!-- The same three beats as still frames: phones and reduced motion -->
+  <section class="frames" aria-label="Як це працює">
+    <div class="wrap"><ol></ol></div>
+  </section>
+
+  <!-- ===== 01 Голос ===== -->
+  <section class="ch" data-ch="1" aria-labelledby="h-c1">
+    <div class="ch-in">
+      <div class="ch-text">
+        <p class="eyebrow rv"><b>01</b> Голос</p>
+        <h2 class="rv" id="h-c1">Говоріть.<br>Текст з’явиться сам.</h2>
+        <p class="lead rv">Утримуйте Пробіл і&nbsp;говоріть&nbsp;— Whisper розпізнає українську й&nbsp;англійську просто на вашому комп’ютері.</p>
+      </div>
+      <div class="ch-stage">
+        <div class="ch-view" role="img" aria-label="Крупний план панелі: мікрофон стає червоним і пульсує, під панеллю — статус «Говоріть…», а сказане з’являється текстом у полі коментаря.">
+          <div class="ch-scene" id="c1" aria-hidden="true">
+            <div class="pg" style="left:-400px;top:-300px;width:1500px;height:900px">
+              <i style="left:0;top:0;width:1500px;height:352px;border-radius:0;background:#fff"></i>
+              <i style="left:0;top:352px;width:1500px;height:1px;border-radius:0;background:#E5E7EB"></i>
+              <i style="left:430px;top:318px;width:150px;height:18px;background:#D9DBE2"></i>
+              <i style="left:620px;top:322px;width:70px;height:10px;background:#E3E4EA"></i>
+              <i style="left:716px;top:322px;width:70px;height:10px;background:#E3E4EA"></i>
+              <i style="left:812px;top:322px;width:70px;height:10px;background:#E3E4EA"></i>
+              <i style="left:430px;top:404px;width:720px;height:300px;background:#fff;box-shadow:0 0 0 1px #E5E7EB"></i>
+              <i style="left:462px;top:440px;width:220px;height:16px;background:#CBCED6"></i>
+              <i style="left:462px;top:476px;width:460px;height:10px;background:#E3E4EA"></i>
+              <i style="left:462px;top:496px;width:380px;height:10px;background:#E3E4EA"></i>
+              <i style="left:462px;top:546px;width:300px;height:36px;background:#F0F1F4"></i>
+              <i style="left:462px;top:600px;width:120px;height:32px;background:#1D1D22"></i>
+            </div>
+            <div class="dimall" style="left:-400px;top:-300px;width:1500px;height:900px"></div>
+            <div id="c1-tb" style="left:0;top:40px"></div>
+            <div id="c1-pill" style="left:300px;top:98px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 02 Позначки ===== -->
+  <section class="ch flip" data-ch="2" aria-labelledby="h-c2">
+    <div class="ch-in">
+      <div class="ch-text">
+        <p class="eyebrow rv"><b>02</b> Позначки</p>
+        <h2 class="rv" id="h-c2">Покажіть,<br>де саме.</h2>
+        <p class="lead rv">Стрілка, рамка, маркер, текст і&nbsp;нумеровані мітки&nbsp;— одразу на знімку.</p>
+      </div>
+      <div class="ch-stage">
+        <div class="ch-view" role="img" aria-label="Крупний план: під панеллю відкрито меню інструментів, активний інструмент змінюється, а на виділеному замовленні з’являються рамка навколо суми, мітки 1 і 2 та стрілка.">
+          <div class="ch-scene" id="c2" aria-hidden="true">
+            <div class="pg" style="left:-400px;top:-300px;width:1500px;height:900px;background:#EEEFF3">
+              <i style="left:0;top:0;width:1500px;height:356px;border-radius:0;background:#fff"></i>
+              <i style="left:0;top:356px;width:1500px;height:1px;border-radius:0;background:#E5E7EB"></i>
+              <i style="left:420px;top:318px;width:96px;height:20px;background:#B9BEC7"></i>
+              <i style="left:760px;top:322px;width:60px;height:12px;background:#C9CDD5"></i>
+              <i style="left:840px;top:322px;width:60px;height:12px;background:#C9CDD5"></i>
+              <i style="left:920px;top:322px;width:60px;height:12px;background:#C9CDD5"></i>
+              <i style="left:440px;top:560px;width:300px;height:120px;background:#fff;box-shadow:0 0 0 1px #E5E7EB"></i>
+              <i style="left:840px;top:374px;width:300px;height:300px;background:#fff;box-shadow:0 0 0 1px #E5E7EB"></i>
+            </div>
+            <div class="order">
+              <div class="oh">Замовлення №4821</div>
+              <div class="or" style="top:40px"><span>Навушники Pulse × 2</span><span>2 400 ₴</span></div>
+              <div class="or" style="top:66px"><span>Чохол × 1</span><span>350 ₴</span></div>
+              <div class="ohr"></div>
+              <div class="or tot" style="top:102px"><span>Разом</span><span>2 400 ₴</span></div>
+              <div class="pay">Оплатити</div>
+            </div>
+            <svg class="cover" style="left:-400px;top:-300px" width="1500" height="900" viewBox="-400 -300 1500 900">
+              <path fill="#000" fill-opacity=".55" fill-rule="evenodd" d="M-400 -300H1100V600H-400ZM106 64V244H426V64Z"/>
+              <rect x="106" y="64" width="320" height="180" fill="none" stroke="#000" stroke-opacity=".4" stroke-width="3"/>
+              <rect x="106" y="64" width="320" height="180" fill="none" stroke="#fff" stroke-width="1.25"/>
+            </svg>
+            <svg class="cover" style="left:-400px;top:-300px" width="1500" height="900" viewBox="-400 -300 1500 900" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <rect id="c2-rect" x="128" y="172" width="0" height="0" rx="6" stroke="#EF4444" stroke-width="2.5" opacity="0"/>
+              <path id="c2-arw" d="" stroke="#EF4444" stroke-width="2.5" opacity="0"/>
+              <g id="c2-m1" style="transform-origin:128px 148px" opacity="0"><circle cx="128" cy="148" r="9.5" fill="#EF4444"/><text x="128" y="151.8" text-anchor="middle" fill="#fff" font-family="Inter, Segoe UI, sans-serif" font-size="10.5" font-weight="700">1</text></g>
+              <g id="c2-m2" style="transform-origin:404px 185px" opacity="0"><circle cx="404" cy="185" r="9.5" fill="#EF4444"/><text x="404" y="188.8" text-anchor="middle" fill="#fff" font-family="Inter, Segoe UI, sans-serif" font-size="10.5" font-weight="700">2</text></g>
+            </svg>
+            <div id="c2-tb" style="left:0;top:-32px"></div>
+            <div id="c2-fly" style="left:124px;top:20px"></div>
+            <div class="rip" id="c2-rip"></div>
+            <div id="c2-cur"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 03 Буфер ===== -->
+  <section class="ch" data-ch="3" aria-labelledby="h-c3">
+    <div class="ch-in">
+      <div class="ch-text">
+        <p class="eyebrow rv"><b>03</b> Буфер</p>
+        <h2 class="rv" id="h-c3">Enter&nbsp;—<br>і все в буфері.</h2>
+        <p class="lead rv">PNG зберігається, а шлях до нього з&nbsp;коментарем копіюється як Markdown&nbsp;— вставте в&nbsp;чат, задачу чи ШІ.</p>
+      </div>
+      <div class="ch-stage">
+        <div class="ch-view tall" role="img" aria-label="Крупний план: натиснуто квадратну кнопку збереження, з’являється сповіщення «Скопійовано в буфер обміну», а в чаті — повідомлення зі знімком і текстом Markdown.">
+          <div class="ch-scene" id="c3" aria-hidden="true">
+            <div class="chatbg" style="left:-400px;top:-300px;width:1400px;height:1100px"></div>
+            <div class="chat">
+              <div class="chh"><span class="cav">КП</span><div><div class="chn">Команда продукту</div><div class="chs">5 учасників</div></div></div>
+              <div class="msg" style="top:64px"><span class="av2" style="background:#3F3F46">А</span><div><div class="mn">Андрій<small>14:30</small></div><div class="mt">Хтось перевіряв API після релізу 2.4?</div></div></div>
+              <div class="msg cmsg" id="c3-bub" style="top:112px"><span class="av2" style="background:#4A5A86">ОК</span><div style="flex:1;min-width:0"><div class="mn">Олена Коваль<small>14:33</small></div>
+                <div class="mpaste">
+                  <svg class="thumb" viewBox="0 0 220 124">
+                    <rect width="220" height="124" fill="#fff"/>
+                    <rect x="0" y="0" width="220" height="124" fill="#F5F5F7"/>
+                    <rect x="10" y="10" width="200" height="104" rx="6" fill="#fff" stroke="#E8E8EC"/>
+                    <text x="20" y="25" font-family="Inter, Segoe UI, sans-serif" font-size="7" font-weight="600" fill="#1D1D22">Час відповіді, p95</text>
+                    <g stroke="#EEEEF2" stroke-width=".7"><path d="M20 40H200M20 56H200M20 72H200M20 88H200"/><path d="M20 104H200" stroke="#E2E2E8"/></g>
+                    <path d="M20 86L32 85L44 87L56 84L68 86L80 85L92 87L104 84L116 86L128 85L140 87L152 84L158 62L164 54L176 58L188 56L200 57" fill="none" stroke="#1D1D22" stroke-width="1.3" stroke-linejoin="round"/>
+                    <rect x="146" y="36" width="34" height="11" rx="3" fill="#1D1D22"/>
+                    <text x="163" y="44" font-family="Inter, Segoe UI, sans-serif" font-size="6.5" font-weight="600" fill="#fff" text-anchor="middle">462 мс</text>
+                    <circle cx="164" cy="54" r="2.5" fill="#fff" stroke="#1D1D22" stroke-width="1.2"/>
+                  </svg>
+                  <pre class="md2">[C:\AI_Screenshots\screenshot_20261010_143207_512.png]
+<b>**Comment:**</b> Стрибок після релізу 2.4, перевір кеш.</pre>
+                </div>
+              </div></div>
+              <div class="comp">Повідомлення…<svg class="i" viewBox="0 0 24 24"><use href="#g-send"/></svg></div>
+            </div>
+            <div class="dimall" id="c3-dim" style="left:-400px;top:-300px;width:1400px;height:1100px"></div>
+            <div id="c3-tb" style="left:-258px;top:16px"></div>
+            <div class="toast glass" id="c3-toast" style="left:91px;top:274px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 04 Меню ===== -->
+  <section class="ch flip" data-ch="4" aria-labelledby="h-c4">
+    <div class="ch-in">
+      <div class="ch-text">
+        <p class="eyebrow rv"><b>04</b> Меню</p>
+        <h2 class="rv" id="h-c4">Усе інше&nbsp;—<br>в одному меню.</h2>
+        <p class="lead rv">Затримка знімка, галерея з&nbsp;пошуком, мова голосу й&nbsp;запуск із Windows&nbsp;— а&nbsp;оновлення встановлюються самі.</p>
+      </div>
+      <div class="ch-stage">
+        <div class="ch-view" role="img" aria-label="Меню з трею: кнопка «Зробити знімок» із підказкою Alt+Shift+S, затримка 3, 5 або 10 секунд, галерея, мікрофон, мова голосу та запуск із Windows. Курсор обирає «5 с».">
+          <div class="ch-scene" id="c4" aria-hidden="true">
+            <div class="desk" style="left:-400px;top:-300px;width:1400px;height:1100px"></div>
+            <div class="lwin" style="left:-60px;top:-30px;width:360px;height:402px">
+              <i style="left:0;top:0;width:360px;height:40px;border-radius:0;background:#E8EBF0"></i>
+              <i style="left:12px;top:9px;width:150px;height:22px;background:#fff"></i>
+              <i style="left:0;top:40px;width:360px;height:36px;border-radius:0;background:#fff;box-shadow:0 1px 0 #E5E7EB"></i>
+              <i style="left:14px;top:49px;width:300px;height:18px;border-radius:9px;background:#F1F3F6"></i>
+              <i style="left:0;top:76px;width:120px;height:326px;border-radius:0;background:#F7F8FA;box-shadow:1px 0 0 #ECEEF1"></i>
+              <i style="left:14px;top:96px;width:70px;height:12px;background:#B9BEC7"></i>
+              <i style="left:14px;top:124px;width:92px;height:22px;background:#E8EEFD"></i>
+              <i style="left:14px;top:154px;width:80px;height:10px;background:#D9DBE2"></i>
+              <i style="left:14px;top:180px;width:88px;height:10px;background:#D9DBE2"></i>
+              <i style="left:146px;top:104px;width:130px;height:16px;background:#C3C6CE"></i>
+              <i style="left:146px;top:134px;width:190px;height:8px;background:#E3E4EA"></i>
+              <i style="left:146px;top:170px;width:60px;height:60px;border-radius:30px;background:#F59E0B"></i>
+              <i style="left:222px;top:182px;width:90px;height:10px;background:#CBCED6"></i>
+              <i style="left:222px;top:202px;width:60px;height:8px;background:#BFD0F5"></i>
+              <i style="left:146px;top:260px;width:190px;height:34px;background:#fff;box-shadow:inset 0 0 0 1px #D1D5DB"></i>
+              <i style="left:146px;top:306px;width:190px;height:34px;background:#fff;box-shadow:inset 0 0 0 1px #D1D5DB"></i>
+              <i style="left:146px;top:356px;width:80px;height:30px;background:#2563EB"></i>
+            </div>
+            <div class="task" style="left:-400px;top:372px;width:1400px;height:48px">
+              <div class="apps"><i style="--c:#3B82F6"></i><i style="--c:#9CA3AF"></i><i style="--c:#D4A23A"></i><i class="cur" style="--c:#2563EB"></i><i style="--c:#6B7280"></i></div>
+              <div class="ttray"><svg class="i" viewBox="0 0 24 24"><use href="#g-chev" transform="rotate(180 12 12)"/></svg><span class="sv"><svg viewBox="0 0 64 64" fill="none" stroke="#FF8A4C" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"><use href="#g-logo"/></svg></span><div>14:32<br>10.10.2026</div></div>
+            </div>
+            <div class="menu glass" id="c4-menu">
+              <div class="mh"><svg viewBox="0 0 64 64" fill="none" stroke="#FF8A4C" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"><use href="#g-logo"/></svg><b>Screen<span class="wm-v">Voicer</span></b><span class="st"><i></i>Голос готовий</span></div>
+              <div class="mbtn" id="c4-btn"><svg class="i" viewBox="0 0 24 24"><use href="#g-camera"/></svg>Зробити знімок<kbd>Alt+Shift+S</kbd></div>
+              <div class="mchips"><span class="mc">3 с</span><span class="mc" id="c4-chip">5 с</span><span class="mc">10 с</span></div>
+              <div class="msep"></div>
+              <div class="mrow"><svg class="i" viewBox="0 0 24 24"><use href="#g-image"/></svg>Галерея</div>
+              <div class="mrow"><svg class="i" viewBox="0 0 24 24"><use href="#g-mic"/></svg>Мікрофон<em>За замовчуванням</em></div>
+              <div class="mrow"><svg class="i" viewBox="0 0 24 24"><use href="#g-globe"/></svg>Мова голосу<span class="sg"><span>УКР</span><span>ENG</span><span class="on">Авто</span></span></div>
+              <div class="mrow"><svg class="i" viewBox="0 0 24 24"><use href="#g-power"/></svg>Запуск з Windows<span class="tg" id="c4-tg"><i></i></span></div>
+            </div>
+            <div class="rip" id="c4-rip"></div>
+            <div id="c4-cur"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="privacy">
+    <div class="wrap">
+      <h2 class="statement">Голос розпізнається на вашому комп’ютері. <span>Нічого не завантажується.</span></h2>
+      <p class="note">Whisper працює офлайн, українською та англійською. Без акаунта і&nbsp;без хмари.</p>
+    </div>
+  </section>
+
+  <section class="final">
+    <div class="wrap">
+      <svg class="mark" viewBox="0 0 64 64" fill="none" stroke="#FF8A4C" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#g-logo"/></svg>
+      <h2>Screen<span class="wm-v">Voicer</span></h2>
+      <div class="cta" data-cta>
+        <a class="btn btn-pri" data-os="win" href="https://github.com/ArthurMospan/ScreenVoicer/releases/latest/download/ScreenVoicer-Setup.exe">Завантажити для Windows</a>
+        <a class="btn btn-sec" data-os="mac" href="https://github.com/ArthurMospan/ScreenVoicer/releases/latest/download/ScreenVoicer-macOS.zip">Завантажити для Mac</a>
+      </div>
+      <p class="meta"><span>Безкоштовно<i aria-hidden="true">·</i>Windows 10/11</span><i class="mid" aria-hidden="true">·</i> <span>macOS 14+<i aria-hidden="true">·</i>Відкритий код</span></p>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap"><p>ScreenVoicer<i aria-hidden="true">·</i><a href="https://github.com/ArthurMospan/ScreenVoicer/blob/main/LICENSE">MIT</a><i aria-hidden="true">·</i><a href="https://github.com/ArthurMospan/ScreenVoicer">GitHub</a></p></div>
+</footer>
+
+<script>
+(() => {
+  'use strict';
+  const D = document, root = D.documentElement;
+  const $ = (s, r = D) => r.querySelector(s);
+  const $$ = (s, r = D) => Array.from(r.querySelectorAll(s));
+  const g = id => D.getElementById(id);
+  const params = new URLSearchParams(location.hash.slice(1));
+  const mqReduce = matchMedia('(prefers-reduced-motion: reduce)');
+  let reduced = mqReduce.matches || params.has('rm');
+  const debug = params.has('p') || params.has('c') || params.has('shot');
+  if (debug) root.classList.add('instant');
+
+  /* ---- maths ---- */
+  const clamp = (v, a = 0, b = 1) => v < a ? a : v > b ? b : v;
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const seg = (t, a, b) => clamp((t - a) / (b - a));
+  const io = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;   // moves
+  const eo = t => 1 - Math.pow(1 - t, 3);                                        // settles
+  const ex = t => t >= 1 ? 1 : 1 - Math.pow(2, -10 * t);                        // arrivals
+  const pop = p => { const c = 1.4; return p <= 0 ? 0 : 1 + (c + 1) * Math.pow(p - 1, 3) + c * Math.pow(p - 1, 2); };
+  const fade = (t, a, b, c, d) => seg(t, a, b) * (1 - seg(t, c, d));
+  const r2 = v => Math.round(v * 100) / 100;
+
+  /* ---- cached style writes: touch the DOM only when a value changes ---- */
+  const set = (el, k, v) => { const c = '_s' + k; if (el[c] !== v) { el[c] = v; el.style[k] = v; } };
+  const op = (el, v) => { v = r2(clamp(v)); set(el, 'opacity', String(v)); set(el, 'visibility', v > 0 ? 'visible' : 'hidden'); };
+  const tf = (el, v) => set(el, 'transform', v);
+  const at = (el, k, v) => { const c = '_a' + k; v = String(v); if (el[c] !== v) { el[c] = v; el.setAttribute(k, v); } };
+  const cl = (el, c, on) => { const k = '_c' + c; on = !!on; if (el[k] !== on) { el[k] = on; el.classList.toggle(c, on); } };
+  const icon = (id, c = '') => `<svg class="i ${c}" viewBox="0 0 24 24"><use href="#g-${id}"/></svg>`;
+
+  /* keyframed path for cursors: [[t, x, y], ...], eased between keys */
+  const track = keys => t => {
+    if (t <= keys[0][0]) return [keys[0][1], keys[0][2]];
+    for (let i = 1; i < keys.length; i++) {
+      const k = keys[i];
+      if (t <= k[0]) { const j = keys[i - 1]; const p = io(clamp((t - j[0]) / (k[0] - j[0] || 1))); return [lerp(j[1], k[1], p), lerp(j[2], k[2], p)]; }
+    }
+    const l = keys[keys.length - 1]; return [l[1], l[2]];
+  };
+  /* centre of an element in its scene's coordinates (offsets ignore transforms) */
+  const centre = (el, scene) => {
+    let x = el.offsetWidth / 2, y = el.offsetHeight / 2, n = el;
+    while (n && n !== scene) { x += n.offsetLeft; y += n.offsetTop; n = n.offsetParent; }
+    return [x, y];
+  };
+
+  /* ---- the product UI, built once per scene ---- */
+  const TB = `<span class="b on">${icon('region')}</span><span class="b">${icon('screen')}</span><span class="b">${icon('timer')}</span><span class="dv"></span>` +
+    `<span class="b w46 tool">${icon('pen')}${icon('chev', 'chev')}</span><span class="b w46"><i class="cdot"></i>${icon('chev', 'chev')}</span>` +
+    `<span class="b">${icon('undo')}</span><span class="b">${icon('redo')}</span><span class="dv"></span>` +
+    `<span class="b mic"><span class="ra"><i class="rp"></i><i class="rl"></i><i class="rd"></i></span>${icon('mic')}</span><span class="b chv">${icon('chev', 'chev')}</span>` +
+    `<span class="fld"><span class="ph">Говоріть або напишіть коментар</span><span class="txt"></span><i class="caret"></i></span>` +
+    `<span class="save"><i class="hl"></i>${icon('check')}</span><span class="b">${icon('close', 'i16')}</span>`;
+  const PILL = `<span class="wave"><i></i><i></i><i></i><i></i><i></i></span><span class="pt">Говоріть… щоб зупинити — Пробіл або мікрофон</span>`;
+  const toastHTML = msg => `<div class="row"><div class="bdg">${icon('check')}</div><div class="tx"><div class="tt">Скопійовано в буфер обміну</div><div class="msg">«${msg}»</div></div><div class="x">${icon('close')}</div></div>` +
+    `<div class="acts"><span class="chip fro">Копіювати</span><span class="chip wh">Галерея</span></div><div class="bar"></div>`;
+  const CURSOR = `<svg class="ca" viewBox="0 0 22 30"><path d="M2 2v22.5l5.6-5.3 3.6 8.3 3.6-1.6-3.6-8.1H19z" fill="#fff" stroke="#000" stroke-width="1.4" stroke-linejoin="round"/></svg>` +
+    `<svg class="cx" viewBox="0 0 26 26"><path d="M13 1v9M13 16v9M1 13h9M16 13h9" stroke="#000" stroke-width="3.4"/><path d="M13 1v9M13 16v9M1 13h9M16 13h9" stroke="#fff" stroke-width="1.4"/></svg>`;
+  const TOOLS = ['pen', 'hl', 'arrow', 'rect', 'text', 'num', 'eraser'];
+
+  function bindToolbar(el) {
+    const q = s => $(s, el);
+    const o = { el, mic: q('.mic'), ra: q('.ra'), rp: q('.rp'), rl: q('.rl'), rd: q('.rd'), ph: q('.ph'), txt: q('.txt'), caret: q('.caret'), save: q('.save'), hl: q('.hl'), words: $$('.w', el), rights: [] };
+    o.measure = () => { o.rights = o.words.map(w => w.offsetLeft + w.offsetWidth); };
+    /* k: words visible (a fraction = the last one fading in); caret: shown or not */
+    o.text = (k, caret) => {
+      const n = o.words.length;
+      let shown = 0;
+      for (let i = 0; i < n; i++) { const a = clamp((k - i) * 2); op(o.words[i], a); if (a > 0) shown = i + 1; }
+      const last = shown ? (o.rights[shown - 1] || 0) : 0, prev = shown > 1 ? (o.rights[shown - 2] || 0) : 0;
+      const right = shown ? lerp(prev, last, io(clamp((k - (shown - 1)) * 2))) : 0;
+      op(o.ph, k > 0 ? 0 : 1);
+      op(o.caret, caret ? 1 : 0);
+      tf(o.caret, `translateX(${r2(right + (shown ? 1 : 0))}px)`);
+    };
+    /* time-driven recording: r = seconds since the mic went red, or -1 */
+    o.recT = r => {
+      cl(o.mic, 'rec', r >= 0);
+      if (r < 0) { op(o.ra, 0); return; }
+      op(o.ra, 1); tf(o.ra, 'none');
+      const ph = r % 1, p = ph < .5 ? ph / .5 : (1 - ph) / .5;               // the app's 0.5 s auto-reversing pulse
+      op(o.rp, .6 - .52 * p); tf(o.rp, `scale(${r2(1 + .4 * p)})`);
+      const lv = Math.abs(Math.sin(r * 5.3) * Math.sin(r * 1.9 + 1));          // voice level ring
+      op(o.rl, .8); tf(o.rl, `scale(${r2(1.04 + .2 * lv)})`);
+    };
+    /* scroll-driven recording: a = presence 0..1, s = disc scale; the rings run on CSS */
+    o.recS = (a, s) => { cl(o.mic, 'rec', a > 0); op(o.ra, a); tf(o.ra, `scale(${r2(s)})`); };
+    o.press = p => { tf(o.save, `scale(${r2(1 - .1 * p)})`); op(o.hl, p); };
+    return o;
+  }
+  function buildToolbar(el, words) {
+    el.classList.add('tb', 'glass');
+    el.innerHTML = TB;
+    $('.txt', el).innerHTML = words.split(' ').map(w => `<span class="w">${w}</span>`).join(' ');
+    return bindToolbar(el);
+  }
+  function bindPill(el) {
+    const o = { el, bars: $$('.wave i', el) };
+    o.wave = t => o.bars.forEach((b, i) => tf(b, `scaleY(${r2(.25 + .75 * Math.abs(Math.sin(t * (4.4 + i * 1.3) + i * 1.3) * Math.sin(t * 1.7 + i)))})`));
+    return o;
+  }
+  const buildPill = el => { el.classList.add('pill', 'glass'); el.innerHTML = PILL; return bindPill(el); };
+  const cursor = el => { el.classList.add('cursor'); el.innerHTML = CURSOR; return { el, at(x, y, cross) { tf(el, `translate(${r2(x)}px,${r2(y)}px)`); cl(el, 'cross', cross); } }; };
+  const flyout = el => {
+    el.classList.add('fly', 'glass');
+    el.innerHTML = TOOLS.map(n => `<span class="b" data-t="${n}">${icon(n)}</span>`).join('');
+    const o = { el, btns: {} };
+    $$('[data-t]', el).forEach(b => { o.btns[b.dataset.t] = b; });
+    o.on = n => TOOLS.forEach(k => cl(o.btns[k], 'on', k === n));
+    return o;
+  };
+  /* click ring for the last click within 0.5 s */
+  const ripple = (el, clicks) => (t, pos) => {
+    let c = null;
+    for (const k of clicks) if (t >= k && t < k + .5) c = k;
+    if (c === null) { op(el, 0); return; }
+    const p = (t - c) / .5, [x, y] = pos(c);
+    op(el, .9 * (1 - p)); tf(el, `translate(${r2(x)}px,${r2(y)}px) scale(${r2(.4 + .8 * ex(p))})`);
+  };
+
+  /* =====================================================================
+     Intro: the toolbar descends into the screen, then three beats on scroll
+     ===================================================================== */
+  const trackEl = $('.track'), stage = $('.stage'), hero = $('.hero'), heroSlot = $('.hero-slot'), heroObj = $('.hero-obj');
+  const capsEl = $('.caps', stage), ticksEl = $('.ticks', stage), ticks = $$('.ticks b', stage), caps = $$('.cap', stage);
+  const frameList = $('.frames ol');
+
+  const COMMENT = 'Стрибок після релізу 2.4, перевір кеш.';
+  const SEL = { x: 500, y: 318, w: 640, h: 360 };
+  const TB_C = { x: 600, y: 37 };                 // toolbar centre in scene px
+  const K = 4.4;                                  // track height, in viewports
+  const PI = 1 / (K - 1);                         // the hero copy has scrolled away here
+  const BEATS = [[PI, .53], [.53, .77], [.77, 1]];
+  const FULL = { x: 0, y: 0, w: 1200, h: 750 };
+  const CROPS = [{ x: 452, y: 262, w: 748, h: 488 }, { x: 402, y: 0, w: 576, h: 392 }, { x: 744, y: 452, w: 456, h: 298 }];
+  const beatP = (i, t) => BEATS[i][0] + t * (BEATS[i][1] - BEATS[i][0]);
+
+  const DATA = [196,204,191,210,199,187,205,214,198,192,207,201,189,196,211,203,194,200,208,197,202,388,462,431,447,425,439,418,433,427];
+  const PREV = [182,188,179,192,185,178,190,194,186,181,189,187,180,184,193,188,182,186,191,185,188,190,186,192,189,184,190,187,191,188];
+  const linePath = arr => arr.map((v, i) => (i ? 'L' : 'M') + (296 + i * 840 / 29).toFixed(2) + ' ' + (680 - v * .56).toFixed(2)).join('');
+
+  const scene0 = $('.scene', stage);
+  $('.ln1', scene0).setAttribute('d', linePath(DATA));
+  $('.ln2', scene0).setAttribute('d', linePath(PREV));
+  buildToolbar($('.tb', scene0), COMMENT);
+  buildPill($('.pill', scene0));
+  $('.toast', scene0).innerHTML = toastHTML(COMMENT);
+  const sceneTpl = scene0.cloneNode(true);
+  const tbTpl = $('.tb', scene0).cloneNode(true);
+
+  function bind(sc) {
+    const q = s => $(s, sc);
+    return { sc, screen: q('.screen'), ov: q('.ov'), dim: q('.dim'), fr: q('.fr'), frs: q('.frs'), size: q('.size'), cur: q('.cur'),
+      tb: bindToolbar(q('.tb')), pill: q('.pill'), toast: q('.toast'), bar: q('.bar'), e: -1, sz: '' };
+  }
+
+  /* the three beats, as a pure function of progress p */
+  function state(S, p) {
+    const t1 = seg(p, BEATS[0][0], BEATS[0][1]), t2 = seg(p, BEATS[1][0], BEATS[1][1]), t3 = seg(p, BEATS[2][0], BEATS[2][1]);
+
+    // 1. Select: drag a region open, the rest of the screen stays dimmed
+    const e = io(seg(t1, .14, .74));
+    if (e !== S.e) {
+      S.e = e;
+      const w = SEL.w * e, h = SEL.h * e, x1 = SEL.x + w, y1 = SEL.y + h;
+      S.dim.setAttribute('d', 'M0 0H1200V750H0Z' + (e > 0 ? `M${SEL.x} ${SEL.y}V${y1.toFixed(2)}H${x1.toFixed(2)}V${SEL.y}Z` : ''));
+      for (const r of [S.fr, S.frs]) {
+        r.setAttribute('x', SEL.x); r.setAttribute('y', SEL.y);
+        r.setAttribute('width', w.toFixed(2)); r.setAttribute('height', h.toFixed(2));
+        r.style.opacity = e > .002 ? 1 : 0;
+      }
+      const sz = Math.round(1280 * e) + '×' + Math.round(720 * e);
+      if (sz !== S.sz) { S.sz = sz; S.size.textContent = sz; }
+      tf(S.size, `translate(${SEL.x}px, ${SEL.y - 28}px)`);
+    }
+    const co = p < BEATS[1][0] ? seg(t1, .04, .12) * (1 - seg(t1, .8, .9)) : 0;
+    op(S.cur, co);
+    tf(S.cur, `translate(${(SEL.x + SEL.w * e).toFixed(2)}px, ${(SEL.y + SEL.h * e).toFixed(2)}px)`);
+
+    // 2. Speak: the mic becomes a red disc, the words arrive in the field
+    const rec = seg(t2, .04, .1) * (1 - seg(t2, .86, .94));
+    S.tb.recS(rec, .72 + .28 * eo(seg(t2, .04, .12)));
+    const pill = seg(t2, .07, .14) * (1 - seg(t2, .84, .92));
+    op(S.pill, pill); cl(S.pill, 'live', pill > 0);
+    tf(S.pill, `translateY(${((1 - pill) * -5).toFixed(2)}px)`);
+    const nW = S.tb.words.length;
+    S.tb.text(nW * seg(t2, .16, .74), p >= BEATS[1][0] && p < BEATS[2][0] + .03);
+    cl(S.tb.caret, 'on', p >= BEATS[1][0] && p < BEATS[2][0] + .03);
+
+    // 3. Save: the glass square is pressed, the overlay lifts, the toast arrives
+    const bump = Math.sin(Math.PI * seg(t3, .04, .18));
+    S.tb.press(bump);
+    const ov = 1 - eo(seg(t3, .2, .36));
+    op(S.ov, ov); op(S.size, clamp(e * 10) * ov);
+    op(S.tb.el, ov);
+    tf(S.tb.el, `translateX(-50%) translateY(${((1 - ov) * -8).toFixed(2)}px)`);
+    const to = eo(seg(t3, .32, .5));
+    op(S.toast, to);
+    tf(S.toast, `translateY(${((1 - to) * 18).toFixed(2)}px)`);
+    tf(S.bar, `scaleX(${(1 - .82 * seg(t3, .42, 1)).toFixed(4)})`);
+  }
+
+  /* ---- motion mode: sticky stage ---- */
+  const main = bind(scene0);
+  let mode = '', vw = 0, vh = 0, range = 1;
+  let ks = 1, txs = 0, tys = 0, kh = 1, txh = 0, tyh = 0;
+  let target = 0, cur = 0, raf = 0, last = 0;
+  const forced = params.has('p') && !isNaN(parseFloat(params.get('p'))) ? clamp(parseFloat(params.get('p'))) : null;
+
+  function layoutMotion() {
+    main.tb.measure();
+    const capsH = ticksEl.offsetHeight + 26 + Math.max(...caps.map(c => c.offsetHeight));
+    const pad = Math.max(24, vh * .06), gap = Math.max(22, vh * .035);
+    const side = Math.max(32, vw * .05);
+    const availH = vh - 2 * pad - gap - capsH;
+    ks = Math.max(.3, Math.min((vw - 2 * side) / 1200, availH / 750, 1.1));
+    const block = 750 * ks + gap + capsH;
+    const top0 = Math.max(pad, (vh - block) / 2);
+    txs = (vw - 1200 * ks) / 2;
+    tys = top0;
+    capsEl.style.transform = `translateY(${(top0 + 750 * ks + gap).toFixed(1)}px)`;
+
+    const tbw = main.tb.el.offsetWidth || 743;
+    kh = Math.min(1.12, (vw - 64) / tbw);
+    heroSlot.style.height = (46 * kh).toFixed(1) + 'px';
+    const heroInTop = heroSlot.offsetParent === hero ? 0 : heroSlot.offsetParent.offsetTop;
+    const yh = heroInTop + heroSlot.offsetTop + heroSlot.offsetHeight / 2;
+    txh = vw / 2 - TB_C.x * kh;
+    tyh = yh - TB_C.y * kh;
+    range = Math.max(1, trackEl.offsetHeight - vh);
+  }
+
+  function drawMotion(p) {
+    const ci = io(clamp(p / PI));
+    const k = lerp(kh, ks, ci), x = lerp(txh, txs, ci), y = lerp(tyh, tys, ci);
+    main.sc.style.transform = `translate(${x.toFixed(2)}px, ${y.toFixed(2)}px) scale(${k.toFixed(4)})`;
+    main.sc.style.opacity = 1;
+    main.screen.style.opacity = eo(seg(p / PI, .32, .96)).toFixed(3);
+    state(main, p);
+
+    ticksEl.style.opacity = seg(p, PI - .04, PI).toFixed(3);
+    for (let i = 0; i < 3; i++) {
+      const [a, b] = BEATS[i];
+      ticks[i].style.transform = `scaleX(${seg(p, a, b).toFixed(4)})`;
+      const fi = i === 0 ? seg(p, a - .04, a) : seg(p, a, a + .028);
+      const fo = i === 2 ? 1 : 1 - seg(p, b - .028, b);
+      caps[i].style.opacity = (fi * fo).toFixed(3);
+      caps[i].style.transform = `translateY(${(10 * (1 - fi) - 10 * (1 - fo)).toFixed(2)}px)`;
+    }
+    if (forced !== null) hero.style.transform = `translateY(${-Math.min(p * range, vh * 1.2)}px)`;
+  }
+
+  const readP = () => clamp(-trackEl.getBoundingClientRect().top / range);
+  function tick(now) {
+    raf = 0;
+    const dt = last ? Math.min(64, now - last) : 16;
+    last = now;
+    cur += (target - cur) * (1 - Math.exp(-dt / 95));
+    if (Math.abs(target - cur) < .00015) cur = target;
+    drawMotion(cur);
+    if (cur !== target) raf = requestAnimationFrame(tick); else last = 0;
+  }
+
+  /* ---- static mode: three still frames + the toolbar as the hero object ---- */
+  let frames = null, heroTb = null;
+  function buildStatic() {
+    if (frames) return;
+    heroTb = tbTpl.cloneNode(true);
+    heroObj.appendChild(heroTb);
+    frames = caps.map((cap, i) => {
+      const li = D.createElement('li');
+      const fig = D.createElement('figure');
+      const frame = D.createElement('div');
+      frame.className = 'frame';
+      frame.setAttribute('aria-hidden', 'true');
+      const sc = sceneTpl.cloneNode(true);
+      frame.appendChild(sc);
+      const cap2 = D.createElement('figcaption');
+      cap2.innerHTML = cap.innerHTML;
+      fig.append(frame, cap2);
+      li.appendChild(fig);
+      frameList.appendChild(li);
+      const S = bind(sc);
+      S.tb.measure();
+      const p = beatP(i, [.8, .76, .7][i]);
+      state(S, p);
+      return { frame, S, i, p };
+    });
+    // With motion allowed, each frame plays its beat once as it comes into view
+    if (!reduced && !debug && 'IntersectionObserver' in window) {
+      const play = fr => {
+        const p0 = beatP(fr.i, 0), dur = 2600;
+        let t0 = 0;
+        const step = now => {
+          t0 = t0 || now;
+          const t = clamp((now - t0) / dur);
+          state(fr.S, lerp(p0, fr.p, t));
+          if (t < 1) requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+      };
+      const o = new IntersectionObserver(entries => {
+        for (const en of entries) {
+          if (!en.isIntersecting) continue;
+          o.unobserve(en.target);
+          play(frames.find(fr => fr.frame === en.target));
+        }
+      }, { threshold: .55 });
+      for (const fr of frames) { state(fr.S, beatP(fr.i, 0)); o.observe(fr.frame); }
+    }
+  }
+  function layoutStatic() {
+    const gut = parseFloat(getComputedStyle(root).getPropertyValue('--gut')) || 16;
+    const W = heroObj.clientWidth;
+    const tbw = heroTb.offsetWidth || 743;
+    let k, x;
+    if (W < 700) {                                // a macro of the right half, bleeding off the left edge
+      k = Math.min(.86, (W - gut) / (tbw - 268));
+      x = W - gut - tbw * k;
+    } else {
+      k = Math.min(1.1, (W - 2 * gut) / tbw);
+      x = (W - tbw * k) / 2;
+    }
+    heroObj.style.height = (46 * k).toFixed(1) + 'px';
+    heroTb.style.transform = `translate(${x.toFixed(1)}px, 0) scale(${k.toFixed(4)})`;
+    for (const fr of frames) {
+      fr.S.tb.measure();
+      const fw = fr.frame.clientWidth;
+      const box = fw >= 860 ? FULL : CROPS[fr.i];
+      const kk = fw / box.w;
+      fr.frame.style.height = (box.h * kk).toFixed(1) + 'px';
+      fr.S.sc.style.transform = `translate(${(-box.x * kk).toFixed(2)}px, ${(-box.y * kk).toFixed(2)}px) scale(${kk.toFixed(4)})`;
+      fr.S.sc.style.opacity = 1;
+    }
+  }
+
+  function pickMode() {
+    const w = root.clientWidth, h = innerHeight;
+    const still = params.has('static') || mqReduce.matches;
+    return (!still && w >= 700 && h >= 520 && h <= 1500 && h <= w * 1.15) ? 'motion' : 'static';
+  }
+  function layoutIntro() {
+    vw = root.clientWidth; vh = +params.get('vh') || innerHeight;   // #vh= pins the viewport unit for tall full-page shots
+    root.style.setProperty('--vh', vh + 'px');
+    const m = pickMode();
+    if (m !== mode) {
+      mode = m;
+      root.dataset.mode = m;
+      hero.style.transform = '';
+    }
+    if (mode === 'motion') {
+      layoutMotion();
+      if (forced !== null) { cur = target = forced; } else { cur = target = readP(); }
+      drawMotion(cur);
+    } else {
+      buildStatic();
+      layoutStatic();
+    }
+  }
+
+  /* =====================================================================
+     Chapters: four macro loops, each a function of time
+     ===================================================================== */
+  const chapters = [];
+  function chapter(n, dur, still, setup) {
+    const sec = $(`.ch[data-ch="${n}"]`), view = $('.ch-view', sec), sc = $('.ch-scene', view);
+    const c = { n, sec, view, sc, dur, still, t: 0, visible: false, frozen: null, cam: null, measure: null, render: null };
+    setup(c);
+    chapters.push(c);
+    return c;
+  }
+  /* the camera: a focal point and a width in scene px, fitted to the view's width */
+  function placeChapter(c) {
+    const W = c.view.clientWidth, H = c.view.clientHeight;
+    if (!W) return;
+    const cam = c.cam(W, H), k = W / cam.w;
+    tf(c.sc, `translate(${r2(W / 2 - cam.cx * k)}px, ${r2(H / 2 - cam.cy * k)}px) scale(${k.toFixed(5)})`);
+  }
+
+  /* 01 Voice: the mic goes red, the status pill breathes, the words arrive */
+  chapter(1, 10, 5.2, c => {
+    const tb = buildToolbar(g('c1-tb'), 'Знижка не працює');
+    const pl = buildPill(g('c1-pill'));
+    const n = tb.words.length, W0 = 2.0, W1 = 5.2;
+    c.measure = () => { tb.measure(); pl.el.style.left = (tb.el.offsetLeft + tb.mic.offsetLeft - 4) + 'px'; };
+    c.cam = W => W < 600 ? { cx: 400, cy: 90, w: 262 } : { cx: 405, cy: 86, w: 250 };
+    c.render = t => {
+      tb.recT(t >= 1.2 && t < 6.2 ? t - 1.2 : -1);
+      const k = t < 9.3 ? (t - W0) / ((W1 - W0) / (n - 1)) + 1 : 0;
+      tb.text(clamp(k, 0, n), t >= 1.2 && t < 9.0 && (t % 1.1) < .6);
+      op(tb.txt, 1 - seg(t, 9.0, 9.5));
+      const pv = fade(t, 1.2, 1.5, 6.6, 7.0);
+      op(pl.el, pv); tf(pl.el, `translateY(${r2((1 - ex(seg(t, 1.2, 1.5))) * -5)}px)`);
+      if (pv > 0) pl.wave(t);
+    };
+  });
+
+  /* 02 Marks: the tool flyout changes, a rectangle, two markers and an arrow land on the crop */
+  chapter(2, 10.5, 5.6, c => {
+    buildToolbar(g('c2-tb'), '');
+    const fly = flyout(g('c2-fly'));
+    const rect = g('c2-rect'), arw = g('c2-arw'), m1 = g('c2-m1'), m2 = g('c2-m2'), cur = cursor(g('c2-cur'));
+    const R = [128, 172, 404, 198], A = [262, 230, 376, 202];
+    const tool = i => [145 + 36 * TOOLS.indexOf(i), 41];
+    const CLICKS = [.5, 2.3, 2.7, 3.4, 3.9];
+    const path = track([[0, 330, 160], [.35, ...tool('rect')], [.75, ...tool('rect')], [.9, R[0], R[1]], [1.9, R[2], R[3]], [2.2, ...tool('num')], [2.5, ...tool('num')],
+      [2.65, 128, 148], [3.0, 128, 148], [3.3, 404, 185], [3.6, 404, 185], [3.8, ...tool('arrow')], [4.1, ...tool('arrow')], [4.4, A[0], A[1]], [5.2, A[2], A[3]], [5.7, 340, 212], [8.0, 340, 212], [8.6, 330, 160]]);
+    const rip = ripple(g('c2-rip'), CLICKS);
+    const curAt = t => {
+      if (t >= .9 && t < 1.9) { const p = io(seg(t, .9, 1.9)); return [lerp(R[0], R[2], p), lerp(R[1], R[3], p)]; }
+      if (t >= 4.4 && t < 5.2) { const p = io(seg(t, 4.4, 5.2)); return [lerp(A[0], A[2], p), lerp(A[1], A[3], p)]; }
+      return path(t);
+    };
+    c.cam = W => W < 600 ? { cx: 266, cy: 132, w: 300 } : { cx: 270, cy: 118, w: 340 };
+    c.render = t => {
+      fly.on(t < .5 ? 'pen' : t < 2.3 ? 'rect' : t < 3.9 ? 'num' : t < 8.9 ? 'arrow' : 'pen');
+      const out = 1 - seg(t, 8.4, 9.0);
+      const rp = io(seg(t, .9, 1.9));
+      at(rect, 'width', r2((R[2] - R[0]) * rp)); at(rect, 'height', r2((R[3] - R[1]) * rp)); op(rect, t >= .9 ? out : 0);
+      const m1p = seg(t, 2.7, 3.1); op(m1, m1p > 0 ? out : 0); tf(m1, `scale(${r2(pop(m1p))})`);
+      const m2p = seg(t, 3.4, 3.8); op(m2, m2p > 0 ? out : 0); tf(m2, `scale(${r2(pop(m2p))})`);
+      const ap = io(seg(t, 4.4, 5.2));
+      if (t >= 4.4) {
+        const x = lerp(A[0], A[2], ap), y = lerp(A[1], A[3], ap), ang = Math.atan2(y - A[1], x - A[0]), L = 10 * clamp(ap * 4);
+        at(arw, 'd', `M${A[0]} ${A[1]}L${r2(x)} ${r2(y)}M${r2(x)} ${r2(y)}L${r2(x - L * Math.cos(ang - .5))} ${r2(y - L * Math.sin(ang - .5))}M${r2(x)} ${r2(y)}L${r2(x - L * Math.cos(ang + .5))} ${r2(y - L * Math.sin(ang + .5))}`);
+      } else at(arw, 'd', '');
+      op(arw, t >= 4.4 ? out : 0);
+      const [cx, cy] = curAt(t);
+      cur.at(cx, cy, (t >= .85 && t < 1.95) || (t >= 4.35 && t < 5.25));
+      rip(t, curAt);
+    };
+  });
+
+  /* 03 Clipboard: Save is pressed, the toast slides in, the chat receives the image and the Markdown */
+  chapter(3, 9.6, 3.4, c => {
+    const tb = buildToolbar(g('c3-tb'), COMMENT);
+    const dim = g('c3-dim'), toast = g('c3-toast'), bub = g('c3-bub');
+    toast.innerHTML = toastHTML(COMMENT);
+    const bar = $('.bar', toast);
+    c.measure = () => { tb.measure(); tb.el.style.left = (470 - tb.el.offsetWidth) + 'px'; };
+    c.cam = W => W < 600 ? { cx: 272, cy: 200, w: 420 } : { cx: 241, cy: 193, w: 483 };
+    c.render = t => {
+      tb.text(tb.words.length, false);
+      tb.press(Math.sin(Math.PI * seg(t, .6, .85)));
+      const ov = 1 - fade(t, 1.0, 1.35, 9.15, 9.5);
+      op(dim, ov); op(tb.el, ov); tf(tb.el, `translateY(${r2((1 - ov) * -8)}px)`);
+      const to = ex(seg(t, 1.3, 1.7));
+      op(toast, fade(t, 1.3, 1.7, 7.2, 7.6)); tf(toast, `translateY(${r2((1 - to) * 18)}px)`);
+      tf(bar, `scaleX(${r2(1 - seg(t, 1.7, 7.3))})`);
+      const b = ex(seg(t, 2.6, 3.0));
+      op(bub, fade(t, 2.6, 2.9, 8.5, 8.9)); tf(bub, `translateY(${r2((1 - b) * 8)}px) scale(${r2(.97 + .03 * b)})`);
+    };
+  });
+
+  /* 04 Menu: the tray menu; the cursor switches start-up on, picks «5 с» and reaches for the button */
+  chapter(4, 9.4, 3.6, c => {
+    const menu = g('c4-menu'), chip = g('c4-chip'), btn = g('c4-btn'), tg = g('c4-tg'), cur = cursor(g('c4-cur'));
+    const CLICKS = [1.5, 3.4];
+    let path = track([[0, 120, 330]]);
+    c.measure = () => {
+      const off = ([x, y]) => [x + 6, y + 8];
+      const T = off(centre(tg, c.sc)), C = off(centre(chip, c.sc)), B = off(centre(btn, c.sc));
+      path = track([[0, 120, 330], [.5, 120, 330], [1.3, T[0], T[1]], [2.3, T[0], T[1]], [3.0, C[0], C[1]], [4.3, C[0], C[1]], [4.9, B[0], B[1]], [6.6, B[0], B[1]], [7.4, 120, 330]]);
+    };
+    const rip = ripple(g('c4-rip'), CLICKS);
+    c.cam = W => W < 600 ? { cx: 392, cy: 200, w: 340 } : { cx: 280, cy: 210, w: 560 };
+    c.render = t => {
+      const [x, y] = path(t);
+      cur.at(x, y, false);
+      op(cur.el, fade(t, .2, .5, 7.6, 7.9));
+      cl(tg, 'on', t >= 1.5 && t < 8.35);
+      cl(chip, 'hov', t >= 2.95 && t < 3.4);
+      cl(chip, 'on', t >= 3.4 && t < 8.35);
+      cl(btn, 'hov', t >= 4.85 && t < 6.7);
+      const m = 1 - fade(t, 8.35, 8.6, 8.85, 9.15);
+      op(menu, m); tf(menu, `translateY(${r2((1 - m) * 6)}px) scale(${r2(.985 + .015 * m)})`);
+      rip(t, path);
+    };
+  });
+
+  /* ---- chapter engine: one rAF loop for the visible chapters; frozen by #c=&t= ---- */
+  const forcedCh = params.has('c') ? parseInt(params.get('c'), 10) : 0;
+  if (debug) for (const c of chapters) c.frozen = c.still;
+  if (forcedCh) { const c = chapters[forcedCh - 1]; if (c) c.frozen = params.has('t') && !isNaN(parseFloat(params.get('t'))) ? parseFloat(params.get('t')) % c.dur : c.still; }
+
+  const chFrame = c => c.frozen !== null ? c.frozen : reduced ? c.still : c.t;
+  const drawChapter = c => { placeChapter(c); c.render(chFrame(c)); };
+  const measureChapters = () => chapters.forEach(c => { if (c.measure) c.measure(); drawChapter(c); });
+
+  let craf = 0, clast = 0;
+  const cloop = now => {
+    craf = 0;
+    const dt = clast ? Math.min(.05, (now - clast) / 1000) : 0;
+    clast = now;
+    let any = false;
+    for (const c of chapters) {
+      if (c.frozen !== null || reduced || !c.visible) continue;
+      c.t = (c.t + dt) % c.dur;
+      c.render(c.t);
+      any = true;
+    }
+    if (any && !D.hidden) craf = requestAnimationFrame(cloop); else clast = 0;
+  };
+  const ckick = () => { if (!craf && !reduced && !D.hidden) { clast = 0; craf = requestAnimationFrame(cloop); } };
+
+  const vis = new IntersectionObserver(entries => {
+    for (const en of entries) {
+      const c = chapters.find(x => x.view === en.target);
+      if (!c) continue;
+      c.visible = en.isIntersecting;
+      if (c.visible && !c.seen) { c.seen = true; c.t = 0; }
+    }
+    ckick();
+  }, { threshold: .2 });
+  chapters.forEach(c => vis.observe(c.view));
+  D.addEventListener('visibilitychange', ckick);
+
+  /* ---- scroll: the intro's smoothed progress, the chapters' parallax, the copy's arrival ---- */
+  let praf = 0;
+  function parallax() {
+    praf = 0;
+    const h = innerHeight;
+    for (const c of chapters) {
+      const r = c.sec.getBoundingClientRect();
+      if (r.bottom < -200 || r.top > h + 200) continue;
+      const d = clamp(((r.top + r.height / 2) - h / 2) / h, -1, 1);
+      tf(c.view, reduced ? 'none' : `translateY(${r2(-d * 18)}px)`);
+    }
+  }
+  function onScroll() {
+    if (mode === 'motion' && forced === null) {
+      target = readP();
+      if (!raf) raf = requestAnimationFrame(tick);
+    }
+    if (!praf) praf = requestAnimationFrame(parallax);
+  }
+  const reveals = $$('.rv');
+  if (debug || reduced || !('IntersectionObserver' in window)) reveals.forEach(el => el.classList.add('in'));
+  else {
+    const rv = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); rv.unobserve(e.target); } }), { threshold: .2, rootMargin: '0px 0px -10% 0px' });
+    reveals.forEach(el => rv.observe(el));
+  }
+
+  /* ---- layout ---- */
+  /* #c= and #y= debug jumps; re-applied after every layout, since --vh can change the page height */
+  const jump = () => {
+    if (forcedCh && chapters[forcedCh - 1]) chapters[forcedCh - 1].sec.scrollIntoView({ block: 'start' });
+    else if (params.has('y')) scrollTo(0, +params.get('y') || 0);
+  };
+  function layout() {
+    layoutIntro();
+    measureChapters();
+    parallax();
+    if (forcedCh || params.has('y')) requestAnimationFrame(jump);
+  }
+  let rz = 0;
+  addEventListener('resize', () => { cancelAnimationFrame(rz); rz = requestAnimationFrame(layout); });
+  addEventListener('scroll', onScroll, { passive: true });
+  mqReduce.addEventListener && mqReduce.addEventListener('change', e => { reduced = e.matches || params.has('rm'); layout(); ckick(); });
+  layout();
+  if (D.fonts && D.fonts.ready) D.fonts.ready.then(layout);
+
+  /* ---- the visitor's platform gets the primary button ---- */
+  const ua = navigator.userAgent || '', plat = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '';
+  const isMac = /mac/i.test(plat) && !/iphone|ipad|ipod/i.test(ua) && !(navigator.maxTouchPoints > 1);
+  if (isMac || params.has('mac')) {
+    $$('[data-cta]').forEach(cta => {
+      const win = $('[data-os="win"]', cta), mac = $('[data-os="mac"]', cta);
+      win.classList.replace('btn-pri', 'btn-sec'); mac.classList.replace('btn-sec', 'btn-pri');
+      cta.insertBefore(mac, win);
+    });
+  }
+
+  /* #dbg: report horizontal overflow */
+  if (params.has('dbg')) {
+    const o = D.createElement('div');
+    o.style.cssText = 'position:fixed;z-index:99;left:8px;bottom:8px;padding:6px 10px;border-radius:8px;background:#000;color:#0f0;font:12px/1.3 monospace';
+    D.body.appendChild(o);
+    const upd = () => { o.textContent = `vw ${innerWidth} · doc ${root.scrollWidth} · body ${D.body.scrollWidth}` + (root.scrollWidth > innerWidth ? ' OVERFLOW' : ' ok'); };
+    upd(); setTimeout(upd, 1500);
+  }
+})();
+</script>
+</body>
+</html>
