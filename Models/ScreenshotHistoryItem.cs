@@ -13,6 +13,15 @@ namespace ScreenVoicer.Models
         public int Height { get; set; }
         public long FileSizeBytes { get; set; }
 
+        /// <summary>Public link to this screenshot (shared alone or together with others), if any.</summary>
+        public string? ShareId { get; set; }
+        public string? ShareUrl { get; set; }
+        public string? ShareDeleteToken { get; set; }
+        public DateTime? ShareExpiresAt { get; set; }
+
+        [JsonIgnore]
+        public bool HasActiveShare => ShareUrl != null && ShareExpiresAt > DateTime.Now;
+
         [JsonIgnore]
         public string DisplayDate => CreatedAt.ToString("dd.MM.yyyy HH:mm");
 

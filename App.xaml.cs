@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using ScreenVoicer.Models;
 using ScreenVoicer.Native;
 using ScreenVoicer.Services;
 using ScreenVoicer.Views;
@@ -689,7 +690,7 @@ namespace ScreenVoicer
                 var capture = _screenCapture.CaptureActiveScreen();
                 long captureMs = stopwatch.ElapsedMilliseconds;
                 var overlay = new OverlayWindow(capture, _audio!, _transcription!, _compositor!, _clipboard!,
-                    _notifications, _history!, _settings!, OpenGallery, TriggerDelayedCapture);
+                    _notifications, _history!, _settings!, OpenGallery, TriggerDelayedCapture, ShareFromToast);
                 Log.Info($"[Capture] {trigger}: {capture.Bounds.Width}x{capture.Bounds.Height} captured in {captureMs} ms, overlay built in {stopwatch.ElapsedMilliseconds - captureMs} ms.");
 
                 overlay.Closed += (_, _) =>
@@ -761,7 +762,8 @@ namespace ScreenVoicer
 
             if (_gallery == null)
             {
-                _gallery = new GalleryWindow(_history, _clipboard, _settings, () => TriggerCapture(CaptureTrigger.Gallery), TriggerDelayedCapture);
+                _gallery = new GalleryWindow(_history, _clipboard, _settings, () => TriggerCapture(CaptureTrigger.Gallery), TriggerDelayedCapture,
+                    CreateShareAsync, DeleteShareAsync);
                 _gallery.Closed += (_, _) => _gallery = null;
                 _gallery.Show();
             }
@@ -828,6 +830,81 @@ namespace ScreenVoicer
             }
             Shutdown();
         }
+
+        #region Share links
+
+        /// <summary>Uploads the screenshots (oldest first) behind one link, remembers it and copies it.</summary>
+        private async Task<ShareResult?> CreateShareAsync(IReadOnlyList<ScreenshotHistoryItem> items)
+        {
+            if (items.Count == 0 || _history == null || _clipboard == null)
+            {
+                return null;
+            }
+
+            try
+            {
+                var ordered = items.OrderBy(i => i.CreatedAt).ToList();
+                var share = await ShareService.CreateAsync(ordered);
+                await _history.SetShareAsync(ordered.Select(i => i.Id), share);
+                _clipboard.CopyToClipboard(share.Url);
+                return share;
+            }
+            catch (Exception ex)
+            {
+                Log.Warn("[Share] Could not create a link", ex);
+                _notifications?.ShowToast("Не вдалося створити посилання",
+                    ex is System.Net.Http.HttpRequestException or TaskCanceledException
+                        ? $"Немає зв'язку із сервером посилань. Перевірте інтернет. ({ex.Message})"
+                        : ex.Message,
+                    ToastKind.Error, 7000);
+                return null;
+            }
+        }
+
+        /// <summary>Deletes the link (for every screenshot that shares it) from the server and the history.</summary>
+        private async Task<bool> DeleteShareAsync(ScreenshotHistoryItem item)
+        {
+            if (item.ShareId == null || item.ShareDeleteToken == null || _history == null)
+            {
+                return false;
+            }
+
+            try
+            {
+                await ShareService.DeleteAsync(item.ShareId, item.ShareDeleteToken);
+                var all = await _history.GetHistoryAsync();
+                await _history.SetShareAsync(all.Where(i => i.ShareId == item.ShareId).Select(i => i.Id), null);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Log.Warn("[Share] Could not delete a link", ex);
+                _notifications?.ShowToast("Не вдалося видалити посилання", ex.Message, ToastKind.Error, 6000);
+                return false;
+            }
+        }
+
+        /// <summary>«Посилання» on the toast after a screenshot.</summary>
+        private async void ShareFromToast(ScreenshotHistoryItem item)
+        {
+            var share = await CreateShareAsync(new[] { item });
+            if (share != null)
+            {
+                _notifications?.Show(new ToastOptions
+                {
+                    Title = "Посилання скопійовано",
+                    Message = $"{share.Url} · діє до {share.ExpiresAt.ToString("d MMMM", UkrainianCulture)}",
+                    Kind = ToastKind.Success,
+                    ImagePath = item.ImagePath,
+                    CopyText = share.Url,
+                    DurationMs = 6000
+                });
+            }
+        }
+
+        private static readonly System.Globalization.CultureInfo UkrainianCulture = new("uk-UA");
+
+        #endregion
 
         #region Updates
 

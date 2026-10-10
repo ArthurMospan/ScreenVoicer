@@ -19,6 +19,35 @@
             <Setter Property="StrokeThickness" Value="2"/>
         </Style>
 
+        <!-- Glass checkbox on a thumbnail: pick several screenshots for one link -->
+        <Style x:Key="SelectBox" TargetType="CheckBox">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="ToolTip" Value="Вибрати — кілька знімків можна віддати одним посиланням"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <Grid Width="26" Height="26" Background="Transparent">
+                            <Border x:Name="box" CornerRadius="8" Background="#A6101014" BorderBrush="#99FFFFFF" BorderThickness="1.5"/>
+                            <Border x:Name="fill" CornerRadius="8" Background="{StaticResource AccentFill}" BorderBrush="{StaticResource AccentRim}"
+                                    BorderThickness="1" Opacity="0"/>
+                            <v:GlyphIcon x:Name="check" Data="{StaticResource Icon.Check}" Width="16" Height="16" StrokeThickness="3.2"
+                                         Foreground="#FFFFFF" Opacity="0"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="box" Property="BorderBrush" Value="#FFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="fill" Property="Opacity" Value="1"/>
+                                <Setter TargetName="check" Property="Opacity" Value="1"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- Glass card that lights its rim under the mouse -->
         <Style x:Key="Card" TargetType="Border">
             <Setter Property="BorderBrush" Value="{StaticResource PanelRim}"/>
@@ -160,6 +189,26 @@
                                                 BorderBrush="#26FFFFFF" BorderThickness="1" CornerRadius="7" Padding="7,2">
                                             <TextBlock Text="{Binding DateText}" FontSize="11" FontWeight="SemiBold" Foreground="#FFFFFF"/>
                                         </Border>
+                                        <CheckBox Style="{StaticResource SelectBox}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8"
+                                                  IsChecked="{Binding IsSelected, Mode=TwoWay}" Click="OnSelectClick"/>
+                                        <!-- the public link of this screenshot: click copies it, × deletes it -->
+                                        <Border HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8" Background="#D90F0F13"
+                                                BorderBrush="#80FFC68A" BorderThickness="1" CornerRadius="8" Visibility="{Binding ShareVisibility}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <Button Style="{StaticResource PillButton}" Height="26" MinWidth="0" Padding="8,0,6,0" Margin="0"
+                                                        Click="OnCopyShareClick" ToolTip="{Binding ShareUrlTip}">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <v:GlyphIcon Data="{StaticResource Icon.Link}" Width="13" Height="13" StrokeThickness="2.2"
+                                                                     Foreground="{StaticResource AccentLightBrush}"/>
+                                                        <TextBlock Text="{Binding ShareText}" FontSize="11" Margin="5,0,0,0" VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </Button>
+                                                <Button Style="{StaticResource PillButton}" Width="24" Height="26" MinWidth="0" Padding="0" Margin="0"
+                                                        Click="OnDeleteShareClick" ToolTip="Видалити посилання: за ним більше нічого не відкриється">
+                                                    <v:GlyphIcon Data="{StaticResource Icon.Close}" Width="11" Height="11" StrokeThickness="2.6"/>
+                                                </Button>
+                                            </StackPanel>
+                                        </Border>
                                     </Grid>
                                 </Border>
 
@@ -186,8 +235,8 @@
                                             Visibility="{Binding TextButtonVisibility}">
                                         <TextBlock Text="Текст"/>
                                     </Button>
-                                    <Button Style="{StaticResource ChipButton}" Click="OnOpenFileClick" ToolTip="Відкрити зображення">
-                                        <v:GlyphIcon Data="{StaticResource Icon.Open}" Width="14" Height="14" StrokeThickness="2"/>
+                                    <Button Style="{StaticResource ChipButton}" Click="OnShareItemClick" ToolTip="{Binding ShareButtonTip}">
+                                        <v:GlyphIcon Data="{StaticResource Icon.Link}" Width="14" Height="14" StrokeThickness="2"/>
                                     </Button>
                                     <Button Style="{StaticResource ChipButton}" Click="OnShowInFolderClick" ToolTip="Показати в провіднику">
                                         <v:GlyphIcon Data="{StaticResource Icon.Folder}" Width="14" Height="14" StrokeThickness="2"/>
@@ -218,6 +267,29 @@
                 </StackPanel>
             </Button>
         </StackPanel>
+
+        <!-- Shown while screenshots are selected: one link for all of them -->
+        <Border x:Name="SelectionBar" Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,22"
+                Visibility="Collapsed" CornerRadius="16" BorderBrush="{StaticResource PanelRim}" BorderThickness="1" Padding="8"
+                Effect="{StaticResource CardShadow}">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                    <GradientStop Color="#F5222229" Offset="0"/>
+                    <GradientStop Color="#F516161B" Offset="1"/>
+                </LinearGradientBrush>
+            </Border.Background>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock x:Name="TxtSelection" VerticalAlignment="Center" Margin="10,0,16,0" FontSize="13.5" FontWeight="SemiBold"
+                           Foreground="{StaticResource InkBrush}"/>
+                <Button x:Name="BtnShareSelected" Style="{StaticResource ActiveButton}" Padding="14,0" Click="OnShareSelectedClick">
+                    <StackPanel Orientation="Horizontal">
+                        <v:GlyphIcon Data="{StaticResource Icon.Link}" Style="{StaticResource SmallIcon}"/>
+                        <TextBlock Text="Створити посилання" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+                <Button Style="{StaticResource PillButton}" Content="Зняти вибір" Margin="6,0,0,0" Click="OnClearSelectionClick"/>
+            </StackPanel>
+        </Border>
 
         <!-- Snackbar -->
         <Border x:Name="Snackbar" Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,22"

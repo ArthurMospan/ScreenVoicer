@@ -74,6 +74,7 @@ namespace ScreenVoicer.Views
         private readonly ISettingsService _settings;
         private readonly Action _openGallery;
         private readonly Action<int>? _startDelayedCapture;
+        private readonly Action<ScreenshotHistoryItem>? _shareItem;
 
         private IntPtr _hwnd;
         private bool _revealed;
@@ -131,7 +132,8 @@ namespace ScreenVoicer.Views
             IHistoryService history,
             ISettingsService settings,
             Action openGallery,
-            Action<int>? startDelayedCapture = null)
+            Action<int>? startDelayedCapture = null,
+            Action<ScreenshotHistoryItem>? shareItem = null)
         {
             InitializeComponent();
 
@@ -145,6 +147,7 @@ namespace ScreenVoicer.Views
             _settings = settings;
             _openGallery = openGallery;
             _startDelayedCapture = startDelayedCapture;
+            _shareItem = shareItem;
             BtnTimer.Visibility = startDelayedCapture != null ? Visibility.Visible : Visibility.Collapsed;
             _mode = settings.DefaultCaptureMode;
             _color = ((SolidColorBrush)((Button)SwatchPanel.Children[0]).Background).Color;
@@ -1974,17 +1977,18 @@ namespace ScreenVoicer.Views
                 var saved = await saveTask;
                 (string comment, bool voiceLost) = await CollectCommentAsync();
 
+                var entry = new ScreenshotHistoryItem
+                {
+                    ImagePath = saved.Path,
+                    TranscribedText = comment,
+                    Width = saved.Width,
+                    Height = saved.Height,
+                    FileSizeBytes = saved.FileSizeBytes,
+                    CreatedAt = DateTime.Now
+                };
                 try
                 {
-                    await _history.AddEntryAsync(new ScreenshotHistoryItem
-                    {
-                        ImagePath = saved.Path,
-                        TranscribedText = comment,
-                        Width = saved.Width,
-                        Height = saved.Height,
-                        FileSizeBytes = saved.FileSizeBytes,
-                        CreatedAt = DateTime.Now
-                    });
+                    await _history.AddEntryAsync(entry);
                 }
                 catch (Exception ex)
                 {
@@ -2010,6 +2014,8 @@ namespace ScreenVoicer.Views
                     ImagePath = saved.Path,
                     CopyText = markdown,
                     OnOpenGallery = _openGallery,
+                    ActionText = _shareItem != null ? "Посилання" : null,
+                    OnAction = _shareItem != null ? () => _shareItem(entry) : null,
                     DurationMs = 5000
                 });
 

@@ -72,6 +72,30 @@ namespace ScreenVoicer.Services
             Changed?.Invoke(this, EventArgs.Empty);
         }
 
+        public async Task SetShareAsync(IEnumerable<string> ids, ShareResult? share)
+        {
+            var wanted = ids.ToHashSet();
+            await _lock.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                var items = await EnsureLoadedAsync().ConfigureAwait(false);
+                foreach (var item in items.Where(x => wanted.Contains(x.Id)))
+                {
+                    item.ShareId = share?.Id;
+                    item.ShareUrl = share?.Url;
+                    item.ShareDeleteToken = share?.DeleteToken;
+                    item.ShareExpiresAt = share?.ExpiresAt;
+                }
+                await SaveInternalAsync(items).ConfigureAwait(false);
+            }
+            finally
+            {
+                _lock.Release();
+            }
+
+            Changed?.Invoke(this, EventArgs.Empty);
+        }
+
         public async Task<bool> DeleteEntryAsync(string id)
         {
             bool removed = false;

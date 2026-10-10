@@ -18,6 +18,9 @@ namespace ScreenVoicer.Services
         /// <summary>Removes the entry and deletes its image file.</summary>
         Task<bool> DeleteEntryAsync(string id);
 
+        /// <summary>Stores (or with null clears) the public link on these entries.</summary>
+        Task SetShareAsync(IEnumerable<string> ids, ShareResult? share);
+
         /// <summary>Number of entries if the history is already loaded, otherwise null (never blocks).</summary>
         int? CachedCount { get; }
     }

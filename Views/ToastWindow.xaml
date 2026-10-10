@@ -87,7 +87,7 @@
             <StackPanel x:Name="PanelActions" Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right"
                         Margin="0,0,12,12" Visibility="Collapsed">
                 <Button x:Name="BtnOpenImage" Style="{StaticResource ToastBtn}" Content="Відкрити" Click="OnOpenImageClick" Visibility="Collapsed"/>
-                <Button x:Name="BtnCopy" Style="{StaticResource ToastBtn}" Content="Копіювати ще раз" Click="OnCopyClick" Visibility="Collapsed"/>
+                <Button x:Name="BtnCopy" Style="{StaticResource ToastBtn}" Content="Копіювати" Click="OnCopyClick" Visibility="Collapsed"/>
                 <Button x:Name="BtnAction" Style="{StaticResource ToastBtn}" Click="OnActionClick" Visibility="Collapsed"/>
                 <Button x:Name="BtnOpenGallery" Style="{StaticResource ToastPrimaryBtn}" Content="Галерея" Click="OnOpenGalleryClick" Visibility="Collapsed"/>
             </StackPanel>

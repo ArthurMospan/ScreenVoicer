@@ -30,6 +30,9 @@ namespace ScreenVoicer.Views
         private readonly ISettingsService _settingsService;
         private readonly Action _startCapture;
         private readonly Action<int>? _startDelayedCapture;
+        private readonly Func<IReadOnlyList<ScreenshotHistoryItem>, Task<ShareResult?>>? _share;
+        private readonly Func<ScreenshotHistoryItem, Task<bool>>? _unshare;
+        private bool _sharing;
 
         // Decoded thumbnails survive refreshes and filtering; keyed by path + last write time.
         private readonly ConcurrentDictionary<string, BitmapSource> _thumbnailCache = new();
@@ -44,7 +47,9 @@ namespace ScreenVoicer.Views
             IClipboardService clipboardService,
             ISettingsService settingsService,
             Action startCapture,
-            Action<int>? startDelayedCapture = null)
+            Action<int>? startDelayedCapture = null,
+            Func<IReadOnlyList<ScreenshotHistoryItem>, Task<ShareResult?>>? share = null,
+            Func<ScreenshotHistoryItem, Task<bool>>? unshare = null)
         {
             InitializeComponent();
             SourceInitialized += (_, _) => User32.UseDarkTitleBar(new WindowInteropHelper(this).Handle, Color.FromRgb(0x0F, 0x0F, 0x13));
@@ -53,6 +58,8 @@ namespace ScreenVoicer.Views
             _settingsService = settingsService;
             _startCapture = startCapture;
             _startDelayedCapture = startDelayedCapture;
+            _share = share;
+            _unshare = unshare;
             BtnDelayedCapture.Visibility = startDelayedCapture != null ? Visibility.Visible : Visibility.Collapsed;
 
             _searchDebounce = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
@@ -415,9 +422,115 @@ namespace ScreenVoicer.Views
 
         #endregion
 
+        #region Share links
+
+        private static readonly System.Globalization.CultureInfo Ukrainian = new("uk-UA");
+
+        private void OnSelectClick(object sender, RoutedEventArgs e) => UpdateSelectionBar();
+
+        private void UpdateSelectionBar()
+        {
+            int count = _allItems.Count(i => i.IsSelected);
+            SelectionBar.Visibility = count > 0 ? Visibility.Visible : Visibility.Collapsed;
+            TxtSelection.Text = count > ShareService.MaxImages
+                ? $"Вибрано {count} — для посилання не більше {ShareService.MaxImages}"
+                : $"Вибрано: {Plural(count, "знімок", "знімки", "знімків")}";
+            BtnShareSelected.IsEnabled = count is > 0 and <= ShareService.MaxImages && !_sharing;
+        }
+
+        private void OnClearSelectionClick(object sender, RoutedEventArgs e)
+        {
+            foreach (var item in _allItems)
+            {
+                item.IsSelected = false;
+            }
+            UpdateSelectionBar();
+        }
+
+        private async void OnShareSelectedClick(object sender, RoutedEventArgs e)
+        {
+            var selected = _allItems.Where(i => i.IsSelected).Select(i => i.Model).ToList();
+            if (await CreateLinkAsync(selected))
+            {
+                OnClearSelectionClick(sender, e);
+            }
+        }
+
+        /// <summary>The link button on a card: copies the existing link, or creates one for this screenshot.</summary>
+        private async void OnShareItemClick(object sender, RoutedEventArgs e)
+        {
+            if (ItemOf(sender) is not { } item)
+            {
+                return;
+            }
+            if (item.Model.HasActiveShare)
+            {
+                CopyLink(item.Model);
+                return;
+            }
+            await CreateLinkAsync(new[] { item.Model });
+        }
+
+        private void OnCopyShareClick(object sender, RoutedEventArgs e)
+        {
+            if (ItemOf(sender) is { } item && item.Model.HasActiveShare)
+            {
+                CopyLink(item.Model);
+            }
+        }
+
+        private async void OnDeleteShareClick(object sender, RoutedEventArgs e)
+        {
+            if (ItemOf(sender) is not { } item || _unshare == null)
+            {
+                return;
+            }
+            if (await _unshare(item.Model))
+            {
+                ShowSnackbar("Посилання видалено — за ним більше нічого не відкриється");
+            }
+        }
+
+        private void CopyLink(ScreenshotHistoryItem item)
+        {
+            ShowSnackbar(_clipboardService.CopyToClipboard(item.ShareUrl!)
+                ? $"Посилання скопійовано · діє до {item.ShareExpiresAt!.Value.ToString("d MMMM", Ukrainian)}"
+                : "Буфер обміну зайнятий іншою програмою");
+        }
+
+        private async Task<bool> CreateLinkAsync(IReadOnlyList<ScreenshotHistoryItem> items)
+        {
+            if (_share == null || _sharing || items.Count == 0)
+            {
+                return false;
+            }
+
+            _sharing = true;
+            UpdateSelectionBar();
+            ShowSnackbar(items.Count > 1 ? $"Завантажую {items.Count} знімки…" : "Створюю посилання…");
+            try
+            {
+                var share = await _share(items);
+                if (share == null)
+                {
+                    return false; // the app already explained what went wrong
+                }
+                ShowSnackbar($"Посилання скопійовано · діє до {share.ExpiresAt.ToString("d MMMM", Ukrainian)}");
+                return true;
+            }
+            finally
+            {
+                _sharing = false;
+                UpdateSelectionBar();
+            }
+        }
+
+        #endregion
+
         private void ShowSnackbar(string text)
         {
             TxtSnackbar.Text = text;
+            Snackbar.Margin = new Thickness(0, 0, 0, SelectionBar.Visibility == Visibility.Visible ? 96 : 22);
             var animation = new DoubleAnimationUsingKeyFrames();
             animation.KeyFrames.Add(new LinearDoubleKeyFrame(1, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(150))));
             animation.KeyFrames.Add(new LinearDoubleKeyFrame(1, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(1900))));
@@ -463,6 +576,27 @@ namespace ScreenVoicer.Views
             public string CommentText => Model.HasVoiceComment ? Model.TranscribedText : "Без коментаря";
             public Brush CommentBrush => Model.HasVoiceComment ? CommentInk : CommentMuted;
             public Visibility TextButtonVisibility => Model.HasVoiceComment ? Visibility.Visible : Visibility.Collapsed;
+
+            private bool _isSelected;
+
+            /// <summary>Picked for a link with several screenshots; survives gallery refreshes.</summary>
+            public bool IsSelected
+            {
+                get => _isSelected;
+                set
+                {
+                    if (_isSelected != value)
+                    {
+                        _isSelected = value;
+                        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsSelected)));
+                    }
+                }
+            }
+
+            public Visibility ShareVisibility => Model.HasActiveShare ? Visibility.Visible : Visibility.Collapsed;
+            public string ShareText => Model.ShareExpiresAt is DateTime until ? $"до {until.ToString("d MMM", new System.Globalization.CultureInfo("uk-UA"))}" : string.Empty;
+            public string? ShareUrlTip => Model.ShareUrl != null ? $"Копіювати посилання\n{Model.ShareUrl}" : null;
+            public string ShareButtonTip => Model.HasActiveShare ? "Копіювати посилання на цей знімок" : "Створити посилання на цей знімок (діє 30 днів)";
             public string DateText => Model.DisplayDate;
             public string SizeText => Model.Width > 0 && Model.Height > 0 ? $"{Model.Width}×{Model.Height}" : FormatSize(Model.FileSizeBytes);
 
