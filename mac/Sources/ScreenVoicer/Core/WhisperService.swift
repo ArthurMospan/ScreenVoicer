@@ -246,6 +246,8 @@ final class WhisperService {
             params.single_segment = true
             params.temperature_inc = 0
             params.audio_ctx = Int32(audioContext)
+            // a single greedy segment can loop ("the page is a test of the page…"): cap it near the speech length
+            params.max_tokens = Int32(seconds * 8 + 16)
         }
 
         let lang = language.isEmpty ? "auto" : language
@@ -344,6 +346,7 @@ final class WhisperService {
             let message = String(cString: text).trimmingCharacters(in: .whitespacesAndNewlines)
             if message.isEmpty { return }
             let lower = message.lowercased()
+            if lower.contains("core ml") { return } // the optional Core ML encoder is simply not downloaded
             if level == GGML_LOG_LEVEL_ERROR || lower.contains("fail") || lower.contains("error")
                 || lower.contains("found device") || lower.contains("using metal") {
                 Log.info("[whisper.cpp] " + message)
