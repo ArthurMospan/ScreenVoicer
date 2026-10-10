@@ -669,7 +669,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MenuHost {
 
     // MARK: - UI test hooks (--ui-test)
 
-    static var uiTestOutput: URL?
+    nonisolated(unsafe) static var uiTestOutput: URL?
     var overlayForTest: OverlayController? { overlay }
     var historyForTest: HistoryService { history }
     var settingsForTest: Settings { settings }
