@@ -74,7 +74,7 @@ if arguments.contains("--update") {
 }
 
 let application = NSApplication.shared
-let appDelegate = AppDelegate()
+let appDelegate = MainActor.assumeIsolated { AppDelegate() }
 application.delegate = appDelegate
 application.setActivationPolicy(.accessory)
 application.run()

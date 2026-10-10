@@ -58,15 +58,22 @@ final class CountdownController {
         panel.setContentSize(host.fittingSize)
     }
 
+    private func fadeIn() {
+        panel.alphaValue = 0
+        panel.orderFrontRegardless()
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.16
+            panel.animator().alphaValue = 1
+        }
+    }
+
     /// Counts down and closes itself. Returns false if the user clicked to cancel.
     func run(seconds: Int) async -> Bool {
         let screen = ScreenCaptureService.screenUnderCursor()
         let area = screen.visibleFrame
         let size = panel.frame.size
         panel.setFrameOrigin(CGPoint(x: area.midX - size.width / 2, y: area.maxY - 24 - size.height))
-        panel.alphaValue = 0
-        panel.orderFrontRegardless()
-        NSAnimationContext.runAnimationGroup { $0.duration = 0.16; panel.animator().alphaValue = 1 }
+        fadeIn()
 
         var left = seconds
         while left > 0 && !cancelled {

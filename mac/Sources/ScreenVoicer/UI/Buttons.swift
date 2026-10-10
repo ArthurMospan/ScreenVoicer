@@ -5,6 +5,10 @@ private struct HoverBody<Content: View>: View {
     let content: (Bool) -> Content
     @State private var hover = false
 
+    init(@ViewBuilder content: @escaping (Bool) -> Content) {
+        self.content = content
+    }
+
     var body: some View {
         content(hover).onHover { hover = $0 }
     }
@@ -18,10 +22,10 @@ struct GlassIconButtonStyle: ButtonStyle {
     var cornerRadius: CGFloat = 17
 
     func makeBody(configuration: Configuration) -> some View {
-        Body(configuration: configuration, style: self)
+        StyledBody(configuration: configuration, style: self)
     }
 
-    private struct Body: View {
+    private struct StyledBody: View {
         let configuration: Configuration
         let style: GlassIconButtonStyle
         @Environment(\.isEnabled) private var enabled
@@ -67,10 +71,10 @@ struct PrimaryButtonStyle: ButtonStyle {
     var fontSize: CGFloat = 12.5
 
     func makeBody(configuration: Configuration) -> some View {
-        Body(configuration: configuration, style: self)
+        StyledBody(configuration: configuration, style: self)
     }
 
-    private struct Body: View {
+    private struct StyledBody: View {
         let configuration: Configuration
         let style: PrimaryButtonStyle
         @Environment(\.isEnabled) private var enabled
@@ -119,10 +123,10 @@ struct TextPillButtonStyle: ButtonStyle {
     var ink: Color = Color(rgb: 0xE2E2E8)
 
     func makeBody(configuration: Configuration) -> some View {
-        Body(configuration: configuration, style: self)
+        StyledBody(configuration: configuration, style: self)
     }
 
-    private struct Body: View {
+    private struct StyledBody: View {
         let configuration: Configuration
         let style: TextPillButtonStyle
         @Environment(\.isEnabled) private var enabled
@@ -166,10 +170,10 @@ struct ChipButtonStyle: ButtonStyle {
 /// A line of the menu-bar menu: glass highlight on hover.
 struct MenuRowStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
-        Body(configuration: configuration)
+        StyledBody(configuration: configuration)
     }
 
-    private struct Body: View {
+    private struct StyledBody: View {
         let configuration: Configuration
         @Environment(\.isEnabled) private var enabled
         @State private var hover = false
