@@ -23,6 +23,8 @@ final class Settings {
     var updateNotifiedVersion: String?
     /// The first-run permissions guide was completed (macOS only).
     var permissionsGuideShown = false
+    /// Launch at login was switched on once at first start (the Windows installer ticks it by default).
+    var autostartInitialized = false
 
     private let url: URL
     private let lock = NSLock()
@@ -52,6 +54,7 @@ final class Settings {
             modelHintShown = s.ModelHintShown ?? false
             updateNotifiedVersion = s.UpdateNotifiedVersion
             permissionsGuideShown = s.PermissionsGuideShown ?? false
+            autostartInitialized = s.AutostartInitialized ?? false
             if let hk = s.Hotkey, HotkeyGesture.parse(hk) != nil {
                 hotkey = hk
             }
@@ -73,7 +76,8 @@ final class Settings {
             Hotkey: hotkey,
             ModelHintShown: modelHintShown,
             UpdateNotifiedVersion: updateNotifiedVersion,
-            PermissionsGuideShown: permissionsGuideShown)
+            PermissionsGuideShown: permissionsGuideShown,
+            AutostartInitialized: autostartInitialized)
         do {
             let encoder = JSONEncoder()
             encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -95,5 +99,6 @@ final class Settings {
         var ModelHintShown: Bool?
         var UpdateNotifiedVersion: String?
         var PermissionsGuideShown: Bool?
+        var AutostartInitialized: Bool?
     }
 }

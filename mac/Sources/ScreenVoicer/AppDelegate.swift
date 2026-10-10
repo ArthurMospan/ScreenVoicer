@@ -64,6 +64,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MenuHost {
 
         if !autostart {
             ApplicationsMover.offerIfNeeded()
+            if !settings.autostartInitialized && Bundle.main.bundleURL.pathExtension == "app" {
+                LoginItem.setEnabled(true) // like the Windows installer's ticked «Запускати разом з Windows»
+                settings.autostartInitialized = true
+                settings.save()
+            }
             openGallery()
             if !settings.permissionsGuideShown || !Permissions.screenGranted || Permissions.microphoneUndecided {
                 showPermissions()
