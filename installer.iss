@@ -3,7 +3,7 @@
 ; CI (.github/workflows/release.yml) passes the version from the git tag: iscc /DMyAppVersion=1.2.3 installer.iss
 #define MyAppName "ScreenVoicer"
 #ifndef MyAppVersion
-  #define MyAppVersion "1.9.0"
+  #define MyAppVersion "1.10.0"
 #endif
 #define MyAppPublisher "ScreenVoicer"
 #define MyAppExeName "ScreenVoicer.exe"
@@ -14,7 +14,8 @@ AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppVerName={#MyAppName} {#MyAppVersion}
 AppPublisher={#MyAppPublisher}
-AppPublisherURL=https://github.com/ArthurMospan/ScreenVoicer
+AppPublisherURL=https://sv.mospan.com.ua/
+AppSupportURL=https://github.com/ArthurMospan/ScreenVoicer
 AppUpdatesURL=https://github.com/ArthurMospan/ScreenVoicer/releases
 DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={#MyAppName}

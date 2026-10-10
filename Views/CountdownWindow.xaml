@@ -20,21 +20,15 @@
     <Border Margin="16" CornerRadius="20" BorderBrush="{StaticResource PanelRim}" BorderThickness="1" Padding="16,10,22,10"
             Effect="{StaticResource CardShadow}">
         <Border.Background>
-            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                <GradientStop Color="#F5202027" Offset="0"/>
-                <GradientStop Color="#F5141419" Offset="1"/>
-            </LinearGradientBrush>
+            <SolidColorBrush Color="#F51B1B21"/>
         </Border.Background>
         <StackPanel Orientation="Horizontal">
             <!-- The brand lamp counts down -->
             <Grid Width="40" Height="40" VerticalAlignment="Center">
                 <Ellipse Stroke="#26FFFFFF" StrokeThickness="2.5"/>
-                <Ellipse x:Name="Pulse" Width="14" Height="14" RenderTransformOrigin="0.5,0.5" Effect="{StaticResource AccentGlow}">
+                <Ellipse x:Name="Pulse" Width="14" Height="14" RenderTransformOrigin="0.5,0.5">
                     <Ellipse.Fill>
-                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                            <GradientStop Color="#FFD09A" Offset="0"/>
-                            <GradientStop Color="#FF7A3D" Offset="1"/>
-                        </LinearGradientBrush>
+                        <SolidColorBrush Color="#FF8A4C"/>
                     </Ellipse.Fill>
                     <Ellipse.RenderTransform>
                         <ScaleTransform x:Name="PulseScale"/>

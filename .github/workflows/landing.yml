@@ -1,6 +1,6 @@
 name: Landing
 
-# Publishes landing/ to GitHub Pages: https://arthurmospan.github.io/ScreenVoicer/
+# Publishes landing/ to GitHub Pages: https://sv.mospan.com.ua/ (custom domain; DNS CNAME sv → arthurmospan.github.io)
 on:
   push:
     branches: [main]

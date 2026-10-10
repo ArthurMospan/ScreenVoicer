@@ -22,7 +22,7 @@ namespace ScreenVoicer.Services
     public static class ShareService
     {
         /// <summary>Production endpoint; SV_SHARE_ENDPOINT points the app at another one (local wrangler dev).</summary>
-        private const string DefaultEndpoint = "https://screenvoicer.REPLACE.workers.dev";
+        private const string DefaultEndpoint = "https://screenvoicer.masspain.workers.dev";
 
         public const int MaxImages = 10;
         private const long MaxImageBytes = 8L * 1024 * 1024;

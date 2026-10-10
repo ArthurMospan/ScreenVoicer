@@ -48,30 +48,16 @@
             </Setter>
         </Style>
 
-        <!-- Glass card that lights its rim under the mouse -->
+        <!-- Matte card: a flat surface whose edge brightens under the mouse -->
         <Style x:Key="Card" TargetType="Border">
             <Setter Property="BorderBrush" Value="{StaticResource PanelRim}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="16"/>
-            <Setter Property="Background">
-                <Setter.Value>
-                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                        <GradientStop Color="#1C1C23" Offset="0"/>
-                        <GradientStop Color="#15151A" Offset="1"/>
-                    </LinearGradientBrush>
-                </Setter.Value>
-            </Setter>
+            <Setter Property="Background" Value="#19191F"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="BorderBrush">
-                        <Setter.Value>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                <GradientStop Color="#99FFC68A" Offset="0"/>
-                                <GradientStop Color="#26FF8A4C" Offset="0.5"/>
-                                <GradientStop Color="#14FFFFFF" Offset="1"/>
-                            </LinearGradientBrush>
-                        </Setter.Value>
-                    </Setter>
+                    <Setter Property="BorderBrush" Value="#4DFFFFFF"/>
+                    <Setter Property="Background" Value="#1E1E25"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
@@ -82,16 +68,6 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
-
-        <!-- A faint warm glow from the top-left corner, like light from the logo lamp -->
-        <Rectangle Grid.RowSpan="2" IsHitTestVisible="False">
-            <Rectangle.Fill>
-                <RadialGradientBrush Center="0.08,0" GradientOrigin="0.08,0" RadiusX="0.7" RadiusY="0.9">
-                    <GradientStop Color="#1FFF8A4C" Offset="0"/>
-                    <GradientStop Color="#00FF8A4C" Offset="1"/>
-                </RadialGradientBrush>
-            </Rectangle.Fill>
-        </Rectangle>
 
         <!-- Header -->
         <Border Grid.Row="0" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="22,16">
@@ -139,7 +115,7 @@
                     </Button>
                     <Button Style="{StaticResource ActiveButton}" Click="OnNewCaptureClick" Padding="14,0" ToolTip="Сховати галерею і зробити знімок">
                         <StackPanel Orientation="Horizontal">
-                            <v:GlyphIcon Data="{StaticResource Icon.Camera}" Style="{StaticResource SmallIcon}"/>
+                            <v:GlyphIcon Data="{StaticResource Icon.Camera}" Style="{StaticResource SmallIcon}" Foreground="{StaticResource AccentBrush}"/>
                             <TextBlock Text="Новий знімок" Margin="7,0,0,0" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -262,7 +238,7 @@
                        Text="Натисніть Alt+Shift+S у будь-якій програмі, виділіть область, затисніть Пробіл і розкажіть, що не так."/>
             <Button x:Name="BtnEmptyCapture" Style="{StaticResource ActiveButton}" HorizontalAlignment="Center" Padding="16,0" Height="38" Click="OnNewCaptureClick">
                 <StackPanel Orientation="Horizontal">
-                    <v:GlyphIcon Data="{StaticResource Icon.Camera}" Style="{StaticResource SmallIcon}"/>
+                    <v:GlyphIcon Data="{StaticResource Icon.Camera}" Style="{StaticResource SmallIcon}" Foreground="{StaticResource AccentBrush}"/>
                     <TextBlock Text="Зробити перший знімок" Margin="8,0,0,0" VerticalAlignment="Center"/>
                 </StackPanel>
             </Button>
@@ -273,17 +249,14 @@
                 Visibility="Collapsed" CornerRadius="16" BorderBrush="{StaticResource PanelRim}" BorderThickness="1" Padding="8"
                 Effect="{StaticResource CardShadow}">
             <Border.Background>
-                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                    <GradientStop Color="#F5222229" Offset="0"/>
-                    <GradientStop Color="#F516161B" Offset="1"/>
-                </LinearGradientBrush>
+                <SolidColorBrush Color="#F51C1C22"/>
             </Border.Background>
             <StackPanel Orientation="Horizontal">
                 <TextBlock x:Name="TxtSelection" VerticalAlignment="Center" Margin="10,0,16,0" FontSize="13.5" FontWeight="SemiBold"
                            Foreground="{StaticResource InkBrush}"/>
                 <Button x:Name="BtnShareSelected" Style="{StaticResource ActiveButton}" Padding="14,0" Click="OnShareSelectedClick">
                     <StackPanel Orientation="Horizontal">
-                        <v:GlyphIcon Data="{StaticResource Icon.Link}" Style="{StaticResource SmallIcon}"/>
+                        <v:GlyphIcon Data="{StaticResource Icon.Link}" Style="{StaticResource SmallIcon}" Foreground="{StaticResource AccentBrush}"/>
                         <TextBlock Text="Створити посилання" Margin="8,0,0,0" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>

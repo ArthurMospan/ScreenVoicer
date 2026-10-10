@@ -433,7 +433,7 @@ namespace ScreenVoicer.Views
             else if (icon != null)
             {
                 mark.Data = icon;
-                mark.Foreground = (Brush)FindResource("MutedBrush");
+                mark.Foreground = (Brush)FindResource("MenuMuted");
                 mark.StrokeThickness = 1.9;
             }
 
@@ -452,7 +452,7 @@ namespace ScreenVoicer.Views
                 {
                     Text = detail,
                     FontSize = 11.5,
-                    Foreground = (Brush)FindResource("MutedBrush"),
+                    Foreground = (Brush)FindResource("MenuMuted"),
                     TextTrimming = TextTrimming.CharacterEllipsis,
                     Margin = new Thickness(0, 1, 0, 0)
                 });

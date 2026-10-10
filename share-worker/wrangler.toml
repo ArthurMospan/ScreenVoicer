@@ -1,4 +1,5 @@
 # Cloudflare Worker behind ScreenVoicer's share links (free plan: Workers + KV, no card needed).
+#   Deployed: https://screenvoicer.masspain.workers.dev (KV namespace SHARES created 2026-10-10)
 #   npx wrangler kv namespace create SHARES   → put the id below
 #   npx wrangler deploy
 name = "screenvoicer"
@@ -7,4 +8,4 @@ compatibility_date = "2026-09-01"
 
 [[kv_namespaces]]
 binding = "SHARES"
-id = "REPLACE_WITH_KV_ID"
+id = "1660127d9353482b9680c7c9d6ac9d31"

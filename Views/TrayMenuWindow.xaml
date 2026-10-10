@@ -9,9 +9,13 @@
         UseLayoutRounding="True" FontFamily="{StaticResource UiFont}" Opacity="0">
 
     <Window.Resources>
+        <!-- Secondary text on the frosted card: lighter than the app-wide muted grey so it stays readable over any wallpaper -->
+        <SolidColorBrush x:Key="MenuMuted" Color="#BDBDC7"/>
+        <SolidColorBrush x:Key="MenuFaint" Color="#8F8F9B"/>
+
         <!-- One line of the menu: icon, label, value on the right; glass highlight on hover -->
         <Style x:Key="Row" TargetType="Button">
-            <Setter Property="Foreground" Value="#F3F3F6"/>
+            <Setter Property="Foreground" Value="{StaticResource GlassText}"/>
             <Setter Property="FontSize" Value="13.5"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Focusable" Value="False"/>
@@ -21,13 +25,11 @@
                     <ControlTemplate TargetType="Button">
                         <Grid>
                             <Border x:Name="fill" CornerRadius="10" Background="Transparent"/>
-                            <Border x:Name="rim" CornerRadius="10" BorderThickness="1" BorderBrush="{StaticResource GlassRim}" Opacity="0"/>
                             <ContentPresenter Margin="9,8,10,8" HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="fill" Property="Background" Value="#14FFFFFF"/>
-                                <Setter TargetName="rim" Property="Opacity" Value="0.35"/>
+                                <Setter TargetName="fill" Property="Background" Value="#1FFFFFFF"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter TargetName="fill" Property="Background" Value="#22FFFFFF"/>
@@ -44,12 +46,12 @@
         <Style x:Key="RowIcon" TargetType="v:GlyphIcon">
             <Setter Property="Width" Value="18"/>
             <Setter Property="Height" Value="18"/>
-            <Setter Property="Foreground" Value="#C9C6CF"/>
+            <Setter Property="Foreground" Value="#D8D8DF"/>
             <Setter Property="Margin" Value="0,0,11,0"/>
         </Style>
 
         <Style x:Key="RowValue" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{StaticResource MutedBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource MenuMuted}"/>
             <Setter Property="FontSize" Value="12.5"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
@@ -62,7 +64,7 @@
             <Setter Property="StrokeThickness" Value="2.6"/>
             <Setter Property="Opacity" Value="0.7"/>
             <Setter Property="Margin" Value="5,1,0,0"/>
-            <Setter Property="Foreground" Value="{StaticResource MutedBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource MenuMuted}"/>
         </Style>
 
         <!-- Glass chip: delay buttons, the language switch -->
@@ -77,21 +79,16 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Grid>
-                            <Border x:Name="fill" CornerRadius="9" Background="#0FFFFFFF"/>
-                            <Border x:Name="sheen" CornerRadius="9" Background="{StaticResource GlassSheen}" Opacity="0"/>
-                            <Border x:Name="rim" CornerRadius="9" BorderThickness="1" BorderBrush="{StaticResource GlassRim}" Opacity="0.3"/>
+                            <Border x:Name="fill" CornerRadius="9" Background="#14FFFFFF"/>
                             <ContentPresenter Margin="11,6,11,7" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="fill" Property="Background" Value="#1FFFFFFF"/>
-                                <Setter TargetName="rim" Property="Opacity" Value="0.7"/>
+                                <Setter TargetName="fill" Property="Background" Value="#26FFFFFF"/>
                                 <Setter Property="Foreground" Value="#FFFFFF"/>
                             </Trigger>
                             <Trigger Property="Tag" Value="on">
                                 <Setter TargetName="fill" Property="Background" Value="{StaticResource ActiveTint}"/>
-                                <Setter TargetName="sheen" Property="Opacity" Value="1"/>
-                                <Setter TargetName="rim" Property="Opacity" Value="1"/>
                                 <Setter Property="Foreground" Value="#FFFFFF"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -123,10 +120,9 @@
             <TranslateTransform x:Name="Slide" Y="10"/>
         </Border.RenderTransform>
         <Grid>
-            <!-- glass: the blurred desktop behind the card (set from code), a dark tint, a rim catching light -->
+            <!-- matte glass: the blurred desktop behind the card (set from code), a neutral frosted tint, one thin edge -->
             <Border x:Name="Backdrop" CornerRadius="18" Background="#141418"/>
-            <Border CornerRadius="18" Background="#B8141418"/>
-            <Border CornerRadius="18" Background="{StaticResource GlassSheen}" Opacity="0.35"/>
+            <Border CornerRadius="18" Background="#B01C1C23"/>
             <Border CornerRadius="18" BorderThickness="1" BorderBrush="{StaticResource PanelRim}"/>
 
             <StackPanel Margin="10">
@@ -139,15 +135,15 @@
                     </Grid.ColumnDefinitions>
                     <Image Source="{StaticResource BrandMark}" Width="38" Height="38" Margin="0,0,11,0"/>
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                        <TextBlock FontFamily="{StaticResource DisplayFont}" FontSize="15" FontWeight="SemiBold" Foreground="#F3F3F6">
+                        <TextBlock FontFamily="{StaticResource DisplayFont}" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource GlassText}">
                             <Run Text="Screen"/><Run Text="Voicer" Foreground="{StaticResource AccentBrush}"/>
                         </TextBlock>
                         <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
                             <Ellipse x:Name="StatusDot" Width="7" Height="7" Fill="#4ADE80" Margin="0,1,6,0" VerticalAlignment="Center"/>
-                            <TextBlock x:Name="TxtStatus" FontSize="12" Foreground="{StaticResource MutedBrush}" TextTrimming="CharacterEllipsis" MaxWidth="250"/>
+                            <TextBlock x:Name="TxtStatus" FontSize="12" Foreground="{StaticResource MenuMuted}" TextTrimming="CharacterEllipsis" MaxWidth="250"/>
                         </StackPanel>
                     </StackPanel>
-                    <TextBlock x:Name="TxtVersion" Grid.Column="2" FontSize="11" Foreground="{StaticResource FaintBrush}" VerticalAlignment="Top" Margin="0,3,2,0"/>
+                    <TextBlock x:Name="TxtVersion" Grid.Column="2" FontSize="11" Foreground="{StaticResource MenuFaint}" VerticalAlignment="Top" Margin="0,3,2,0"/>
                 </Grid>
 
                 <!-- update available: an orange-tinted glass strip above everything else -->
@@ -167,18 +163,18 @@
                 <Button x:Name="BtnCapture" Style="{StaticResource ActiveButton}" Height="46" HorizontalContentAlignment="Stretch" Padding="14,0" Click="OnCaptureClick">
                     <Grid>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                            <v:GlyphIcon Data="{StaticResource Icon.Camera}" Width="19" Height="19" StrokeThickness="2"/>
+                            <v:GlyphIcon Data="{StaticResource Icon.Camera}" Width="19" Height="19" StrokeThickness="2.2" Foreground="{StaticResource AccentBrush}"/>
                             <TextBlock Text="Зробити знімок" FontSize="14" Margin="10,0,0,0" VerticalAlignment="Center"/>
                         </StackPanel>
-                        <Border HorizontalAlignment="Right" Background="#33000000" CornerRadius="7" Padding="7,3">
-                            <TextBlock x:Name="TxtCaptureHotkey" FontSize="11.5" FontWeight="SemiBold"/>
+                        <Border HorizontalAlignment="Right" Background="#12000000" CornerRadius="7" Padding="7,3">
+                            <TextBlock x:Name="TxtCaptureHotkey" FontSize="11.5" FontWeight="SemiBold" Foreground="#4A4A52"/>
                         </Border>
                     </Grid>
                 </Button>
 
                 <StackPanel Orientation="Horizontal" Margin="6,9,0,2">
-                    <v:GlyphIcon Data="{StaticResource Icon.Timer}" Width="15" Height="15" Foreground="{StaticResource MutedBrush}" Margin="0,0,7,0"/>
-                    <TextBlock Text="Із затримкою" Foreground="{StaticResource MutedBrush}" FontSize="12.5" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <v:GlyphIcon Data="{StaticResource Icon.Timer}" Width="15" Height="15" Foreground="{StaticResource MenuMuted}" Margin="0,0,7,0"/>
+                    <TextBlock Text="Із затримкою" Foreground="{StaticResource MenuMuted}" FontSize="12.5" VerticalAlignment="Center" Margin="0,0,10,0"/>
                     <Button Style="{StaticResource Chip}" Content="3 с" Tag="3" Click="OnDelayClick"/>
                     <Button Style="{StaticResource Chip}" Content="5 с" Tag="5" Click="OnDelayClick"/>
                     <Button Style="{StaticResource Chip}" Content="10 с" Tag="10" Click="OnDelayClick"/>
@@ -225,7 +221,7 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <v:GlyphIcon Data="{StaticResource Icon.Globe}" Style="{StaticResource RowIcon}"/>
-                    <TextBlock Grid.Column="1" Text="Мова голосу" FontSize="13.5" Foreground="#F3F3F6" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Column="1" Text="Мова голосу" FontSize="13.5" Foreground="{StaticResource GlassText}" VerticalAlignment="Center"/>
                     <Border Grid.Column="2" Background="#0FFFFFFF" CornerRadius="10" Padding="2" BorderBrush="#14FFFFFF" BorderThickness="1">
                         <StackPanel x:Name="LanguagePanel" Orientation="Horizontal">
                             <Button Style="{StaticResource Chip}" Content="УКР" Tag="uk" Margin="0" Click="OnLanguageClick" ToolTip="Українська"/>
@@ -275,15 +271,15 @@
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <Button Style="{StaticResource Row}" HorizontalAlignment="Left" Foreground="{StaticResource MutedBrush}" Click="OnAboutClick">
+                    <Button Style="{StaticResource Row}" HorizontalAlignment="Left" Foreground="{StaticResource MenuMuted}" Click="OnAboutClick">
                         <StackPanel Orientation="Horizontal">
-                            <v:GlyphIcon Data="{StaticResource Icon.Info}" Style="{StaticResource RowIcon}" Foreground="{StaticResource MutedBrush}" Margin="0,0,8,0"/>
+                            <v:GlyphIcon Data="{StaticResource Icon.Info}" Style="{StaticResource RowIcon}" Foreground="{StaticResource MenuMuted}" Margin="0,0,8,0"/>
                             <TextBlock Text="Про програму" FontSize="13" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
-                    <Button Grid.Column="1" Style="{StaticResource Row}" Foreground="{StaticResource MutedBrush}" Click="OnExitClick">
+                    <Button Grid.Column="1" Style="{StaticResource Row}" Foreground="{StaticResource MenuMuted}" Click="OnExitClick">
                         <StackPanel Orientation="Horizontal">
-                            <v:GlyphIcon Data="{StaticResource Icon.Exit}" Style="{StaticResource RowIcon}" Foreground="{StaticResource MutedBrush}" Margin="0,0,8,0"/>
+                            <v:GlyphIcon Data="{StaticResource Icon.Exit}" Style="{StaticResource RowIcon}" Foreground="{StaticResource MenuMuted}" Margin="0,0,8,0"/>
                             <TextBlock Text="Вийти" FontSize="13" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -291,7 +287,7 @@
 
                 <Border x:Name="AboutWell" Style="{StaticResource Well}" Margin="4,2,4,4" Padding="12,10" Visibility="Collapsed">
                     <StackPanel>
-                        <TextBlock x:Name="TxtAbout" FontSize="12" Foreground="#C9C6CF" TextWrapping="Wrap" LineHeight="18"/>
+                        <TextBlock x:Name="TxtAbout" FontSize="12" Foreground="#D2D2DA" TextWrapping="Wrap" LineHeight="18"/>
                         <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                             <Button Style="{StaticResource Chip}" Content="Перевірити оновлення" Click="OnCheckUpdatesClick"/>
                             <Button Style="{StaticResource Chip}" Content="Журнал" Click="OnOpenLogClick"/>

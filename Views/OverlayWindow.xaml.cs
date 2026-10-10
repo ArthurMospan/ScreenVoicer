@@ -9,7 +9,6 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
-using System.Windows.Media.Effects;
 using System.Windows.Threading;
 using ScreenVoicer.Models;
 using ScreenVoicer.Native;
@@ -1776,17 +1775,13 @@ namespace ScreenVoicer.Views
             if (recording)
             {
                 _pulse.Begin(this, true);
-                MicCircle.Fill = (Brush)FindResource("RecordFill"); // red glass that glows while listening
-                MicCircle.Effect = (Effect)FindResource("RecordGlow");
-                MicSheen.Opacity = 1;
+                MicCircle.Fill = (Brush)FindResource("RecordFill"); // a solid red disc while listening
                 MicGlyph.Foreground = Brushes.White;
             }
             else
             {
                 _pulse.Stop(this);
                 MicCircle.Fill = IdleFill;
-                MicCircle.Effect = null;
-                MicSheen.Opacity = 0;
                 MicGlyph.Foreground = InkBrush;
                 _displayLevel = 0;
                 LevelRing.Opacity = 0;

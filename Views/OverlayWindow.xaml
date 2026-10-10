@@ -16,22 +16,18 @@
          is software-rendered, which made opening the overlay and drawing on it laggy. -->
 
     <Window.Resources>
-        <!-- Dark "glass": the blurred screenshot (set from code) under this tint, framed by a light-catching rim -->
-        <SolidColorBrush x:Key="GlassTint" Color="#A314141A"/>
-        <LinearGradientBrush x:Key="GlassEdge" StartPoint="0,0" EndPoint="0,1">
-            <GradientStop Color="#40FFFFFF" Offset="0"/>
-            <GradientStop Color="#17FFFFFF" Offset="0.5"/>
-            <GradientStop Color="#0FFFFFFF" Offset="1"/>
-        </LinearGradientBrush>
-        <SolidColorBrush x:Key="GlassText" Color="#F3F3F6"/>
-        <SolidColorBrush x:Key="GlassMuted" Color="#9D9DAA"/>
+        <!-- Matte glass: the blurred screenshot (set from code) under a neutral frosted tint and one thin even edge -->
+        <SolidColorBrush x:Key="GlassTint" Color="#A6202028"/>
+        <SolidColorBrush x:Key="GlassEdge" Color="#2EFFFFFF"/>
+        <SolidColorBrush x:Key="GlassText" Color="#F4F4F7"/>
+        <SolidColorBrush x:Key="GlassMuted" Color="#CFCFD6"/>
 
-        <DropShadowEffect x:Key="GlassShadow" BlurRadius="28" ShadowDepth="5" Opacity="0.4" Color="#000000"/>
+        <DropShadowEffect x:Key="GlassShadow" BlurRadius="28" ShadowDepth="5" Opacity="0.35" Color="#000000"/>
 
         <Style x:Key="Divider" TargetType="Rectangle">
             <Setter Property="Width" Value="1"/>
             <Setter Property="Height" Value="18"/>
-            <Setter Property="Fill" Value="#26FFFFFF"/>
+            <Setter Property="Fill" Value="#29FFFFFF"/>
             <Setter Property="Margin" Value="5,0"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
@@ -48,7 +44,7 @@
         <!-- Round icon buttons. Same keys as before: the code switches tools between PillButton and ActiveButton. -->
         <Style x:Key="PillButton" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#E6E6EC"/>
+            <Setter Property="Foreground" Value="#ECECF1"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Width" Value="34"/>
             <Setter Property="Height" Value="34"/>
@@ -60,17 +56,15 @@
                     <ControlTemplate TargetType="Button">
                         <Grid>
                             <Border x:Name="fill" CornerRadius="17" Background="{TemplateBinding Background}"/>
-                            <Border x:Name="rim" CornerRadius="17" BorderThickness="1" BorderBrush="{StaticResource GlassRim}" Opacity="0"/>
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="fill" Property="Background" Value="#14FFFFFF"/>
-                                <Setter TargetName="rim" Property="Opacity" Value="0.45"/>
+                                <Setter TargetName="fill" Property="Background" Value="#1AFFFFFF"/>
                                 <Setter Property="Foreground" Value="#FFFFFF"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="fill" Property="Background" Value="#24FFFFFF"/>
+                                <Setter TargetName="fill" Property="Background" Value="#2BFFFFFF"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter Property="Opacity" Value="0.35"/>
@@ -81,22 +75,19 @@
             </Setter>
         </Style>
 
-        <!-- Selected: lit glass — a faint warm tint, a sheen fading downwards and a rim that catches the light on top -->
+        <!-- Selected: just a lighter frosted disc — no tint, no rim -->
         <Style x:Key="ActiveButton" TargetType="Button" BasedOn="{StaticResource PillButton}">
             <Setter Property="Foreground" Value="#FFFFFF"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Grid>
-                            <Border CornerRadius="17" Background="{StaticResource ActiveTint}"/>
-                            <Border CornerRadius="17" Background="{StaticResource GlassSheen}"/>
-                            <Border CornerRadius="17" BorderThickness="1" BorderBrush="{StaticResource GlassRim}"/>
-                            <Border x:Name="hover" CornerRadius="17" Background="#14FFFFFF" Opacity="0"/>
+                            <Border x:Name="fill" CornerRadius="17" Background="{StaticResource ActiveTint}"/>
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="hover" Property="Opacity" Value="1"/>
+                                <Setter TargetName="fill" Property="Background" Value="#47FFFFFF"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -104,25 +95,22 @@
             </Setter>
         </Style>
 
-        <!-- Save: the brand's lamp — glowing orange glass -->
+        <!-- Save: a square of denser glass with a thin white edge — the square shape sets it apart from the round tools -->
         <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource PillButton}">
             <Setter Property="Foreground" Value="#FFFFFF"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Grid>
-                            <Border CornerRadius="17" Background="{StaticResource AccentFill}" Effect="{StaticResource AccentGlow}"/>
-                            <Border CornerRadius="17" Background="{StaticResource GlassSheen}" Opacity="0.7"/>
-                            <Border CornerRadius="17" BorderThickness="1" BorderBrush="{StaticResource AccentRim}"/>
-                            <Border x:Name="hover" CornerRadius="17" Background="#1FFFFFFF" Opacity="0"/>
+                            <Border x:Name="fill" CornerRadius="11" Background="#57FFFFFF" BorderBrush="#80FFFFFF" BorderThickness="1"/>
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="hover" Property="Opacity" Value="1"/>
+                                <Setter TargetName="fill" Property="Background" Value="#6BFFFFFF"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="hover" Property="Background" Value="#14000000"/>
+                                <Setter TargetName="fill" Property="Background" Value="#40FFFFFF"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -148,14 +136,6 @@
                         <Grid Background="Transparent">
                             <Ellipse x:Name="ring" Stroke="Transparent" StrokeThickness="2"/>
                             <Ellipse Margin="5" Fill="{TemplateBinding Background}" Stroke="#40FFFFFF" StrokeThickness="1"/>
-                            <Ellipse Margin="6" IsHitTestVisible="False">
-                                <Ellipse.Fill>
-                                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                        <GradientStop Color="#4DFFFFFF" Offset="0"/>
-                                        <GradientStop Color="#00FFFFFF" Offset="0.6"/>
-                                    </LinearGradientBrush>
-                                </Ellipse.Fill>
-                            </Ellipse>
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -266,14 +246,6 @@
                         <StackPanel Orientation="Horizontal">
                             <Grid Width="16" Height="16" VerticalAlignment="Center">
                                 <Ellipse x:Name="ColorDot" Stroke="#59FFFFFF" StrokeThickness="1"/>
-                                <Ellipse Margin="1.5" IsHitTestVisible="False">
-                                    <Ellipse.Fill>
-                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                            <GradientStop Color="#55FFFFFF" Offset="0"/>
-                                            <GradientStop Color="#00FFFFFF" Offset="0.6"/>
-                                        </LinearGradientBrush>
-                                    </Ellipse.Fill>
-                                </Ellipse>
                             </Grid>
                             <v:GlyphIcon Style="{StaticResource Chevron}"/>
                         </StackPanel>
@@ -303,9 +275,7 @@
                                 </Ellipse.RenderTransform>
                             </Ellipse>
                             <Ellipse x:Name="MicCircle" Fill="Transparent"/>
-                            <Ellipse x:Name="MicSheen" Margin="1" Fill="{StaticResource GlassSheen}" Stroke="{StaticResource GlassRim}"
-                                     StrokeThickness="1" Opacity="0" IsHitTestVisible="False"/>
-                            <v:GlyphIcon x:Name="MicGlyph" Data="{StaticResource Icon.Mic}" Foreground="#F3F3F6"/>
+                            <v:GlyphIcon x:Name="MicGlyph" Data="{StaticResource Icon.Mic}" Foreground="#F4F4F5"/>
                         </Grid>
                     </Button>
                     <Button x:Name="BtnMicrophone" Style="{StaticResource PillButton}" Width="16" Margin="-3,0,2,0"
@@ -315,7 +285,7 @@
 
                     <Grid Width="300" VerticalAlignment="Center" Margin="4,0,6,0">
                         <TextBox x:Name="TbComment" Background="Transparent" BorderThickness="0" Padding="0,7"
-                                 FontSize="14" Foreground="#F3F3F6" CaretBrush="#FFC68A" SelectionBrush="#FF8A4C" SelectionOpacity="0.45"
+                                 FontSize="14" Foreground="{StaticResource GlassText}" CaretBrush="#FFC68A" SelectionBrush="#FF8A4C" SelectionOpacity="0.45"
                                  TextWrapping="Wrap" AcceptsReturn="True" MaxHeight="88" VerticalScrollBarVisibility="Auto"
                                  VerticalContentAlignment="Center" TextChanged="OnCommentTextChanged"/>
                         <TextBlock x:Name="TxtPlaceholder" IsHitTestVisible="False" Margin="2,0,0,0" VerticalAlignment="Center"

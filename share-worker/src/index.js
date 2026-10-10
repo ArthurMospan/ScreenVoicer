@@ -13,7 +13,7 @@ const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // a 4K PNG is ~3–6 MB; KV allows 25 
 const MAX_COMMENT = 4000;
 const ID_LENGTH = 10;
 const ALPHABET = '23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'; // no look-alikes (0/O, 1/l/I)
-const LANDING = 'https://arthurmospan.github.io/ScreenVoicer/';
+const LANDING = 'https://sv.mospan.com.ua/';
 
 export default {
   async fetch(request, env) {

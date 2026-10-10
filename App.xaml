@@ -17,45 +17,27 @@
         <SolidColorBrush x:Key="SurfaceBrush" Color="#17171D"/>
         <SolidColorBrush x:Key="RaisedBrush" Color="#1E1E25"/>
         <SolidColorBrush x:Key="InkBrush" Color="#F3F3F6"/>
-        <SolidColorBrush x:Key="MutedBrush" Color="#9D9DAA"/>
+        <SolidColorBrush x:Key="MutedBrush" Color="#AAAAB6"/>
         <SolidColorBrush x:Key="FaintBrush" Color="#6B6B78"/>
         <SolidColorBrush x:Key="LineBrush" Color="#1FFFFFFF"/>
         <SolidColorBrush x:Key="SubtleBrush" Color="#0DFFFFFF"/>
         <SolidColorBrush x:Key="DangerBrush" Color="#F87171"/>
 
-        <!-- Glass: a cool sheen that fades downwards and a rim that catches light on top -->
-        <LinearGradientBrush x:Key="GlassSheen" StartPoint="0,0" EndPoint="0,1">
-            <GradientStop Color="#47FFFFFF" Offset="0"/>
-            <GradientStop Color="#12FFFFFF" Offset="0.55"/>
-            <GradientStop Color="#08FFFFFF" Offset="1"/>
-        </LinearGradientBrush>
-        <LinearGradientBrush x:Key="GlassRim" StartPoint="0,0" EndPoint="0,1">
-            <GradientStop Color="#A6FFFFFF" Offset="0"/>
-            <GradientStop Color="#2EFFFFFF" Offset="0.4"/>
-            <GradientStop Color="#14FFFFFF" Offset="1"/>
-        </LinearGradientBrush>
-        <LinearGradientBrush x:Key="PanelRim" StartPoint="0,0" EndPoint="0,1">
-            <GradientStop Color="#47FFFFFF" Offset="0"/>
-            <GradientStop Color="#14FFFFFF" Offset="0.5"/>
-            <GradientStop Color="#0FFFFFFF" Offset="1"/>
-        </LinearGradientBrush>
-        <LinearGradientBrush x:Key="AccentFill" StartPoint="0,0" EndPoint="0,1">
-            <GradientStop Color="#F2FFA066" Offset="0"/>
-            <GradientStop Color="#B3FF8A4C" Offset="0.5"/>
-            <GradientStop Color="#73E8642A" Offset="1"/>
-        </LinearGradientBrush>
-        <LinearGradientBrush x:Key="AccentRim" StartPoint="0,0" EndPoint="0,1">
-            <GradientStop Color="#E6FFE6CC" Offset="0"/>
-            <GradientStop Color="#66FFC68A" Offset="0.45"/>
-            <GradientStop Color="#33FFC68A" Offset="1"/>
-        </LinearGradientBrush>
-        <LinearGradientBrush x:Key="RecordFill" StartPoint="0,0" EndPoint="0,1">
-            <GradientStop Color="#FFFF6B78" Offset="0"/>
-            <GradientStop Color="#FFE23A4C" Offset="1"/>
-        </LinearGradientBrush>
-        <SolidColorBrush x:Key="ActiveTint" Color="#1CFF8A4C"/>
-        <DropShadowEffect x:Key="AccentGlow" Color="#FF8A4C" BlurRadius="18" ShadowDepth="0" Opacity="0.6"/>
-        <DropShadowEffect x:Key="RecordGlow" Color="#FF4D5E" BlurRadius="16" ShadowDepth="0" Opacity="0.65"/>
+        <!-- Matte glass: flat frosted fills and one thin even edge — no sheen, no glints, no glow.
+             Active = translucent white, primary = near-solid white with dark ink, the accent lives in icons. -->
+        <SolidColorBrush x:Key="GlassSheen" Color="#08FFFFFF"/>
+        <SolidColorBrush x:Key="GlassRim" Color="#2EFFFFFF"/>
+        <SolidColorBrush x:Key="PanelRim" Color="#2EFFFFFF"/>
+        <SolidColorBrush x:Key="GlassText" Color="#F4F4F7"/>
+        <SolidColorBrush x:Key="GlassPlaceholder" Color="#CFCFD6"/>
+        <SolidColorBrush x:Key="PrimaryFill" Color="#EBFFFFFF"/>
+        <SolidColorBrush x:Key="PrimaryInk" Color="#1D1D22"/>
+        <SolidColorBrush x:Key="AccentFill" Color="#FF8A4C"/>
+        <SolidColorBrush x:Key="AccentRim" Color="#00FFFFFF"/>
+        <SolidColorBrush x:Key="RecordFill" Color="#FF4D5E"/>
+        <SolidColorBrush x:Key="ActiveTint" Color="#38FFFFFF"/>
+        <DropShadowEffect x:Key="AccentGlow" Color="#FF8A4C" BlurRadius="10" ShadowDepth="0" Opacity="0.35"/>
+        <DropShadowEffect x:Key="RecordGlow" Color="#FF4D5E" BlurRadius="10" ShadowDepth="0" Opacity="0.3"/>
         <DropShadowEffect x:Key="LiftShadow" Color="#000000" BlurRadius="12" ShadowDepth="3" Opacity="0.3"/>
         <DropShadowEffect x:Key="CardShadow" Color="#000000" BlurRadius="30" ShadowDepth="6" Opacity="0.45"/>
 
@@ -96,39 +78,31 @@
         <Geometry x:Key="Icon.Gpu">M3.5 7.5H20.5V16.5H3.5ZM7 16.5V19M17 16.5V19M8 12A2 2 0 1 0 7.99 12ZM13.5 10.5H17.5M13.5 13.5H17.5</Geometry>
         <Geometry x:Key="Icon.Link">M10 14A4 4 0 0 0 15.66 14L18.66 11A4 4 0 0 0 13 5.34L11.5 6.84M14 10A4 4 0 0 0 8.34 10L5.34 13A4 4 0 0 0 11 18.66L12.5 17.16</Geometry>
 
-        <!-- ═══ Logo: a glowing orange tile (the camera's «recording» lamp) with dark viewfinder corners and a white
-             mic capsule. One drawing for every size — it stays legible at 16 px in the tray. ═══ -->
+        <!-- ═══ Logo «F»: orange viewfinder corners around a three-bar voice wave, no tile, one solid colour.
+             One drawing for every size — it is also the tray icon and the .ico (regenerated from this). ═══ -->
         <DrawingImage x:Key="BrandMark">
             <DrawingImage.Drawing>
                 <DrawingGroup>
                     <GeometryDrawing Brush="#00000000" Geometry="M0,0H64V64H0Z"/>
-                    <GeometryDrawing>
-                        <GeometryDrawing.Geometry><RectangleGeometry Rect="2,2,60,60" RadiusX="16" RadiusY="16"/></GeometryDrawing.Geometry>
-                        <GeometryDrawing.Brush>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                <GradientStop Color="#FFA468" Offset="0"/>
-                                <GradientStop Color="#F06A2C" Offset="1"/>
-                            </LinearGradientBrush>
-                        </GeometryDrawing.Brush>
+                    <GeometryDrawing Geometry="M6,22V14A8,8 0 0 1 14,6H22M42,6H50A8,8 0 0 1 58,14V22M58,42V50A8,8 0 0 1 50,58H42M22,58H14A8,8 0 0 1 6,50V42">
+                        <GeometryDrawing.Pen><Pen Brush="#FF8A4C" Thickness="7" StartLineCap="Round" EndLineCap="Round" LineJoin="Round"/></GeometryDrawing.Pen>
                     </GeometryDrawing>
-                    <GeometryDrawing>
-                        <GeometryDrawing.Geometry><RectangleGeometry Rect="2,2,60,60" RadiusX="16" RadiusY="16"/></GeometryDrawing.Geometry>
-                        <GeometryDrawing.Brush>
-                            <RadialGradientBrush Center="0.5,0" GradientOrigin="0.5,0" RadiusX="0.85" RadiusY="0.7">
-                                <GradientStop Color="#40FFFFFF" Offset="0"/>
-                                <GradientStop Color="#00FFFFFF" Offset="1"/>
-                            </RadialGradientBrush>
-                        </GeometryDrawing.Brush>
+                    <GeometryDrawing Geometry="M22,28V36M32,20V44M42,28V36">
+                        <GeometryDrawing.Pen><Pen Brush="#FF8A4C" Thickness="7" StartLineCap="Round" EndLineCap="Round"/></GeometryDrawing.Pen>
                     </GeometryDrawing>
-                    <GeometryDrawing>
-                        <GeometryDrawing.Geometry><RectangleGeometry Rect="2.5,2.5,59,59" RadiusX="15.5" RadiusY="15.5"/></GeometryDrawing.Geometry>
-                        <GeometryDrawing.Pen><Pen Brush="#40FFFFFF" Thickness="1"/></GeometryDrawing.Pen>
+                </DrawingGroup>
+            </DrawingImage.Drawing>
+        </DrawingImage>
+        <!-- The same mark hinted for the 16–24 px icon frames (tray): 2 px strokes on the 16 px pixel grid, 1 px gaps -->
+        <DrawingImage x:Key="BrandMarkSmall">
+            <DrawingImage.Drawing>
+                <DrawingGroup>
+                    <GeometryDrawing Brush="#00000000" Geometry="M0,0H64V64H0Z"/>
+                    <GeometryDrawing Geometry="M8,22V16A8,8 0 0 1 16,8H22M42,8H48A8,8 0 0 1 56,16V22M56,42V48A8,8 0 0 1 48,56H42M22,56H16A8,8 0 0 1 8,48V42">
+                        <GeometryDrawing.Pen><Pen Brush="#FF8A4C" Thickness="8" StartLineCap="Round" EndLineCap="Round" LineJoin="Round"/></GeometryDrawing.Pen>
                     </GeometryDrawing>
-                    <GeometryDrawing Geometry="M13,25V19A6,6 0 0 1 19,13H25M39,13H45A6,6 0 0 1 51,19V25M51,39V45A6,6 0 0 1 45,51H39M25,51H19A6,6 0 0 1 13,45V39">
-                        <GeometryDrawing.Pen><Pen Brush="#2A1608" Thickness="5.5" StartLineCap="Round" EndLineCap="Round" LineJoin="Round"/></GeometryDrawing.Pen>
-                    </GeometryDrawing>
-                    <GeometryDrawing Brush="#FFF8F2">
-                        <GeometryDrawing.Geometry><RectangleGeometry Rect="24,19,16,26" RadiusX="8" RadiusY="8"/></GeometryDrawing.Geometry>
+                    <GeometryDrawing Geometry="M20,28V36M32,18V46M44,28V36">
+                        <GeometryDrawing.Pen><Pen Brush="#FF8A4C" Thickness="8" StartLineCap="Round" EndLineCap="Round"/></GeometryDrawing.Pen>
                     </GeometryDrawing>
                 </DrawingGroup>
             </DrawingImage.Drawing>
@@ -136,10 +110,10 @@
 
         <!-- ═══ Buttons (dark glass). Same keys as before, so every window picks up the new look. ═══ -->
 
-        <!-- Text button without a frame; glass appears on hover -->
+        <!-- Text button without a frame; a frosted fill appears on hover -->
         <Style x:Key="PillButton" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#D4D4DC"/>
+            <Setter Property="Foreground" Value="#E2E2E8"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Height" Value="34"/>
             <Setter Property="MinWidth" Value="34"/>
@@ -154,17 +128,15 @@
                     <ControlTemplate TargetType="Button">
                         <Grid>
                             <Border x:Name="fill" Background="{TemplateBinding Background}" CornerRadius="11"/>
-                            <Border x:Name="rim" CornerRadius="11" BorderThickness="1" BorderBrush="{StaticResource GlassRim}" Opacity="0"/>
                             <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="fill" Property="Background" Value="#14FFFFFF"/>
-                                <Setter TargetName="rim" Property="Opacity" Value="0.45"/>
+                                <Setter TargetName="fill" Property="Background" Value="#1AFFFFFF"/>
                                 <Setter Property="Foreground" Value="#FFFFFF"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="fill" Property="Background" Value="#24FFFFFF"/>
+                                <Setter TargetName="fill" Property="Background" Value="#2BFFFFFF"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter Property="Opacity" Value="0.35"/>
@@ -175,25 +147,22 @@
             </Setter>
         </Style>
 
-        <!-- Primary action: lit orange glass -->
+        <!-- Primary action: a white matte button with dark text -->
         <Style x:Key="ActiveButton" TargetType="Button" BasedOn="{StaticResource PillButton}">
-            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="Foreground" Value="{StaticResource PrimaryInk}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Grid>
-                            <Border x:Name="fill" CornerRadius="11" Background="{StaticResource AccentFill}" Effect="{StaticResource AccentGlow}"/>
-                            <Border CornerRadius="11" Background="{StaticResource GlassSheen}" Opacity="0.7"/>
-                            <Border CornerRadius="11" BorderThickness="1" BorderBrush="{StaticResource AccentRim}"/>
-                            <Border x:Name="hover" CornerRadius="11" Background="#1FFFFFFF" Opacity="0"/>
+                            <Border x:Name="fill" CornerRadius="11" Background="{StaticResource PrimaryFill}"/>
                             <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="hover" Property="Opacity" Value="1"/>
+                                <Setter TargetName="fill" Property="Background" Value="#FFFFFFFF"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="hover" Property="Background" Value="#14000000"/>
+                                <Setter TargetName="fill" Property="Background" Value="#D9FFFFFF"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter Property="Opacity" Value="0.45"/>
@@ -204,25 +173,22 @@
             </Setter>
         </Style>
 
-        <!-- Secondary action: clear glass with a rim -->
+        <!-- Secondary action: frosted glass with a thin edge -->
         <Style x:Key="OutlineButton" TargetType="Button" BasedOn="{StaticResource PillButton}">
             <Setter Property="Foreground" Value="#F3F3F6"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Grid>
-                            <Border x:Name="fill" CornerRadius="11" Background="#0FFFFFFF"/>
-                            <Border CornerRadius="11" Background="{StaticResource GlassSheen}" Opacity="0.5"/>
-                            <Border x:Name="rim" CornerRadius="11" BorderThickness="1" BorderBrush="{StaticResource GlassRim}" Opacity="0.6"/>
+                            <Border x:Name="fill" CornerRadius="11" Background="#14FFFFFF" BorderBrush="{StaticResource PanelRim}" BorderThickness="1"/>
                             <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="fill" Property="Background" Value="#1FFFFFFF"/>
-                                <Setter TargetName="rim" Property="Opacity" Value="1"/>
+                                <Setter TargetName="fill" Property="Background" Value="#26FFFFFF"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="fill" Property="Background" Value="#2BFFFFFF"/>
+                                <Setter TargetName="fill" Property="Background" Value="#33FFFFFF"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -230,10 +196,10 @@
             </Setter>
         </Style>
 
-        <!-- Small glass chip (gallery cards) -->
+        <!-- Small frosted chip (gallery cards, toasts) -->
         <Style x:Key="ChipButton" TargetType="Button">
-            <Setter Property="Background" Value="#0FFFFFFF"/>
-            <Setter Property="Foreground" Value="#E4E4EA"/>
+            <Setter Property="Background" Value="#12FFFFFF"/>
+            <Setter Property="Foreground" Value="#E8E8ED"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="9,5"/>
             <Setter Property="MinHeight" Value="28"/>
@@ -246,14 +212,12 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Grid>
-                            <Border x:Name="fill" Background="{TemplateBinding Background}" CornerRadius="9"/>
-                            <Border x:Name="rim" CornerRadius="9" BorderThickness="1" BorderBrush="{StaticResource GlassRim}" Opacity="0.35"/>
+                            <Border x:Name="fill" Background="{TemplateBinding Background}" CornerRadius="9" BorderBrush="#1AFFFFFF" BorderThickness="1"/>
                             <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="fill" Property="Background" Value="#24FFFFFF"/>
-                                <Setter TargetName="rim" Property="Opacity" Value="0.8"/>
+                                <Setter TargetName="fill" Property="Background" Value="#26FFFFFF"/>
                                 <Setter Property="Foreground" Value="#FFFFFF"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -268,14 +232,12 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Grid>
-                            <Border x:Name="fill" Background="{TemplateBinding Background}" CornerRadius="9"/>
-                            <Border x:Name="rim" CornerRadius="9" BorderThickness="1" BorderBrush="{StaticResource GlassRim}" Opacity="0.35"/>
+                            <Border x:Name="fill" Background="{TemplateBinding Background}" CornerRadius="9" BorderBrush="#1AFFFFFF" BorderThickness="1"/>
                             <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="fill" Property="Background" Value="#59EF4444"/>
-                                <Setter TargetName="rim" Property="Opacity" Value="0.8"/>
                                 <Setter Property="Foreground" Value="#FFFFFF"/>
                             </Trigger>
                         </ControlTemplate.Triggers>

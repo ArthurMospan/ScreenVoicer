@@ -28,14 +28,11 @@
         </Style>
     </Window.Resources>
 
-    <!-- Room around the card for its shadow and the brand glow of the primary button -->
+    <!-- Room around the card for its shadow -->
     <Border x:Name="Card" Margin="14" CornerRadius="16" BorderBrush="{StaticResource PanelRim}" BorderThickness="1"
             Effect="{StaticResource CardShadow}" MouseEnter="OnCardMouseEnter" MouseLeave="OnCardMouseLeave">
         <Border.Background>
-            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                <GradientStop Color="#F5202027" Offset="0"/>
-                <GradientStop Color="#F5141419" Offset="1"/>
-            </LinearGradientBrush>
+            <SolidColorBrush Color="#F51B1B21"/>
         </Border.Background>
         <Border.RenderTransform>
             <TranslateTransform x:Name="Slide" Y="16"/>
