@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>ScreenVoicer — скриншот із голосовим коментарем</title>
-<meta name="description" content="Виділіть місце на екрані й скажіть, що не так. Картинка з вашими словами — вже в буфері обміну. Безкоштовно для Windows, голос розпізнається на вашому комп’ютері.">
+<meta name="description" content="Виділіть місце на екрані й скажіть, що не так. Картинка з вашими словами — вже в буфері обміну. Безкоштовно для Windows і Mac, голос розпізнається на вашому комп’ютері.">
 <meta name="theme-color" content="#09090b">
 <meta property="og:title" content="ScreenVoicer">
 <meta property="og:description" content="Скриншот. Голос. Готово.">
@@ -355,9 +355,9 @@ footer a:hover { color: var(--text); }
       <p class="sub">Виділіть місце на екрані й скажіть, що не так. Картинка з вашими словами — вже в буфері обміну.</p>
       <div class="cta" data-cta>
         <a class="btn btn-primary" data-os="win" href="https://github.com/ArthurMospan/ScreenVoicer/releases/latest/download/ScreenVoicer-Setup.exe"><svg aria-hidden="true"><use href="#i-win"/></svg>Завантажити для Windows</a>
-        <button class="btn btn-secondary" data-os="mac" type="button" aria-disabled="true" title="Версія для macOS ще в роботі"><svg aria-hidden="true"><use href="#i-apple"/></svg>Завантажити для Mac<span class="soon">скоро</span></button>
+        <a class="btn btn-secondary" data-os="mac" href="https://github.com/ArthurMospan/ScreenVoicer/releases/latest/download/ScreenVoicer-macOS.zip"><svg aria-hidden="true"><use href="#i-apple"/></svg>Завантажити для Mac</a>
       </div>
-      <p class="meta"><span>Безкоштовно</span><span>Windows 10/11</span><span>macOS — скоро</span><span>Відкритий код</span></p>
+      <p class="meta"><span>Безкоштовно</span><span>Windows 10/11</span><span>macOS 14+</span><span>Відкритий код</span></p>
 
       <div class="showcase" id="how">
         <figure class="screen reveal">
@@ -553,14 +553,14 @@ footer a:hover { color: var(--text); }
     <div class="wrap reveal">
       <div class="head">
         <h2>Спробуйте на своєму екрані.</h2>
-        <p>Перший знімок — Alt+Shift+S.</p>
+        <p>Перший знімок — Alt+Shift+S (на Mac ⌥⇧S) або клік по іконці.</p>
       </div>
       <div class="cta" data-cta>
         <a class="btn btn-primary" data-os="win" href="https://github.com/ArthurMospan/ScreenVoicer/releases/latest/download/ScreenVoicer-Setup.exe"><svg aria-hidden="true"><use href="#i-win"/></svg>Завантажити для Windows</a>
-        <button class="btn btn-secondary" data-os="mac" type="button" aria-disabled="true" title="Версія для macOS ще в роботі"><svg aria-hidden="true"><use href="#i-apple"/></svg>Завантажити для Mac<span class="soon">скоро</span></button>
+        <a class="btn btn-secondary" data-os="mac" href="https://github.com/ArthurMospan/ScreenVoicer/releases/latest/download/ScreenVoicer-macOS.zip"><svg aria-hidden="true"><use href="#i-apple"/></svg>Завантажити для Mac</a>
       </div>
-      <p class="meta"><span>Безкоштовно</span><span>Windows 10/11</span><span>macOS — скоро</span><span>Відкритий код</span></p>
-      <p class="note">Якщо Windows попередить про невідомого видавця, натисніть «Докладніше» → «Однаково запустити».</p>
+      <p class="meta"><span>Безкоштовно</span><span>Windows 10/11</span><span>macOS 14+</span><span>Відкритий код</span></p>
+      <p class="note">Якщо Windows попередить про невідомого видавця, натисніть «Докладніше» → «Однаково запустити». На Mac перший запуск дозвольте в Системних параметрах → Приватність і безпека → «Все одно відкрити» (<a href="https://github.com/ArthurMospan/ScreenVoicer/blob/main/mac/README.md">як встановити</a>).</p>
     </div>
   </section>
 </main>
@@ -968,7 +968,6 @@ footer a:hover { color: var(--text); }
       c.insertBefore(mac, win);
     });
   }
-  $$('[data-os="mac"]').forEach(b => b.addEventListener('click', e => e.preventDefault()));
 
   /* latest version from GitHub; any failure leaves the footer as is */
   try {
