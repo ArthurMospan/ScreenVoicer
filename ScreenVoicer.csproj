@@ -1,0 +1,65 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <RootNamespace>ScreenVoicer</RootNamespace>
+    <AssemblyName>ScreenVoicer</AssemblyName>
+    <PlatformTarget>x64</PlatformTarget>
+
+    <!-- Per-monitor DPI awareness (WPF ignores the WinForms-only ApplicationHighDpiMode property). -->
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Resources\AppIcon.ico</ApplicationIcon>
+
+    <Version>1.9.0</Version>
+    <Product>ScreenVoicer</Product>
+    <Company>ScreenVoicer</Company>
+    <Description>Screenshots with voice comments for bug reports and AI assistants</Description>
+    <Copyright>© 2026 ScreenVoicer</Copyright>
+
+    <!-- Publishing & single file -->
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <PublishReadyToRun>true</PublishReadyToRun>
+    <SatelliteResourceLanguages>en;uk</SatelliteResourceLanguages>
+    <DebugType>embedded</DebugType>
+    <!-- WFAC010: WinForms analyzer wants DPI set via SetHighDpiMode; WPF reads it from app.manifest. -->
+    <NoWarn>$(NoWarn);WFAC010</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- This is a WPF app; WinForms (tray icon) and System.Drawing (capture) are imported explicitly where used,
+         otherwise Point/Color/Brush/MessageBox/... become ambiguous everywhere. -->
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NAudio.WinMM" Version="2.2.1" />
+    <PackageReference Include="NAudio.Wasapi" Version="2.2.1" />
+    <PackageReference Include="Whisper.net" Version="1.7.4" />
+    <PackageReference Include="Whisper.net.Runtime" Version="1.7.4" />
+    <PackageReference Include="Whisper.net.Runtime.NoAvx" Version="1.7.4" />
+    <!-- GPU inference through Vulkan (any NVIDIA/AMD/Intel driver); also contains a CPU backend. -->
+    <PackageReference Include="Whisper.net.Runtime.Vulkan" Version="1.7.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Resources\**\*" />
+  </ItemGroup>
+
+  <!-- The Whisper runtime packages also ship x86/ARM64/Linux binaries; only win-x64 is used, don't bloat the exe. -->
+  <Target Name="RemoveUnusedWhisperRuntimes" AfterTargets="ResolvePackageAssets" BeforeTargets="AssignTargetPaths">
+    <ItemGroup>
+      <None Remove="@(None)" Condition="$([System.String]::Copy('%(None.TargetPath)').Replace('\','/').StartsWith('runtimes/')) And !$([System.String]::Copy('%(None.TargetPath)').Replace('\','/').Contains('/win-x64/'))" />
+    </ItemGroup>
+  </Target>
+
+</Project>

@@ -1,0 +1,82 @@
+<Window x:Class="ScreenVoicer.Views.HotkeyWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:v="clr-namespace:ScreenVoicer.Views"
+        Title="ScreenVoicer — гаряча клавіша"
+        Icon="/ScreenVoicer;component/Resources/AppIcon.ico"
+        Width="530" SizeToContent="Height"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent" ResizeMode="NoResize"
+        Topmost="True" ShowInTaskbar="True" WindowStartupLocation="CenterScreen"
+        UseLayoutRounding="True" FontFamily="{StaticResource UiFont}">
+
+    <Window.Resources>
+        <!-- A physical key: lighter top, thicker bottom edge -->
+        <Style x:Key="KeyCap" TargetType="Border">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                        <GradientStop Color="#33333D" Offset="0"/>
+                        <GradientStop Color="#22222A" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="BorderBrush">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                        <GradientStop Color="#4DFFFFFF" Offset="0"/>
+                        <GradientStop Color="#14FFFFFF" Offset="0.5"/>
+                        <GradientStop Color="#0A0A0E" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="BorderThickness" Value="1,1,1,3"/>
+            <Setter Property="CornerRadius" Value="9"/>
+            <Setter Property="Padding" Value="13,7"/>
+            <Setter Property="Margin" Value="3"/>
+            <Setter Property="MinWidth" Value="42"/>
+        </Style>
+    </Window.Resources>
+
+    <Border Margin="18" CornerRadius="18" BorderBrush="{StaticResource PanelRim}" BorderThickness="1" Padding="24,22,24,20"
+            Effect="{StaticResource CardShadow}" MouseLeftButtonDown="OnDragArea">
+        <Border.Background>
+            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                <GradientStop Color="#F7202027" Offset="0"/>
+                <GradientStop Color="#F7141419" Offset="1"/>
+            </LinearGradientBrush>
+        </Border.Background>
+        <StackPanel>
+            <StackPanel Orientation="Horizontal">
+                <Border Width="36" Height="36" CornerRadius="11" Background="{StaticResource ActiveTint}" BorderBrush="{StaticResource GlassRim}"
+                        BorderThickness="1" Margin="0,0,12,0" VerticalAlignment="Center">
+                    <v:GlyphIcon Data="{StaticResource Icon.Keyboard}" Foreground="{StaticResource AccentLightBrush}" Width="19" Height="19"/>
+                </Border>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="Гаряча клавіша для знімка" FontFamily="{StaticResource DisplayFont}" FontSize="18" FontWeight="SemiBold"
+                               Foreground="{StaticResource InkBrush}"/>
+                    <TextBlock Text="Натисніть нову комбінацію, наприклад Ctrl+Shift+X або F9." Foreground="{StaticResource MutedBrush}"
+                               FontSize="13" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                </StackPanel>
+            </StackPanel>
+
+            <Border Background="#0AFFFFFF" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="14"
+                    Padding="12" MinHeight="78" Margin="0,18,0,0">
+                <WrapPanel x:Name="KeysPanel" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+
+            <TextBlock x:Name="TxtStatus" Margin="2,12,0,0" FontSize="12.5" TextWrapping="Wrap" Foreground="{StaticResource MutedBrush}" MinHeight="18"/>
+
+            <Grid Margin="0,18,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Button x:Name="BtnDefault" Grid.Column="0" Style="{StaticResource PillButton}" HorizontalAlignment="Left" Click="OnDefaultClick" Padding="10,0"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Content="Скасувати" Style="{StaticResource OutlineButton}" Click="OnCancelClick" Margin="0,0,10,0" Padding="14,0"/>
+                    <Button x:Name="BtnSave" Content="Зберегти" Style="{StaticResource ActiveButton}" Click="OnSaveClick" Padding="18,0"/>
+                </StackPanel>
+            </Grid>
+        </StackPanel>
+    </Border>
+</Window>

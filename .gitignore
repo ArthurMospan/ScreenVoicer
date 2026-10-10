@@ -1,0 +1,18 @@
+# Build output
+bin/
+obj/
+publish/
+installer_output/
+*.user
+.vs/
+.vscode/
+.idea/
+
+# Whisper models are downloaded by the app (hundreds of MB) — never commit them
+*.bin
+*.part
+*.onnx
+
+# Local scratch
+*.log
+*.tmp

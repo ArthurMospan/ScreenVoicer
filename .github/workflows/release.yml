@@ -1,0 +1,60 @@
+name: Release
+
+# Push a tag like v1.9.0 (with a matching "## 1.9.0" section in CHANGELOG.md) to publish a release.
+# The installed app finds it through the GitHub API and offers the update.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Version from tag
+        id: v
+        shell: pwsh
+        run: |
+          $v = "${{ github.ref_name }}".TrimStart('v')
+          "version=$v" >> $env:GITHUB_OUTPUT
+
+      - name: Publish single-file exe
+        run: dotnet publish ScreenVoicer.csproj -c Release -o publish -p:Version=${{ steps.v.outputs.version }}
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress }
+          & $iscc /DMyAppVersion=${{ steps.v.outputs.version }} installer.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Release notes from CHANGELOG.md
+        shell: pwsh
+        run: |
+          $v = '${{ steps.v.outputs.version }}'
+          $lines = Get-Content CHANGELOG.md -Encoding UTF8
+          $start = [Array]::IndexOf($lines, "## $v")
+          $notes = @()
+          if ($start -ge 0) {
+            for ($i = $start + 1; $i -lt $lines.Count -and -not $lines[$i].StartsWith('## '); $i++) { $notes += $lines[$i] }
+          }
+          $text = ($notes -join "`n").Trim()
+          if (-not $text) { $text = "ScreenVoicer $v" }
+          $text | Set-Content notes.md -Encoding utf8
+
+      - name: Publish release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          Copy-Item publish\ScreenVoicer.exe ScreenVoicer-portable.exe
+          gh release create "${{ github.ref_name }}" installer_output\ScreenVoicer-Setup.exe ScreenVoicer-portable.exe `
+            --title "ScreenVoicer ${{ steps.v.outputs.version }}" --notes-file notes.md
