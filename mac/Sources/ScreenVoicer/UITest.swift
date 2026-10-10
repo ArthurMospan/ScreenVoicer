@@ -46,6 +46,7 @@ enum UITest {
         await wait(0.3)
 
         await overlayFlow(app, output)
+        await voiceFlow(app)
 
         // hotkey dialog
         app.openHotkeySettings()
@@ -159,6 +160,37 @@ enum UITest {
         ToastCenter.shared.hideAll()
     }
 
+    /// Space tap = hands-free recording, the next press stops it; the take lands in last-recording.wav.
+    private static func voiceFlow(_ app: AppDelegate) async {
+        try? FileManager.default.removeItem(at: Paths.lastRecording)
+        app.capture()
+        await wait(2.5)
+        guard let overlay = app.overlayForTest, let panel = overlay.panelForTest else {
+            check("second overlay opens", false)
+            return
+        }
+        keyEvent(panel, .keyDown, kVK_Space, " ")
+        await wait(0.1)
+        keyEvent(panel, .keyUp, kVK_Space, " ")
+        await wait(0.6)
+        check("Space tap keeps recording (hands-free)", overlay.model.isRecording, overlay.model.status?.text ?? "no status")
+        await wait(1.6)
+        keyEvent(panel, .keyDown, kVK_Space, " ")
+        keyEvent(panel, .keyUp, kVK_Space, " ")
+        await wait(2.5)
+        check("second Space press stops recording", !overlay.model.isRecording)
+        let bytes = (try? FileManager.default.attributesOfItem(atPath: Paths.lastRecording.path)[.size] as? NSNumber)?.intValue ?? 0
+        let seconds = Double(max(0, bytes - 44)) / 32000
+        check("the take was recorded at 16 kHz", seconds >= 1.5, String(format: "%.1f s, status: %@", seconds, overlay.model.status?.text ?? "none"))
+        keyEvent(panel, .keyDown, kVK_Escape, "\u{1b}")
+        await wait(0.5)
+        if app.overlayForTest != nil {
+            keyEvent(panel, .keyDown, kVK_Escape, "\u{1b}")
+            await wait(0.5)
+        }
+        check("Esc closes the overlay", app.overlayForTest == nil)
+    }
+
     // MARK: helpers
 
     private static func seedHistory(_ app: AppDelegate) async {
@@ -198,6 +230,14 @@ enum UITest {
                                                isARepeat: false, keyCode: UInt16(code)) else { continue }
             NSApp.sendEvent(event)
         }
+    }
+
+    private static func keyEvent(_ window: NSWindow, _ type: NSEvent.EventType, _ code: Int, _ chars: String) {
+        guard let event = NSEvent.keyEvent(with: type, location: .zero, modifierFlags: [],
+                                           timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber,
+                                           context: nil, characters: chars, charactersIgnoringModifiers: chars,
+                                           isARepeat: false, keyCode: UInt16(code)) else { return }
+        NSApp.sendEvent(event)
     }
 
     private static func type(_ window: NSWindow, _ text: String) {

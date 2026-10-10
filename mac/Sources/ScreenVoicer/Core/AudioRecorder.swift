@@ -96,14 +96,15 @@ final class AudioRecorder {
             }
         }
 
-        let format = input.outputFormat(forBus: 0)
-        guard format.sampleRate > 0, format.channelCount > 0,
-              let converter = AVAudioConverter(from: format, to: Self.targetFormat) else {
+        // the hardware format of the (possibly just switched) device; the tap uses the node's own format (nil),
+        // and the converter is built from the first buffer, so a format change can never crash the tap
+        let format = input.inputFormat(forBus: 0)
+        guard format.sampleRate > 0, format.channelCount > 0 else {
             lastError = "Мікрофон не передає звук. Оберіть інший мікрофон."
             return false
         }
 
-        input.installTap(onBus: 0, bufferSize: 2048, format: format) { [weak self] buffer, _ in
+        input.installTap(onBus: 0, bufferSize: 2048, format: nil) { [weak self] buffer, _ in
             self?.consume(buffer)
         }
         do {
@@ -116,7 +117,7 @@ final class AudioRecorder {
             return false
         }
         self.engine = engine
-        self.converter = converter
+        self.converter = nil
         Log.info("[Audio] Recording started on \(deviceUID.isEmpty ? "the default device" : deviceUID) (\(Int(format.sampleRate)) Hz, \(format.channelCount) ch).")
         return true
     }
@@ -124,7 +125,15 @@ final class AudioRecorder {
     /// Audio thread: resample to 16 kHz mono and append.
     private func consume(_ buffer: AVAudioPCMBuffer) {
         lock.lock()
-        guard let converter, isRecording || engine != nil else {
+        guard engine != nil else {
+            lock.unlock()
+            return
+        }
+        if converter == nil || converter?.inputFormat != buffer.format {
+            converter = AVAudioConverter(from: buffer.format, to: Self.targetFormat)
+            converter?.downmix = true
+        }
+        guard let converter else {
             lock.unlock()
             return
         }
