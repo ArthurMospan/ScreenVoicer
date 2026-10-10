@@ -1,0 +1,1019 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ScreenVoicer — скриншот із голосовим коментарем</title>
+<meta name="description" content="Виділіть частину екрана й скажіть, що не так. Знімок і коментар — уже в буфері обміну. Голос розпізнається на вашому комп’ютері. Безкоштовно для Windows і macOS.">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#050505">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' fill='none' stroke='%23ff8a4c' stroke-width='7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 22v-8a8 8 0 0 1 8-8h8M42 6h8a8 8 0 0 1 8 8v8M58 42v8a8 8 0 0 1-8 8h-8M22 58h-8a8 8 0 0 1-8-8v-8M22 28v8M32 20v24M42 28v8'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap" rel="stylesheet">
+<script>
+  // Pick the layout before the first paint: the film (one sticky stage) or stacked stills (phones, reduced motion).
+  (function () {
+    var d = document.documentElement, w = d.clientWidth || innerWidth, h = innerHeight;
+    var still = /static/.test(location.hash) || matchMedia('(prefers-reduced-motion: reduce)').matches;
+    d.dataset.mode = (!still && w >= 700 && h >= 520 && h <= 1500 && h <= w * 1.15) ? 'motion' : 'static';
+    d.style.setProperty('--vh', h + 'px');
+    if (/p=|dbg|shot/.test(location.hash)) d.classList.add('instant');   // debug hook: no entrance animations
+  })();
+</script>
+<style>
+  :root {
+    --bg: #050505;
+    --fg: #F5F5F7;
+    --fg2: #A1A1A6;
+    --fg3: #86868B;
+    --accent: #FF8A4C;
+    --glass: rgba(32, 32, 40, .65);
+    --edge: rgba(255, 255, 255, .18);
+    --gut: 32px;
+    --vh: 100vh;
+    --ease: cubic-bezier(.22, .61, .36, 1);
+  }
+  @media (max-width: 699px) { :root { --gut: 16px; } }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background: var(--bg); -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    font-optical-sizing: auto;
+    font-size: 17px;
+    line-height: 1.47;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: clip;
+  }
+  a { color: inherit; }
+  :focus { outline: none; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 6px; }
+  .wrap { width: 100%; max-width: 1244px; margin: 0 auto; padding: 0 var(--gut); }
+
+  /* ---------- Navigation ---------- */
+  .nav { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+  .brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
+  .brand svg { width: 22px; height: 22px; }
+  .wm-v { color: var(--accent); }
+  .navlink { font-size: 13px; color: var(--fg2); text-decoration: none; transition: color .3s var(--ease); }
+  .navlink:hover { color: var(--fg); }
+
+  /* ---------- Opening ---------- */
+  .hero-in { text-align: center; padding-top: clamp(56px, 12.5vh, 150px); }
+  h1 {
+    font-size: clamp(38px, min(6.6vw, 10.5vh), 92px);
+    line-height: 1.02;
+    letter-spacing: -.028em;
+    font-weight: 650;
+    text-wrap: balance;
+  }
+  .sub {
+    margin: clamp(18px, 2.6vh, 26px) auto 0;
+    max-width: 36em;
+    font-size: clamp(17px, 1.5vw, 21px);
+    line-height: 1.42;
+    letter-spacing: -.012em;
+    color: var(--fg2);
+    text-wrap: balance;
+  }
+  .cta { display: flex; justify-content: center; gap: 12px; margin-top: clamp(26px, 4vh, 38px); }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+    height: 48px; padding: 0 24px; border-radius: 999px;
+    font: inherit; font-size: 15.5px; font-weight: 500; letter-spacing: -.01em; line-height: 1;
+    text-decoration: none; white-space: nowrap; cursor: pointer; border: 0; background: none; color: var(--fg);
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color .35s var(--ease), box-shadow .35s var(--ease), color .35s var(--ease), transform .35s var(--ease);
+  }
+  .btn-pri { background: var(--fg); color: #000; }
+  .btn-pri:hover { background: #fff; }
+  .btn-pri:active { transform: scale(.98); }
+  .btn-sec { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .24); }
+  .btn-sec:hover { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .42); }
+  .btn-sec:active { transform: scale(.98); }
+  .meta { margin-top: 18px; font-size: 13px; letter-spacing: -.003em; color: var(--fg3); }
+  .meta span { white-space: nowrap; }
+  .meta i { font-style: normal; margin: 0 .45em; color: #55555A; }
+  .meta .mid { margin-right: .2em; }
+  .hero-slot { margin-top: clamp(52px, 13vh, 140px); }
+  .hero-obj { display: none; position: relative; overflow: hidden; margin: clamp(56px, 10vh, 104px) calc(-1 * var(--gut)) 0; }
+  .hero-obj .tb { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+
+  /* ---------- The film: one sticky stage ---------- */
+  .track { position: relative; }
+  .stage { display: none; }
+  [data-mode="motion"] .track { height: calc(var(--vh) * 9.6); }
+  [data-mode="motion"] .hero { position: absolute; left: 0; right: 0; top: 0; height: var(--vh); z-index: 2; }
+  [data-mode="motion"] .stage { display: block; position: sticky; top: 0; height: var(--vh); overflow: hidden; }
+  [data-mode="static"] .hero-slot { display: none; }
+  [data-mode="static"] .hero-obj { display: block; }
+  .frame { position: absolute; left: 0; top: 0; border-radius: 18px; opacity: 0; }  /* placed by the script */
+  .frame.clip { overflow: hidden; }
+  .frame.clip .screen { border-radius: 0; }
+  .blk { position: absolute; inset: 0; background: var(--bg); opacity: 0; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .nav, .hero-in > h1, .hero-in > .sub, .hero-in > .cta, .hero-in > .meta, .hero-obj { animation: rise 1.2s var(--ease) both; }
+    .hero-in > h1 { animation-delay: .06s; }
+    .hero-in > .sub { animation-delay: .16s; }
+    .hero-in > .cta { animation-delay: .26s; }
+    .hero-in > .meta { animation-delay: .32s; }
+    .hero-obj { animation-delay: .5s; }
+    [data-mode="motion"] .stage { animation: appear 1.6s .5s var(--ease) both; }
+  }
+  @keyframes rise { from { opacity: 0; transform: translateY(14px); } }
+  @keyframes appear { from { opacity: 0; } }
+  .instant .nav, .instant .hero-in > *, .instant .hero-obj, .instant .stage { animation: none; }
+
+  .caps { position: absolute; left: 0; right: 0; top: 0; padding: 0 var(--gut); text-align: center; }
+  .caplist { position: relative; list-style: none; max-width: 900px; margin: 0 auto; }
+  .cap { position: absolute; left: 0; right: 0; top: 0; opacity: 0; }
+  .cap p, .frames figcaption p {
+    font-size: clamp(21px, 1.75vw, 27px); line-height: 1.3; letter-spacing: -.018em; font-weight: 600;
+    color: var(--fg3); text-wrap: balance;
+  }
+  .cap b, .frames figcaption b { color: var(--fg); font-weight: 600; }
+  .md {
+    display: inline-block; margin-top: 16px; padding: 10px 14px; border-radius: 10px;
+    background: #111113; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .07);
+    text-align: left; white-space: pre; font: 12.5px/1.6 ui-monospace, "Cascadia Mono", "SF Mono", Consolas, monospace;
+    color: var(--fg3); max-width: 100%; overflow: hidden; text-overflow: ellipsis;
+  }
+  .md em { font-style: normal; color: #D2D2D7; }
+
+  .state { position: absolute; inset: 0; display: grid; place-items: center; padding: 0 var(--gut); text-align: center; opacity: 0; pointer-events: none; }
+  .statement {
+    max-width: 15.5em; margin: 0 auto;
+    font-size: clamp(30px, 4.4vw, 60px); line-height: 1.06; letter-spacing: -.026em; font-weight: 650; text-wrap: balance;
+  }
+  .statement span { color: var(--fg3); }
+
+  .rail { position: absolute; right: 26px; top: 50%; transform: translateY(-50%); display: grid; gap: 10px; opacity: 0; }
+  .rail i { display: block; width: 4px; height: 18px; }
+  .rail b { display: block; width: 4px; height: 18px; border-radius: 2px; background: rgba(255, 255, 255, .22); transform: scaleY(.22); transition: transform .5s var(--ease), background-color .5s var(--ease); }
+  .rail i.on b { background: var(--fg); transform: none; }
+  @media (max-width: 1100px) { .rail { right: 14px; } }
+
+  /* ---------- Scene (design size 1200 x 750; everything inside is in scene px) ---------- */
+  .scene {
+    position: absolute; left: 0; top: 0; width: 1200px; height: 750px; transform-origin: 0 0; will-change: transform;
+    font-size: 13px; line-height: 1.35; letter-spacing: -.003em; color: #1D1D22; text-align: left;
+    font-optical-sizing: none; font-variation-settings: "opsz" 14;
+  }
+  .screen { position: absolute; inset: 0; border-radius: 18px; overflow: hidden; background: #F5F5F7; }
+  .app { position: absolute; inset: 0; }
+  .app svg { display: block; }
+  .ln-i { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* A light web app: an invoice page */
+  .anav { position: absolute; left: 0; right: 0; top: 0; height: 56px; background: #fff; border-bottom: 1px solid #E7E7EB; }
+  .abrand { position: absolute; left: 32px; top: 14px; display: flex; align-items: center; gap: 10px; height: 28px; font-size: 15px; font-weight: 650; letter-spacing: -.015em; }
+  .abrand .lg { width: 24px; height: 24px; border-radius: 7px; background: #1D1D22; color: #fff; display: grid; place-items: center; }
+  .abrand .lg svg { width: 15px; height: 15px; }
+  .tabs { position: absolute; left: 150px; top: 0; height: 56px; display: flex; gap: 2px; list-style: none; }
+  .tabs li { position: relative; display: flex; align-items: center; padding: 0 12px; font-size: 13.5px; font-weight: 500; color: #6E6E78; }
+  .tabs li.on { color: #1D1D22; font-weight: 600; }
+  .tabs li.on::after { content: ""; position: absolute; left: 12px; right: 12px; bottom: 0; height: 2px; border-radius: 1px; background: #1D1D22; }
+  .search { position: absolute; right: 116px; top: 12px; width: 220px; height: 32px; border-radius: 10px; background: #EBEBEF; display: flex; align-items: center; gap: 8px; padding: 0 12px; color: #9A9AA3; }
+  .search svg { width: 15px; height: 15px; }
+  .search kbd { margin-left: auto; font: inherit; font-size: 11px; color: #A8A8B0; }
+  .bell { position: absolute; right: 74px; top: 14px; width: 28px; height: 28px; display: grid; place-items: center; color: #6E6E78; }
+  .bell svg { width: 17px; height: 17px; }
+  .tav { position: absolute; right: 32px; top: 14px; width: 28px; height: 28px; border-radius: 50%; background: #D9DCE6; display: grid; place-items: center; font-size: 10.5px; font-weight: 650; color: #4A4F63; }
+  .back { position: absolute; left: 220px; top: 86px; display: flex; align-items: center; gap: 6px; font-size: 13px; color: #6E6E78; }
+  .back svg { width: 14px; height: 14px; }
+  .ptitle { position: absolute; left: 220px; top: 114px; display: flex; align-items: center; gap: 12px; font-size: 24px; font-weight: 650; letter-spacing: -.025em; }
+  .ptitle .chip { font-size: 12px; font-weight: 600; letter-spacing: 0; color: #6E6E78; background: #F0F0F3; padding: 3px 9px 4px; border-radius: 7px; }
+  .psub { position: absolute; left: 220px; top: 154px; font-size: 13px; color: #8A8A94; }
+  .abtn { position: absolute; top: 118px; height: 34px; padding: 0 14px; border-radius: 10px; display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; }
+  .abtn.ghost { left: 714px; color: #3A3A42; box-shadow: inset 0 0 0 1px #D9D9DF; background: #fff; }
+  .abtn.dark { left: 884px; width: 96px; justify-content: center; background: #1D1D22; color: #fff; }
+  .card { position: absolute; background: #fff; border: 1px solid #E8E8EC; border-radius: 14px; }
+  .tbl { left: 220px; top: 196px; width: 760px; height: 240px; }
+  .th, .tr { position: absolute; left: 20px; right: 20px; display: grid; grid-template-columns: 1fr 90px 120px 120px; align-items: center; }
+  .th { top: 0; height: 40px; font-size: 12px; font-weight: 600; color: #8A8A94; border-bottom: 1px solid #EEEEF2; }
+  .tr { height: 50px; font-size: 13.5px; border-bottom: 1px solid #F1F1F4; }
+  .tr:last-child { border-bottom: 0; }
+  .th span + span, .tr span + span { text-align: right; }
+  .tr span + span { color: #55555E; }
+  .tr span:last-child { color: #1D1D22; font-weight: 500; }
+  .note { left: 220px; top: 456px; width: 396px; height: 156px; padding: 18px 20px; }
+  .note .l { font-size: 12.5px; font-weight: 600; color: #55555E; }
+  .note p { margin-top: 10px; font-size: 13px; line-height: 1.5; color: #8A8A94; max-width: 24em; }
+  .tot { left: 640px; top: 456px; width: 340px; height: 156px; }
+  .tot .r { position: absolute; left: 20px; right: 20px; display: flex; justify-content: space-between; font-size: 13.5px; color: #55555E; }
+  .tot .r.r1 { top: 18px; }
+  .tot .r.r2 { top: 50px; }
+  .tot .sep { position: absolute; left: 20px; right: 20px; top: 86px; height: 1px; background: #EEEEF2; }
+  .tot .r.big { top: 102px; font-size: 18px; font-weight: 650; letter-spacing: -.02em; color: #1D1D22; }
+  .hist { position: absolute; left: 220px; top: 636px; font-size: 12.5px; color: #A1A1AA; }
+
+  /* A chat window, for the paste */
+  .chat { position: absolute; left: 600px; top: 150px; width: 560px; height: 400px; border-radius: 12px; background: #18181D; color: #E8E8ED; overflow: hidden; box-shadow: 0 0 0 1px rgba(255, 255, 255, .08), 0 24px 60px rgba(0, 0, 0, .4); opacity: 0; }
+  .chh { position: absolute; left: 0; right: 0; top: 0; height: 56px; display: flex; align-items: center; gap: 12px; padding: 0 18px; border-bottom: 1px solid rgba(255, 255, 255, .07); }
+  .cav { flex: none; width: 34px; height: 34px; border-radius: 50%; background: #3F3F46; display: grid; place-items: center; font-weight: 700; font-size: 12px; color: #fff; }
+  .chn { font-weight: 600; font-size: 14px; }
+  .chs { font-size: 12px; color: #9A9AA6; }
+  .min { position: absolute; left: 16px; top: 72px; max-width: 330px; padding: 9px 12px 10px; border-radius: 14px 14px 14px 4px; background: #26262E; font-size: 13px; line-height: 18px; }
+  .min b { display: block; font-size: 12px; color: #B4B4C0; font-weight: 600; margin-bottom: 2px; }
+  .mout { position: absolute; right: 16px; top: 140px; width: 300px; padding: 6px 6px 8px; border-radius: 14px 14px 4px 14px; background: #2E3446; font-size: 13px; line-height: 18px; transform-origin: 100% 100%; opacity: 0; }
+  .thumb { position: relative; width: 288px; height: 142px; border-radius: 9px; overflow: hidden; background: #F5F5F7; }
+  .thumb .tin { position: absolute; left: 0; top: 0; width: 1200px; height: 750px; transform-origin: 0 0; }
+  .thumb .tin .app { font-size: 13px; }
+  .mout p { padding: 8px 6px 0; color: #E8E8ED; }
+  .mout small { display: block; text-align: right; padding: 2px 6px 0; font-size: 11px; color: #A9B0C2; }
+  .comp { position: absolute; left: 12px; right: 12px; bottom: 12px; height: 40px; border-radius: 20px; background: #23232A; display: flex; align-items: center; padding: 0 16px; color: #8A8A96; font-size: 13px; }
+  .comp svg { width: 18px; height: 18px; margin-left: auto; color: #A8A8B4; }
+
+  /* Keystroke chip */
+  .keys { position: absolute; left: 880px; top: 490px; display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-radius: 16px; background: rgba(18, 18, 22, .9); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12), 0 12px 30px rgba(0, 0, 0, .3); opacity: 0; color: #7C7C88; font: 500 14px/1 ui-monospace, "Cascadia Mono", "SF Mono", Consolas, monospace; }
+  .keys kbd { display: inline-grid; place-items: center; min-width: 40px; height: 38px; padding: 0 11px; border-radius: 9px; background: #26262C; color: #F4F4F7; font: inherit; box-shadow: inset 0 -2px 0 rgba(0, 0, 0, .45), inset 0 0 0 1px rgba(255, 255, 255, .1); }
+  .keys kbd.down { background: #F4F4F7; color: #0B0B0D; box-shadow: none; transform: translateY(1px); }
+
+  /* Overlay: dim, selection frame, annotations */
+  .ov, .ov2 { position: absolute; left: 0; top: 0; width: 1200px; height: 750px; overflow: visible; }
+  .size {
+    position: absolute; left: 0; top: 0; padding: 3px 7px 4px; border-radius: 7px;
+    background: rgba(20, 20, 26, .85); box-shadow: inset 0 0 0 1px var(--edge);
+    color: #fff; font-size: 11.5px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; opacity: 0;
+  }
+  .cur { position: absolute; left: 0; top: 0; width: 0; height: 0; opacity: 0; }
+  .cur svg { position: absolute; display: block; }
+  .cur .ca { left: -2px; top: -2px; width: 22px; height: 30px; }
+  .cur .cx { left: -12px; top: -12px; width: 24px; height: 24px; display: none; }
+  .cur.cross .ca { display: none; }
+  .cur.cross .cx { display: block; }
+
+  /* Glass: one flat tint, blur, one thin even edge */
+  .glass {
+    background: var(--glass);
+    -webkit-backdrop-filter: blur(30px) saturate(140%);
+    backdrop-filter: blur(30px) saturate(140%);
+    box-shadow: inset 0 0 0 1px var(--edge), 0 5px 28px rgba(0, 0, 0, .35);
+  }
+
+  /* Toolbar group: the toolbar, the status pill and the tool flyout move together */
+  .tbg { position: absolute; left: 0; top: 0; transform: translate(600px, 14px) translate(-50%, 0); }
+  .tb {
+    position: relative;
+    display: flex; align-items: center; height: 46px; padding: 5px; border-radius: 23px;
+    color: #ECECF1; white-space: nowrap; font-size: 14px; line-height: 1;
+  }
+  .b { position: relative; flex: none; width: 34px; height: 34px; margin: 0 1px; border-radius: 17px; display: flex; align-items: center; justify-content: center; }
+  .b.on { background: rgba(255, 255, 255, .22); color: #fff; }
+  .b.w46 { width: 46px; }
+  .b.w16 { width: 16px; margin: 0 2px 0 -3px; }
+  .i { display: block; flex: none; width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .i16 { width: 16px; height: 16px; }
+  .chev { width: 10px; height: 10px; stroke-width: 2.6; opacity: .7; margin: 1px 0 0 2px; }
+  .b.w16 .chev { margin: 1px 0 0; }
+  .dv { flex: none; width: 1px; height: 18px; margin: 0 5px; background: rgba(255, 255, 255, .16); }
+  .dot { flex: none; width: 14px; height: 14px; border-radius: 50%; background: #EF4444; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .35); }
+  .tool .stack { position: relative; width: 18px; height: 18px; }
+  .tool .stack .i { position: absolute; inset: 0; }
+  .tool .t-num { opacity: 0; }
+  .mic .rec { position: absolute; inset: 0; opacity: 0; }
+  .mic .ring, .mic .disc { position: absolute; inset: 0; border-radius: 50%; background: #FF4D5E; }
+  .mic .ring { animation: pulse .7s ease-in-out infinite alternate; }
+  .mic .lvl { position: absolute; inset: 0; border-radius: 50%; box-shadow: inset 0 0 0 2px #FF8E99; animation: lvl 1.3s ease-in-out infinite; }
+  .mic .i { position: relative; color: #F4F4F5; }
+  .fld { position: relative; flex: none; width: 300px; height: 34px; margin: 0 6px 0 4px; display: flex; align-items: center; color: #F4F4F7; overflow: hidden; contain: strict; }
+  .ph { position: absolute; left: 4px; top: 0; bottom: 0; display: flex; align-items: center; color: #CFCFD6; }
+  .txt { white-space: pre; }
+  .caret { flex: none; width: 1.5px; height: 18px; margin-left: 1px; background: #FFC68A; border-radius: 1px; animation: blink 1.1s steps(1) infinite; }
+  .save { position: relative; flex: none; width: 34px; height: 34px; margin: 0 1px; border-radius: 11px; background: rgba(255, 255, 255, .34); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .5); display: flex; align-items: center; justify-content: center; color: #fff; }
+  .save .i { stroke-width: 2.4; position: relative; }
+  .save .hl { position: absolute; inset: 0; border-radius: inherit; background: rgba(255, 255, 255, .32); opacity: 0; }
+
+  .pillpos { position: absolute; left: 50%; top: 54px; transform: translateX(-50%); }
+  .pill { display: flex; align-items: center; gap: 9px; height: 29px; padding: 0 14px 1px 12px; border-radius: 15px; white-space: nowrap; font-size: 12.5px; font-weight: 600; color: #FF8E99; opacity: 0; }
+  .wave { display: flex; align-items: center; gap: 2px; height: 14px; }
+  .wave i { display: block; width: 2px; height: 14px; border-radius: 1px; background: #FF4D5E; transform: scaleY(.3); animation: wv 1s ease-in-out infinite; }
+  .wave i:nth-child(1) { animation-duration: .9s; animation-delay: -.3s; }
+  .wave i:nth-child(2) { animation-duration: 1.15s; animation-delay: -.7s; }
+  .wave i:nth-child(3) { animation-duration: .8s; animation-delay: -.1s; }
+  .wave i:nth-child(4) { animation-duration: 1.05s; animation-delay: -.5s; }
+  .wave i:nth-child(5) { animation-duration: .95s; animation-delay: -.85s; }
+
+  .fly { position: absolute; left: 150px; top: 52px; display: flex; padding: 4px; border-radius: 21px; color: #ECECF1; transform-origin: 50% 0; transform: translateX(-50%) scale(.92); opacity: 0; }
+
+  /* Toast */
+  .toast { position: absolute; right: 20px; bottom: 20px; width: 376px; border-radius: 16px; color: #F3F3F6; opacity: 0; background: rgba(28, 28, 34, .8); line-height: 1.3; }
+  .toast .row { display: flex; align-items: center; padding: 13px 10px 11px 14px; }
+  .toast .bdg { flex: none; width: 44px; height: 44px; margin-right: 12px; border-radius: 12px; background: rgba(255, 255, 255, .08); box-shadow: inset 0 0 0 1px var(--edge); display: grid; place-items: center; color: #4ADE80; }
+  .toast .bdg .i { width: 20px; height: 20px; stroke-width: 2.2; }
+  .toast .tx { flex: 1; min-width: 0; }
+  .toast .tt { font-size: 13.5px; font-weight: 600; }
+  .toast .msg { margin-top: 3px; font-size: 12.5px; line-height: 18px; color: #A9A9B6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .toast .x { flex: none; align-self: flex-start; width: 24px; height: 24px; margin: -4px 0 0 6px; display: grid; place-items: center; color: #8C8C99; }
+  .toast .x .i { width: 13px; height: 13px; stroke-width: 2.4; }
+  .toast .acts { display: flex; justify-content: flex-end; gap: 6px; padding: 0 12px 13px; }
+  .chipb { height: 28px; padding: 0 12px; border-radius: 14px; display: flex; align-items: center; font-size: 11.5px; font-weight: 600; }
+  .chipb.fro { background: rgba(255, 255, 255, .09); box-shadow: inset 0 0 0 1px var(--edge); color: #ECECF1; }
+  .chipb.wh { background: rgba(255, 255, 255, .92); color: #1D1D22; }
+  .toast .bar { position: absolute; left: 12px; right: 12px; bottom: 0; height: 2px; background: var(--accent); opacity: .6; transform-origin: 0 50%; }
+
+  @keyframes pulse { from { opacity: .6; transform: scale(1); } to { opacity: .06; transform: scale(1.42); } }
+  @keyframes lvl { 0%, 100% { transform: scale(1.04); opacity: .5; } 40% { transform: scale(1.22); opacity: .9; } 70% { transform: scale(1.1); opacity: .6; } }
+  @keyframes wv { 0%, 100% { transform: scaleY(.25); } 50% { transform: scaleY(1); } }
+  @keyframes blink { 0%, 55% { opacity: 1; } 56%, 100% { opacity: 0; } }
+  .idle * { animation-play-state: paused !important; }
+
+  /* ---------- Stacked stills (static) ---------- */
+  .frames { display: none; padding-top: clamp(88px, 14vh, 140px); }
+  [data-mode="static"] .frames { display: block; }
+  .frames ol { list-style: none; display: grid; grid-template-columns: minmax(0, 1fr); gap: clamp(64px, 10vh, 112px); max-width: 1040px; margin: 0 auto; }
+  .frame-s { position: relative; overflow: hidden; border-radius: 20px; background: var(--bg); }
+  .frame-s .scene { position: absolute; }
+  .frame-s .screen { border-radius: 0; }
+  .frames figcaption { margin: 26px auto 0; max-width: 900px; text-align: center; }
+  .frames figcaption .md { display: block; width: fit-content; margin: 16px auto 0; }
+  .frames .still-state { text-align: center; padding-top: clamp(24px, 6vh, 60px); }
+
+  /* ---------- After the film ---------- */
+  .final { padding: clamp(150px, 24vh, 280px) 0 clamp(130px, 20vh, 220px); text-align: center; }
+  [data-mode="motion"] .final { padding-top: clamp(120px, 20vh, 240px); }
+  .final .mark { width: 64px; height: 64px; margin: 0 auto 30px; display: block; }
+  .final h2 { font-size: clamp(40px, 5vw, 64px); line-height: 1; letter-spacing: -.035em; font-weight: 650; }
+
+  .foot { padding: 0 0 44px; }
+  .foot p { padding-top: 22px; border-top: 1px solid rgba(255, 255, 255, .08); font-size: 12.5px; color: var(--fg3); text-align: center; }
+  .foot a { text-decoration: none; color: var(--fg2); transition: color .3s var(--ease); }
+  .foot a:hover { color: var(--fg); }
+  .foot i { font-style: normal; margin: 0 .55em; color: #48484D; }
+
+  /* ---------- Small screens ---------- */
+  @media (max-width: 699px) {
+    .nav { height: 56px; }
+    .hero-in { padding-top: 64px; }
+    .cta { flex-direction: column; align-items: stretch; gap: 10px; max-width: 420px; margin-left: auto; margin-right: auto; }
+    .btn { height: 50px; font-size: 16px; }
+    .meta { line-height: 1.75; }
+    .meta > span { display: block; }
+    .meta .mid { display: none; }
+    .frame-s { border-radius: 16px; }
+    .frames figcaption { margin-top: 20px; text-align: left; }
+    .frames figcaption .md { margin-left: 0; font-size: 11px; padding: 9px 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .frames figcaption p { font-size: 20px; }
+    .frames .still-state { text-align: left; }
+    .statement { font-size: clamp(28px, 8.4vw, 40px); margin: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .mic .ring, .mic .lvl, .wave i, .caret { animation: none; }
+    .mic .ring { opacity: .25; transform: scale(1.25); }
+    .wave i:nth-child(1) { transform: scaleY(.45); }
+    .wave i:nth-child(2) { transform: scaleY(.9); }
+    .wave i:nth-child(3) { transform: scaleY(.6); }
+    .wave i:nth-child(4) { transform: scaleY(1); }
+    .wave i:nth-child(5) { transform: scaleY(.4); }
+    .btn, .rail b { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Icon sprite (24-unit grid, stroked with currentColor) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <path id="g-region" d="M4 9V6.5A2.5 2.5 0 0 1 6.5 4H9M15 4h2.5A2.5 2.5 0 0 1 20 6.5V9M20 15v2.5a2.5 2.5 0 0 1-2.5 2.5H15M9 20H6.5A2.5 2.5 0 0 1 4 17.5V15"/>
+    <path id="g-screen" d="M4.5 5h15A1.5 1.5 0 0 1 21 6.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 15.5v-9A1.5 1.5 0 0 1 4.5 5zM9 20.5h6M12 17v3.5"/>
+    <path id="g-timer" d="M12 21a7.5 7.5 0 1 0 0-15 7.5 7.5 0 0 0 0 15zM12 10v3.5l2.5 1.5M9.5 2.5h5M19 6.5l1.5-1.5"/>
+    <path id="g-pen" d="M15 5.5l3.5 3.5L9 18.5 4.5 19.5 5.5 15zM13 7.5l3.5 3.5"/>
+    <path id="g-hl" d="M14.5 4.5l5 5-7 7-5-5zM7.5 11.5L5.5 17 7 18.5l5.5-2M4 20.5h7"/>
+    <path id="g-arrow" d="M5.5 18.5l13-13M10 5.5h8.5V14"/>
+    <path id="g-rect" d="M6.5 5h11A2.5 2.5 0 0 1 20 7.5v9a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 16.5v-9A2.5 2.5 0 0 1 6.5 5z"/>
+    <path id="g-text" d="M5 7.5V5h14v2.5M12 5v14M9 19h6"/>
+    <path id="g-num" d="M12 3.5a8.5 8.5 0 1 1 0 17 8.5 8.5 0 0 1 0-17zM10.5 9.5L12.5 8v8.5"/>
+    <path id="g-eraser" d="M9 20h11M5.7 14.3l8.6-8.6a2 2 0 0 1 2.8 0l2.2 2.2a2 2 0 0 1 0 2.8L11 19H8.4zM9.5 10.5l5 5"/>
+    <path id="g-chev" d="M6.5 9.5L12 15l5.5-5.5"/>
+    <path id="g-undo" d="M9 14L4.5 9.5 9 5M4.5 9.5H14a5.5 5.5 0 0 1 0 11h-3"/>
+    <path id="g-redo" d="M15 14l4.5-4.5L15 5M19.5 9.5H10a5.5 5.5 0 0 0 0 11h3"/>
+    <path id="g-mic" d="M12 3.5a3 3 0 0 1 3 3V12a3 3 0 0 1-6 0V6.5a3 3 0 0 1 3-3zM5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v2.5"/>
+    <path id="g-check" d="M5 12.5l4.5 4.5L19 7.5"/>
+    <path id="g-close" d="M6.5 6.5l11 11M17.5 6.5l-11 11"/>
+    <path id="g-send" d="M4.5 12L20 4.5 16 20l-4-6.5zM12 13.5l8-9"/>
+    <path id="g-logo" d="M6 22v-8a8 8 0 0 1 8-8h8M42 6h8a8 8 0 0 1 8 8v8M58 42v8a8 8 0 0 1-8 8h-8M22 58h-8a8 8 0 0 1-8-8v-8M22 28v8M32 20v24M42 28v8"/>
+  </defs>
+</svg>
+
+<main>
+  <section class="track" id="top">
+
+    <!-- The one sticky stage: a single scene, the camera moves inside it -->
+    <div class="stage">
+      <div class="frame">
+        <div class="scene" aria-hidden="true">
+          <div class="screen">
+            <div class="app">
+              <div class="anav">
+                <div class="abrand"><span class="lg"><svg viewBox="0 0 24 24" class="ln-i"><path d="M6 3.5h12v17l-3-2-3 2-3-2-3 2zM9 8.5h6M9 12.5h6M9 16.5h3"/></svg></span>Облік</div>
+                <ul class="tabs"><li>Огляд</li><li class="on">Рахунки</li><li>Клієнти</li><li>Товари</li><li>Звіти</li></ul>
+                <div class="search"><svg viewBox="0 0 24 24" class="ln-i"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4"/></svg>Пошук<kbd>Ctrl K</kbd></div>
+                <div class="bell"><svg viewBox="0 0 24 24" class="ln-i"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 1.5h-15zM10 20.5h4"/></svg></div>
+                <div class="tav">ОК</div>
+              </div>
+              <div class="back"><svg viewBox="0 0 24 24" class="ln-i"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Рахунки</div>
+              <div class="ptitle">Рахунок №1042<span class="chip">Чернетка</span></div>
+              <div class="psub">ТОВ «Нова лінія» · сплатити до 24 жовтня</div>
+              <div class="abtn ghost"><svg viewBox="0 0 24 24" class="ln-i" style="width:14px;height:14px"><path d="M12 4v11M7.5 10.5l4.5 4.5 4.5-4.5M5 19.5h14"/></svg>Завантажити PDF</div>
+              <div class="abtn dark">Надіслати</div>
+              <div class="card tbl">
+                <div class="th"><span>Товар</span><span>К-сть</span><span>Ціна</span><span>Сума</span></div>
+                <div class="tr" style="top:40px"><span>Навушники Pulse</span><span>2</span><span>1 200 ₴</span><span>2 400 ₴</span></div>
+                <div class="tr" style="top:90px"><span>Чохол силіконовий</span><span>1</span><span>350 ₴</span><span>350 ₴</span></div>
+                <div class="tr" style="top:140px"><span>Кабель USB-C, 2 м</span><span>3</span><span>150 ₴</span><span>450 ₴</span></div>
+                <div class="tr" style="top:190px"><span>Доставка</span><span>1</span><span>0 ₴</span><span>0 ₴</span></div>
+              </div>
+              <div class="card note"><div class="l">Примітка для клієнта</div><p>Дякуємо за замовлення. Оплата протягом 14 днів після отримання рахунку.</p></div>
+              <div class="card tot">
+                <div class="r r1"><span>Підсумок</span><span>3 200 ₴</span></div>
+                <div class="r r2"><span>Знижка 10 %</span><span>−320 ₴</span></div>
+                <div class="sep"></div>
+                <div class="r big"><span>Разом</span><span>3 200 ₴</span></div>
+              </div>
+              <div class="hist">Створено 10 жовтня · Чернетку збережено щойно</div>
+            </div>
+
+            <div class="chat">
+              <div class="chh"><div class="cav">КП</div><div><div class="chn">Команда продукту</div><div class="chs">5 учасників</div></div></div>
+              <div class="min"><b>Андрій</b>Хтось дивився рахунок 1042 після оновлення?</div>
+              <div class="mout"><div class="thumb"><div class="tin"></div></div><p>Разом не враховує знижку 10 %.</p><small>14:33</small></div>
+              <div class="comp">Повідомлення…<svg viewBox="0 0 24 24" class="ln-i"><use href="#g-send"/></svg></div>
+            </div>
+
+            <svg class="ov" viewBox="0 0 1200 750">
+              <path class="dim" fill="#000" fill-opacity=".55" fill-rule="evenodd" d="M0 0H1200V750H0Z"/>
+              <g class="ink" fill="none" stroke="#EF4444" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+                <path class="pen"/>
+                <g class="mk"><circle r="13" fill="#EF4444" stroke="none"/><text y="5" text-anchor="middle" fill="#fff" stroke="none" font-size="14" font-weight="700">1</text></g>
+              </g>
+              <rect class="frs" fill="none" stroke="#000" stroke-opacity=".4" stroke-width="3" width="0" height="0"/>
+              <rect class="fr" fill="none" stroke="#fff" stroke-width="1.25" width="0" height="0"/>
+            </svg>
+            <div class="size">0×0</div>
+            <div class="keys"><kbd>Ctrl</kbd>+<kbd>V</kbd></div>
+
+            <div class="toast glass">
+              <div class="row">
+                <div class="bdg"><svg class="i" viewBox="0 0 24 24"><use href="#g-check"/></svg></div>
+                <div class="tx">
+                  <div class="tt">Скопійовано в буфер обміну</div>
+                  <div class="msg">«Разом не враховує знижку 10 %.»</div>
+                </div>
+                <div class="x"><svg class="i" viewBox="0 0 24 24"><use href="#g-close"/></svg></div>
+              </div>
+              <div class="acts"><span class="chipb fro">Копіювати</span><span class="chipb wh">Галерея</span></div>
+              <div class="bar"></div>
+            </div>
+          </div>
+
+          <!-- The toolbar: the one object of the film -->
+          <div class="tbg">
+            <div class="tb glass">
+              <span class="b on"><svg class="i" viewBox="0 0 24 24"><use href="#g-region"/></svg></span>
+              <span class="b"><svg class="i" viewBox="0 0 24 24"><use href="#g-screen"/></svg></span>
+              <span class="b"><svg class="i" viewBox="0 0 24 24"><use href="#g-timer"/></svg></span>
+              <span class="dv"></span>
+              <span class="b w46 tool"><span class="stack"><svg class="i t-pen" viewBox="0 0 24 24"><use href="#g-pen"/></svg><svg class="i t-num" viewBox="0 0 24 24"><use href="#g-num"/></svg></span><svg class="i chev" viewBox="0 0 24 24"><use href="#g-chev"/></svg></span>
+              <span class="b w46"><span class="dot"></span><svg class="i chev" viewBox="0 0 24 24"><use href="#g-chev"/></svg></span>
+              <span class="b"><svg class="i" viewBox="0 0 24 24"><use href="#g-undo"/></svg></span>
+              <span class="b"><svg class="i" viewBox="0 0 24 24"><use href="#g-redo"/></svg></span>
+              <span class="dv"></span>
+              <span class="b mic"><span class="rec"><span class="ring"></span><span class="lvl"></span><span class="disc"></span></span><svg class="i" viewBox="0 0 24 24"><use href="#g-mic"/></svg></span>
+              <span class="b w16"><svg class="i chev" viewBox="0 0 24 24"><use href="#g-chev"/></svg></span>
+              <span class="fld"><span class="caret"></span><span class="ph">Говоріть або напишіть коментар</span><span class="txt"></span></span>
+              <span class="save"><span class="hl"></span><svg class="i" viewBox="0 0 24 24"><use href="#g-check"/></svg></span>
+              <span class="b"><svg class="i i16" viewBox="0 0 24 24"><use href="#g-close"/></svg></span>
+            </div>
+            <div class="pillpos"><div class="pill glass"><span class="wave"><i></i><i></i><i></i><i></i><i></i></span>Говоріть… щоб зупинити — Пробіл або мікрофон</div></div>
+            <div class="fly glass">
+              <span class="b f-pen on"><svg class="i" viewBox="0 0 24 24"><use href="#g-pen"/></svg></span>
+              <span class="b"><svg class="i" viewBox="0 0 24 24"><use href="#g-hl"/></svg></span>
+              <span class="b"><svg class="i" viewBox="0 0 24 24"><use href="#g-arrow"/></svg></span>
+              <span class="b"><svg class="i" viewBox="0 0 24 24"><use href="#g-rect"/></svg></span>
+              <span class="b"><svg class="i" viewBox="0 0 24 24"><use href="#g-text"/></svg></span>
+              <span class="b f-num"><svg class="i" viewBox="0 0 24 24"><use href="#g-num"/></svg></span>
+              <span class="b"><svg class="i" viewBox="0 0 24 24"><use href="#g-eraser"/></svg></span>
+            </div>
+          </div>
+
+          <div class="cur">
+            <svg class="ca" viewBox="0 0 22 30"><path d="M2 2v22.5l5.6-5.3 3.6 8.3 3.6-1.6-3.6-8.1H19z" fill="#fff" stroke="#000" stroke-width="1.4" stroke-linejoin="round"/></svg>
+            <svg class="cx" viewBox="0 0 24 24">
+              <path d="M12 2.5v7M12 14.5v7M2.5 12h7M14.5 12h7" stroke="#000" stroke-opacity=".55" stroke-width="3.2" stroke-linecap="round"/>
+              <path d="M12 2.5v7M12 14.5v7M2.5 12h7M14.5 12h7" stroke="#fff" stroke-width="1.3" stroke-linecap="round"/>
+            </svg>
+          </div>
+        </div>
+        <div class="blk"></div>
+      </div>
+
+      <div class="caps">
+        <ol class="caplist">
+          <li class="cap"><p><b>Виділіть.</b> Alt + Shift + S (на Mac ⌥⇧S) зупиняє екран&nbsp;— обведіть потрібне.</p></li>
+          <li class="cap"><p><b>Позначте.</b> Обведіть помилку, поставте мітку.</p></li>
+          <li class="cap"><p><b>Скажіть.</b> Утримуйте Пробіл&nbsp;— слова з’являться в&nbsp;полі.</p></li>
+          <li class="cap"><p><b>Збережіть.</b> Enter&nbsp;— PNG на диску, коментар у&nbsp;буфері.</p></li>
+          <li class="cap"><p><b>Вставте.</b> Ctrl + V&nbsp;— у чат, задачу чи&nbsp;ШІ.</p><code class="md">[C:\AI_Screenshots\screenshot_20261010_143207_512.png]
+<em>**Comment:**</em> Разом не враховує знижку 10 %.</code></li>
+        </ol>
+      </div>
+      <p class="state"><span class="statement">Голос розпізнається на вашому комп’ютері. <span>Нічого не завантажується.</span></span></p>
+      <div class="rail" aria-hidden="true"><i><b></b></i><i><b></b></i><i><b></b></i><i><b></b></i><i><b></b></i><i><b></b></i></div>
+    </div>
+
+    <!-- Opening view -->
+    <header class="hero">
+      <nav class="nav wrap" aria-label="Головна навігація">
+        <a class="brand" href="#top" aria-label="ScreenVoicer">
+          <svg viewBox="0 0 64 64" fill="none" stroke="#FF8A4C" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#g-logo"/></svg>
+          <span aria-hidden="true">Screen<span class="wm-v">Voicer</span></span>
+        </a>
+        <a class="navlink" href="https://github.com/ArthurMospan/ScreenVoicer">GitHub</a>
+      </nav>
+      <div class="hero-in wrap">
+        <h1>Покажіть і скажіть.</h1>
+        <p class="sub">Виділіть частину екрана й скажіть, що не так. Знімок і&nbsp;коментар&nbsp;— уже в&nbsp;буфері обміну.</p>
+        <div class="cta">
+          <a class="btn btn-pri" data-os="win" href="https://github.com/ArthurMospan/ScreenVoicer/releases/latest/download/ScreenVoicer-Setup.exe">Завантажити для Windows</a>
+          <a class="btn btn-sec" data-os="mac" href="https://github.com/ArthurMospan/ScreenVoicer/releases/latest/download/ScreenVoicer-macOS.zip">Завантажити для Mac</a>
+        </div>
+        <p class="meta"><span>Безкоштовно<i aria-hidden="true">·</i>Windows 10/11</span><i class="mid" aria-hidden="true">·</i> <span>macOS 14+<i aria-hidden="true">·</i>Відкритий код</span></p>
+        <div class="hero-slot" aria-hidden="true"></div>
+        <div class="hero-obj" aria-hidden="true"></div>
+      </div>
+    </header>
+  </section>
+
+  <!-- The same six chapters as stills: phones and reduced motion -->
+  <section class="frames" aria-label="Як це працює">
+    <div class="wrap"><ol></ol></div>
+  </section>
+
+  <section class="final">
+    <div class="wrap">
+      <svg class="mark" viewBox="0 0 64 64" fill="none" stroke="#FF8A4C" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#g-logo"/></svg>
+      <h2>Screen<span class="wm-v">Voicer</span></h2>
+      <div class="cta">
+        <a class="btn btn-pri" data-os="win" href="https://github.com/ArthurMospan/ScreenVoicer/releases/latest/download/ScreenVoicer-Setup.exe">Завантажити для Windows</a>
+        <a class="btn btn-sec" data-os="mac" href="https://github.com/ArthurMospan/ScreenVoicer/releases/latest/download/ScreenVoicer-macOS.zip">Завантажити для Mac</a>
+      </div>
+      <p class="meta"><span>Безкоштовно<i aria-hidden="true">·</i>Windows 10/11</span><i class="mid" aria-hidden="true">·</i> <span>macOS 14+<i aria-hidden="true">·</i>Відкритий код</span></p>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap"><p>ScreenVoicer<i aria-hidden="true">·</i><a href="https://github.com/ArthurMospan/ScreenVoicer/blob/main/LICENSE">MIT</a><i aria-hidden="true">·</i><a href="https://github.com/ArthurMospan/ScreenVoicer">GitHub</a></p></div>
+</footer>
+
+<script>
+(() => {
+  const root = document.documentElement;
+  const $ = s => document.querySelector(s);
+  // #dbg: a readout of errors, mode and horizontal overflow (for verification shots)
+  if (/dbg/.test(location.hash)) {
+    const o = document.createElement('div');
+    o.style.cssText = 'position:fixed;z-index:99;left:8px;bottom:8px;padding:6px 10px;border-radius:8px;background:#000;color:#0f0;font:12px/1.3 monospace;white-space:pre-wrap;max-width:90vw';
+    document.body.appendChild(o);
+    const upd = () => { o.textContent = (o.textContent.split('\n').filter(l => l.startsWith('ERR')).join('\n') + '\n') + `mode ${root.dataset.mode} · vw ${innerWidth} · doc ${root.scrollWidth} · ${root.scrollWidth > innerWidth ? 'OVERFLOW' : 'ok'}`; };
+    addEventListener('error', e => { o.textContent = 'ERR ' + e.message + ' @' + e.lineno + '\n' + o.textContent; });
+    setTimeout(upd, 300); setTimeout(upd, 1500);
+  }
+  // The visitor's platform gets the primary button (#mac forces it, for checking)
+  {
+    const plat = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '';
+    if ((/mac/i.test(plat) && !(navigator.maxTouchPoints > 1)) || /mac/.test(location.hash)) {
+      document.querySelectorAll('.cta').forEach(c => {
+        const win = c.querySelector('[data-os="win"]'), mac = c.querySelector('[data-os="mac"]');
+        win.classList.replace('btn-pri', 'btn-sec'); mac.classList.replace('btn-sec', 'btn-pri');
+        c.insertBefore(mac, win);
+      });
+    }
+  }
+  const track = $('.track'), stage = $('.stage'), frame = $('.frame'), hero = $('.hero');
+  const heroSlot = $('.hero-slot'), heroObj = $('.hero-obj');
+  const capsEl = stage.querySelector('.caps'), caps = [...stage.querySelectorAll('.cap')];
+  const stateEl = stage.querySelector('.state'), rail = stage.querySelector('.rail'), dots = [...rail.querySelectorAll('i')];
+  const blk = frame.querySelector('.blk');
+  const frameList = $('.frames ol');
+  const mqReduce = matchMedia('(prefers-reduced-motion: reduce)');
+
+  /* ---- Film constants (scene px) ---- */
+  const COMMENT = 'Разом не враховує знижку 10 %.';
+  const SEL = { x: 250, y: 300, w: 730, h: 360 };
+  const MK = { x: 846, y: 570 };                                  // the numbered marker
+  const PEN = 'M960 552C932 540 880 546 872 564C863 586 908 598 944 594C976 590 984 568 969 556C960 549 942 548 930 550';
+  const TB_C = { x: 600, y: 37 };                                 // toolbar centre after the descent
+  const K = 9.6;                                                  // track height, in viewports
+  const PI = 1 / (K - 1);                                         // one viewport of scroll, in p; the opening has left here
+  const WEIGHTS = [1, 1.5, 1.5, 1.1, 1.4, 1.1];                   // chapter lengths, in viewports
+  const CH = []; { let a = PI; for (const w of WEIGHTS) { const b = a + w * PI; CH.push([a, b]); a = b; } }
+  const FULL = { x: 0, y: 0, w: 1200, h: 750 };
+  const STILL = [.78, 1, .72, .86, .9];                            // the still of each chapter, as chapter time
+
+  const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+  const seg = (t, a, b) => clamp((t - a) / (b - a));
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const inOut = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  const out = t => 1 - Math.pow(1 - t, 3);
+  const pop = t => t <= 0 ? 0 : 1 + 2.4 * Math.pow(t - 1, 3) + 1.4 * Math.pow(t - 1, 2);
+  const f = n => n.toFixed(2);
+  const chapterP = (i, t) => CH[i][0] + t * (CH[i][1] - CH[i][0]);
+  const keyed = keys => t => {                                    // eased path through [t, x, y] keys
+    if (t <= keys[0][0]) return [keys[0][1], keys[0][2]];
+    for (let i = 1; i < keys.length; i++) {
+      const k = keys[i];
+      if (t <= k[0]) { const j = keys[i - 1]; const q = inOut(clamp((t - j[0]) / (k[0] - j[0] || 1))); return [lerp(j[1], k[1], q), lerp(j[2], k[2], q)]; }
+    }
+    const l = keys[keys.length - 1]; return [l[1], l[2]];
+  };
+  const zoomView = (z, cx, cy) => { const w = 1200 / z, h = 750 / z; return { x: clamp(cx - w / 2, 0, 1200 - w), y: clamp(cy - h / 2, 0, 750 - h), w, h }; };
+
+  const scene0 = stage.querySelector('.scene');
+  scene0.querySelector('.pen').setAttribute('d', PEN);
+  scene0.querySelector('.mk').setAttribute('transform', `translate(${MK.x} ${MK.y})`);
+  // The pasted image: a still of the selected region, annotations included
+  {
+    const tin = scene0.querySelector('.thumb .tin');
+    tin.appendChild(scene0.querySelector('.app').cloneNode(true));
+    const kk = 288 / SEL.w;
+    tin.insertAdjacentHTML('beforeend', `<svg class="ov2" viewBox="0 0 1200 750"><g fill="none" stroke="#EF4444" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="${PEN}"/><g transform="translate(${MK.x} ${MK.y})"><circle r="13" fill="#EF4444" stroke="none"/><text y="5" text-anchor="middle" fill="#fff" stroke="none" font-size="14" font-weight="700">1</text></g></g></svg>`);
+    tin.style.transform = `translate(${f(-SEL.x * kk)}px, ${f(-SEL.y * kk)}px) scale(${kk.toFixed(4)})`;
+  }
+
+  // Pristine copies for the stills and the static hero object
+  const sceneTpl = scene0.cloneNode(true);
+  const tbTpl = scene0.querySelector('.tb').cloneNode(true);
+
+  function bind(sc) {
+    const q = s => sc.querySelector(s);
+    const S = {
+      sc, screen: q('.screen'), ov: q('.ov'), dim: q('.dim'), fr: q('.fr'), frs: q('.frs'), size: q('.size'),
+      cur: q('.cur'), ink: q('.ink'), pen: q('.pen'), mk: q('.mk'),
+      tbg: q('.tbg'), tb: q('.tb'), tool: q('.tool'), mic: q('.mic'), rec: q('.rec'), ring: q('.ring'), txt: q('.txt'), ph: q('.ph'), caret: q('.caret'),
+      tpen: q('.t-pen'), tnum: q('.t-num'), save: q('.save'), hl: q('.hl'),
+      pill: q('.pill'), fly: q('.fly'), fpen: q('.f-pen'), fnum: q('.f-num'),
+      toast: q('.toast'), bar: q('.bar'), chat: q('.chat'), mout: q('.mout'), keys: q('.keys'), kbd: [...sc.querySelectorAll('.keys kbd')],
+      n: -1, sz: '', e: -1, cross: null
+    };
+    return S;
+  }
+
+  /* ---- Geometry that depends on the rendered toolbar (measured on a visible scene) ---- */
+  let L = null;
+  function measure(S) {
+    const tbw = S.tb.offsetWidth || 743;
+    const tbcx = clamp(SEL.x + SEL.w / 2, 24 + tbw / 2, 1176 - tbw / 2), tbTop = SEL.y - 58, tbLeft = tbcx - tbw / 2;
+    const c = el => [tbLeft + el.offsetLeft + el.offsetWidth / 2, tbTop + el.offsetTop + el.offsetHeight / 2];
+    const toolCx = S.tool.offsetLeft + S.tool.offsetWidth / 2;
+    S.fly.style.left = toolCx.toFixed(1) + 'px';
+    const flyW = S.fly.offsetWidth || 262, flyLeft = tbLeft + toolCx - flyW / 2, flyTop = tbTop + 52;
+    const fc = el => [flyLeft + el.offsetLeft + 17, flyTop + el.offsetTop + 17];
+    let len = 330; try { len = S.pen.getTotalLength() || len; } catch (e) { /* keep the estimate */ }
+    const mic = c(S.mic), save = c(S.save), tool = c(S.tool);
+    const micOff = [mic[0] + 7, mic[1] + 9], saveOff = [save[0] + 7, save[1] + 9], toolOff = [tool[0] + 6, tool[1] + 8];
+    const fpen = fc(S.fpen), fnum = fc(S.fnum);
+    const p0 = S.pen.getPointAtLength ? S.pen.getPointAtLength(0) : { x: 960, y: 552 };
+    const p1 = S.pen.getPointAtLength ? S.pen.getPointAtLength(len) : { x: 930, y: 550 };
+    const views = {
+      full: FULL,
+      draw: zoomView(1.3, SEL.x + SEL.w / 2, SEL.y + SEL.h / 2 - 10),
+      mic: zoomView(1.7, mic[0] + 110, tbTop + 23),
+      save: zoomView(1.7, save[0] - 100, tbTop + 23),
+      chat: zoomView(1.45, 880, 350)
+    };
+    const crops = [
+      { x: 196, y: 252, w: 680, h: 440 },
+      { x: 596, y: 436, w: 420, h: 220 },
+      { x: mic[0] - 150, y: tbTop - 30, w: 580, h: 230 },
+      { x: 740, y: 578, w: 460, h: 172 },
+      { x: 588, y: 140, w: 584, h: 422 }
+    ];
+    const end1 = [SEL.x + SEL.w, SEL.y + SEL.h];
+    const cur2 = keyed([[0, ...end1], [.08, ...toolOff], [.17, ...toolOff], [.25, fpen[0] + 6, fpen[1] + 8], [.31, fpen[0] + 6, fpen[1] + 8], [.38, p0.x, p0.y], [.60, p1.x, p1.y], [.62, p1.x, p1.y], [.70, ...toolOff], [.76, ...toolOff], [.82, fnum[0] + 6, fnum[1] + 8], [.88, fnum[0] + 6, fnum[1] + 8], [.94, MK.x, MK.y], [1, MK.x, MK.y]]);
+    const cur3 = keyed([[0, MK.x, MK.y], [.04, MK.x, MK.y], [.18, ...micOff], [1, ...micOff]]);
+    const cur4 = keyed([[0, ...micOff], [.05, ...micOff], [.25, ...saveOff], [1, ...saveOff]]);
+    L = { tbw, tbcx, tbTop, len, views, crops, cur2, cur3, cur4 };
+    return L;
+  }
+
+  /* ---- The camera: a view box in scene px, as a function of progress ---- */
+  function camAt(p) {
+    const V = L.views;
+    const t = CH.map(([a, b]) => seg(p, a, b));
+    let a = V.full, b = V.full, u = 0;
+    if (p < CH[1][0]) return V.full;
+    if (p < CH[2][0]) { a = V.full; b = V.draw; u = seg(t[1], 0, .25); }
+    else if (p < CH[3][0]) { a = V.draw; b = V.mic; u = seg(t[2], 0, .22); }
+    else if (p < CH[4][0]) { if (t[3] < .4) { a = V.mic; b = V.save; u = seg(t[3], 0, .25); } else { a = V.save; b = V.full; u = seg(t[3], .4, .75); } }
+    else { a = V.full; b = V.chat; u = seg(t[4], .05, .4); }
+    const e = inOut(u);
+    return { x: lerp(a.x, b.x, e), y: lerp(a.y, b.y, e), w: lerp(a.w, b.w, e), h: lerp(a.h, b.h, e) };
+  }
+
+  /* ---- The six chapters, as a pure function of progress p ---- */
+  function state(S, p) {
+    const [t1, t2, t3, t4, t5, t6] = CH.map(([a, b]) => seg(p, a, b));
+
+    // 1. Select: a crosshair drags the region open; the rest of the screen stays dimmed
+    const e = inOut(seg(t1, .16, .72));
+    if (e !== S.e) {
+      S.e = e;
+      const w = SEL.w * e, h = SEL.h * e, x1 = SEL.x + w, y1 = SEL.y + h;
+      S.dim.setAttribute('d', 'M0 0H1200V750H0Z' + (e > 0 ? `M${SEL.x} ${SEL.y}V${f(y1)}H${f(x1)}V${SEL.y}Z` : ''));
+      for (const r of [S.fr, S.frs]) {
+        r.setAttribute('x', SEL.x); r.setAttribute('y', SEL.y);
+        r.setAttribute('width', f(w)); r.setAttribute('height', f(h));
+        r.style.opacity = e > .002 ? 1 : 0;
+      }
+      const sz = Math.round(1460 * e) + '×' + Math.round(720 * e);
+      if (sz !== S.sz) { S.sz = sz; S.size.textContent = sz; }
+      S.size.style.transform = `translate(${SEL.x}px, ${SEL.y - 28}px)`;
+    }
+    // The toolbar settles above the selection
+    const g = inOut(seg(t1, .80, 1));
+    const gx = lerp(600, L.tbcx, g), gy = lerp(14, L.tbTop, g);
+
+    // 2. Draw: the flyout opens, the pen circles the total, then the marker «1»
+    const fo = Math.max(out(seg(t2, .09, .17)) * (1 - seg(t2, .25, .31)), out(seg(t2, .70, .76)) * (1 - seg(t2, .82, .88)));
+    S.fly.style.opacity = f(fo);
+    S.fly.style.transform = `translateX(-50%) scale(${(.92 + .08 * fo).toFixed(3)})`;
+    const numOn = t2 >= .82;
+    S.fpen.classList.toggle('on', !numOn);
+    S.fnum.classList.toggle('on', numOn);
+    const draw = inOut(seg(t2, .38, .60));
+    S.pen.style.strokeDasharray = L.len + ' ' + L.len;
+    S.pen.style.strokeDashoffset = f(L.len * (1 - draw));
+    S.pen.style.opacity = draw > 0 ? 1 : 0;
+    const sw = seg(t2, .84, .90);
+    S.tpen.style.opacity = f(1 - sw);
+    S.tnum.style.opacity = f(sw);
+    const mk = pop(seg(t2, .94, 1));
+    S.mk.setAttribute('transform', `translate(${MK.x} ${MK.y}) scale(${mk.toFixed(3)})`);
+    S.mk.style.opacity = mk > 0 ? 1 : 0;
+
+    // 3. Speak: the mic becomes a red disc, the pill appears, the words arrive
+    const rec = seg(t3, .20, .26) * (1 - seg(t3, .86, .92));
+    S.rec.style.opacity = f(rec);
+    S.rec.style.transform = `scale(${(.72 + .28 * out(seg(t3, .20, .28))).toFixed(3)})`;
+    S.ring.style.animationPlayState = rec > 0 ? 'running' : 'paused';
+    const pill = seg(t3, .22, .30) * (1 - seg(t3, .84, .92));
+    S.pill.style.opacity = f(pill);
+    S.pill.style.transform = `translateY(${f((1 - pill) * -5)}px)`;
+    const n = Math.round(COMMENT.length * seg(t3, .30, .80));
+    if (n !== S.n) {
+      S.n = n;
+      S.txt.textContent = COMMENT.slice(0, n);
+      S.ph.style.opacity = n ? 0 : 1;
+      S.caret.style.order = n ? 1 : 0;
+    }
+    S.caret.style.visibility = t4 < .28 ? 'visible' : 'hidden';
+
+    // 4. Save: the glass square is pressed, the overlay lifts, the toast arrives
+    const bump = Math.sin(Math.PI * seg(t4, .28, .42));
+    S.save.style.transform = `scale(${(1 - .1 * bump).toFixed(3)})`;
+    S.hl.style.opacity = bump.toFixed(3);
+    const ov = 1 - out(seg(t4, .44, .62));
+    S.ov.style.opacity = f(ov);
+    S.size.style.opacity = f(clamp(e * 10) * ov * (1 - g));
+    S.tbg.style.opacity = f(ov);
+    S.tbg.style.transform = `translate(${f(gx)}px, ${f(gy + (1 - ov) * -8)}px) translate(-50%, 0)`;
+    const to = out(seg(t4, .58, .76)) * (1 - seg(t5, .2, .35));
+    S.toast.style.opacity = f(to);
+    S.toast.style.transform = `translateY(${f((1 - out(seg(t4, .58, .76))) * 18)}px)`;
+    const bp = clamp(seg(t4, .66, 1) * .55 + seg(t5, 0, .35) * .45);
+    S.bar.style.transform = `scaleX(${(1 - .85 * bp).toFixed(4)})`;
+
+    // 5. Paste: the chat rises, Ctrl + V, the message with the image and the comment
+    const ch = out(seg(t5, 0, .2));
+    S.chat.style.opacity = f(ch);
+    S.chat.style.transform = `translateY(${f((1 - ch) * 16)}px)`;
+    const kv = seg(t5, .40, .48) * (1 - seg(t5, .64, .72));
+    S.keys.style.opacity = f(kv);
+    S.keys.style.transform = `translate(-50%, ${f((1 - out(seg(t5, .40, .48))) * 8)}px)`;
+    S.kbd[0].classList.toggle('down', t5 >= .50 && t5 < .64);
+    S.kbd[1].classList.toggle('down', t5 >= .54 && t5 < .64);
+    const m = out(seg(t5, .60, .74));
+    S.mout.style.opacity = f(m);
+    S.mout.style.transform = `scale(${(.96 + .04 * m).toFixed(3)})`;
+
+    // Cursor: a crosshair for selecting and drawing, an arrow for the buttons
+    let cx = SEL.x + SEL.w * e, cy = SEL.y + SEL.h * e, co = 0, cross = true;
+    if (p < CH[1][0]) {
+      co = seg(t1, .06, .14) * (1 - seg(t1, .80, .88));
+    } else if (p < CH[2][0]) {
+      co = seg(t2, 0, .06);
+      if (t2 >= .38 && t2 <= .60) { const pt = S.pen.getPointAtLength(L.len * draw); cx = pt.x; cy = pt.y; }
+      else { [cx, cy] = L.cur2(t2); }
+      cross = (t2 >= .34 && t2 < .64) || t2 >= .91;
+    } else if (p < CH[3][0]) {
+      co = 1; [cx, cy] = L.cur3(t3); cross = false;
+    } else if (p < CH[4][0]) {
+      co = 1 - seg(t4, .44, .52); [cx, cy] = L.cur4(t4); cross = false;
+    }
+    S.cur.style.opacity = f(co);
+    S.cur.style.transform = `translate(${f(cx)}px, ${f(cy)}px)`;
+    if (cross !== S.cross) { S.cross = cross; S.cur.classList.toggle('cross', cross); }
+  }
+
+  /* ---- Motion mode: the sticky stage ---- */
+  const main = bind(scene0);
+  let mode = '', vw = 0, vh = 0, range = 1;
+  let ks = 1, fw = 1200, fh = 750, kh = 1, txh = 0, tyh = 0;
+  let target = 0, cur = 0, raf = 0, last = 0;
+  const forced = (() => { const m = location.hash.match(/p=([\d.]+)/); return m ? clamp(parseFloat(m[1])) : null; })();
+
+  function layoutMotion() {
+    if (!L || !L.tbw) measure(main);
+    const capsH = Math.max(...caps.map(c => c.offsetHeight));
+    const pad = Math.max(24, vh * .06), gap = Math.max(22, vh * .035);
+    const side = Math.max(32, vw * .05);
+    const availH = vh - 2 * pad - gap - capsH;
+    ks = Math.max(.3, Math.min((vw - 2 * side) / 1200, availH / 750, 1.1));
+    fw = 1200 * ks; fh = 750 * ks;
+    const block = fh + gap + capsH;
+    const fy = Math.max(pad, (vh - block) / 2), fx = (vw - fw) / 2;
+    frame.style.left = f(fx) + 'px'; frame.style.top = f(fy) + 'px';
+    frame.style.width = f(fw) + 'px'; frame.style.height = f(fh) + 'px';
+    capsEl.style.transform = `translateY(${f(fy + fh + gap)}px)`;
+
+    const tbw = L.tbw;
+    kh = Math.min(1.12, (vw - 64) / tbw);
+    heroSlot.style.height = (46 * kh).toFixed(1) + 'px';
+    const heroInTop = heroSlot.offsetParent === hero ? 0 : heroSlot.offsetParent.offsetTop;
+    const yh = heroInTop + heroSlot.offsetTop + heroSlot.offsetHeight / 2;
+    txh = vw / 2 - TB_C.x * kh - fx;
+    tyh = yh - TB_C.y * kh - fy;
+    range = Math.max(1, track.offsetHeight - vh);
+  }
+
+  function drawMotion(p) {
+    const V = camAt(p);
+    const kc = fw / V.w, txc = -V.x * kc, tyc = -V.y * kc;
+    let k = kc, tx = txc, ty = tyc;
+    if (p < PI) { const ci = inOut(p / PI); k = lerp(kh, kc, ci); tx = lerp(txh, txc, ci); ty = lerp(tyh, tyc, ci); }
+    main.sc.style.transform = `translate(${f(tx)}px, ${f(ty)}px) scale(${k.toFixed(4)})`;
+    main.screen.style.opacity = out(seg(p / PI, .32, .96)).toFixed(3);
+    frame.classList.toggle('clip', p >= PI);
+    frame.style.opacity = 1;
+    state(main, p);
+
+    const t6 = seg(p, CH[5][0], CH[5][1]);
+    for (let i = 0; i < 5; i++) {
+      const [a, b] = CH[i];
+      const fi = i === 0 ? seg(p, a - .03, a) : seg(p, a, a + .022);
+      const fo = 1 - seg(p, b - .022, b);
+      caps[i].style.opacity = (fi * fo).toFixed(3);
+      caps[i].style.transform = `translateY(${f(10 * (1 - fi) - 10 * (1 - fo))}px)`;
+    }
+    const dimOut = seg(t6, 0, .45);
+    blk.style.opacity = dimOut.toFixed(3);
+    main.sc.style.opacity = (1 - seg(t6, .3, .5)).toFixed(3);
+    frame.style.transform = `scale(${(1 - .03 * inOut(seg(t6, 0, .5))).toFixed(4)})`;
+    const st = seg(t6, .30, .55);
+    stateEl.style.opacity = st.toFixed(3);
+    stateEl.style.transform = `translateY(${f(12 * (1 - st))}px)`;
+    rail.style.opacity = (seg(p, PI - .03, PI) * (1 - seg(t6, 0, .3))).toFixed(3);
+    let active = 0; for (let i = 0; i < 6; i++) if (p >= CH[i][0]) active = i;
+    dots.forEach((d, i) => d.classList.toggle('on', i === active && p >= PI));
+    if (forced !== null) hero.style.transform = `translateY(${-Math.min(p * range, vh * 1.2)}px)`;
+  }
+
+  const readP = () => clamp(-track.getBoundingClientRect().top / range);
+  function tick(now) {
+    raf = 0;
+    const dt = last ? Math.min(64, now - last) : 16;
+    last = now;
+    cur += (target - cur) * (1 - Math.exp(-dt / 95));
+    if (Math.abs(target - cur) < .00015) cur = target;
+    drawMotion(cur);
+    if (cur !== target) raf = requestAnimationFrame(tick); else last = 0;
+  }
+  function onScroll() {
+    if (mode !== 'motion' || forced !== null) return;
+    target = readP();
+    if (!raf) raf = requestAnimationFrame(tick);
+  }
+
+  /* ---- Static mode: stills of the chapters, the toolbar as the hero object ---- */
+  let frames = null, heroTb = null;
+  function buildStatic() {
+    if (frames) return;
+    heroTb = tbTpl.cloneNode(true);
+    heroObj.appendChild(heroTb);
+    frames = caps.map((cap, i) => {
+      const li = document.createElement('li');
+      const fig = document.createElement('figure');
+      const fr = document.createElement('div');
+      fr.className = 'frame-s';
+      fr.setAttribute('aria-hidden', 'true');
+      const sc = sceneTpl.cloneNode(true);
+      fr.appendChild(sc);
+      const cap2 = document.createElement('figcaption');
+      cap2.innerHTML = cap.innerHTML;
+      fig.append(fr, cap2);
+      li.appendChild(fig);
+      frameList.appendChild(li);
+      return { frame: fr, S: bind(sc), i, p: chapterP(i, STILL[i]) };
+    });
+    const last = document.createElement('li');
+    last.className = 'still-state';
+    last.innerHTML = stateEl.innerHTML;
+    frameList.appendChild(last);
+    if (!L || !L.tbw) measure(frames[0].S);
+    for (const fr of frames) state(fr.S, fr.p);
+    // With motion allowed, each still plays its chapter once as it comes into view
+    if (!mqReduce.matches && !/shot/.test(location.hash) && 'IntersectionObserver' in window) {
+      const play = fr => {
+        const p0 = chapterP(fr.i, 0), dur = 2800;
+        let t0 = 0;
+        const step = now => {
+          t0 = t0 || now;
+          const t = clamp((now - t0) / dur);
+          state(fr.S, lerp(p0, fr.p, t));
+          if (t < 1) requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+      };
+      const io = new IntersectionObserver(entries => {
+        for (const en of entries) {
+          if (!en.isIntersecting) continue;
+          io.unobserve(en.target);
+          play(frames.find(fr => fr.frame === en.target));
+        }
+      }, { threshold: .55 });
+      for (const fr of frames) { state(fr.S, chapterP(fr.i, 0)); io.observe(fr.frame); }
+    }
+  }
+  function layoutStatic() {
+    const gut = parseFloat(getComputedStyle(root).getPropertyValue('--gut')) || 16;
+    const W = heroObj.clientWidth;
+    const tbw = L.tbw;
+    let k, tx;
+    if (W < 700) {                                // a macro of the right half, bleeding off the left edge
+      k = Math.min(.86, (W - gut) / (tbw - 268));
+      tx = W - gut - tbw * k;
+    } else {
+      k = Math.min(1.1, (W - 2 * gut) / tbw);
+      tx = (W - tbw * k) / 2;
+    }
+    heroObj.style.height = (46 * k).toFixed(1) + 'px';
+    heroTb.style.transform = `translate(${tx.toFixed(1)}px, 0) scale(${k.toFixed(4)})`;
+    for (const fr of frames) {
+      const w = fr.frame.clientWidth;
+      const box = w >= 860 ? camAt(fr.p) : L.crops[fr.i];
+      const kk = w / box.w;
+      fr.frame.style.height = (box.h * kk).toFixed(1) + 'px';
+      fr.S.sc.style.transform = `translate(${f(-box.x * kk)}px, ${f(-box.y * kk)}px) scale(${kk.toFixed(4)})`;
+    }
+  }
+
+  /* ---- Mode switching and layout ---- */
+  function pickMode() {
+    const w = root.clientWidth, h = innerHeight;
+    const still = /static/.test(location.hash) || mqReduce.matches;
+    return (!still && w >= 700 && h >= 520 && h <= 1500 && h <= w * 1.15) ? 'motion' : 'static';
+  }
+  function layout() {
+    vw = root.clientWidth; vh = innerHeight;
+    root.style.setProperty('--vh', vh + 'px');
+    const m = pickMode();
+    if (m !== mode) {
+      mode = m;
+      root.dataset.mode = m;
+      hero.style.transform = '';
+      L = null;
+    }
+    if (mode === 'motion') {
+      measure(main);
+      layoutMotion();
+      if (forced !== null) { cur = target = forced; } else { cur = target = readP(); }
+      drawMotion(cur);
+    } else {
+      buildStatic();
+      measure(frames[0].S);
+      layoutStatic();
+    }
+  }
+
+  // Pause the glass animations while the stage is off-screen
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(es => { for (const en of es) stage.classList.toggle('idle', !en.isIntersecting); }, { threshold: 0 }).observe(stage);
+  }
+
+  let rz = 0;
+  addEventListener('resize', () => { cancelAnimationFrame(rz); rz = requestAnimationFrame(layout); });
+  addEventListener('scroll', onScroll, { passive: true });
+  mqReduce.addEventListener && mqReduce.addEventListener('change', layout);
+  layout();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(layout);
+})();
+</script>
+</body>
+</html>
