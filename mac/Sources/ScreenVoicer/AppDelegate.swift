@@ -120,7 +120,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MenuHost {
 
     private func registerHotkey() {
         hotkey.onPressed = { [weak self] in self?.triggerCapture(.hotkey) }
-        let gesture = HotkeyGesture.parse(settings.hotkey) ?? HotkeyGesture.parse(Settings.defaultHotkey)!
+        var parsed = HotkeyGesture.parse(settings.hotkey)
+        if parsed == nil {
+            // also the lone Insert of 1.11 (the owner went back to ⌥⇧S in 1.12)
+            Log.info("[Hotkey] '\(settings.hotkey)' is not a valid shortcut any more, back to \(Settings.defaultHotkey).")
+            parsed = HotkeyGesture.parse(Settings.defaultHotkey)
+            settings.hotkey = Settings.defaultHotkey
+            settings.save()
+        }
+        let gesture = parsed!
         Self.hotkeyText = gesture.displayText
         if !hotkey.register(gesture) {
             var options = ToastOptions(title: "Гаряча клавіша зайнята",
@@ -137,7 +145,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MenuHost {
         let model = whisper.selectedModel
         if !WhisperService.isModelDownloaded(model.id) {
             ToastCenter.shared.showToast("Готую розпізнавання голосу",
-                                         "Одноразово завантажую мовну модель «\(model.id)» (\(model.sizeMb) МБ). Скриншоти можна робити вже зараз.",
+                                         "Одноразово завантажую розпізнавання «\(model.title)» (\(model.sizeMb) МБ). Скриншоти можна робити вже зараз.",
                                          .info, 8000)
         }
         DispatchQueue.main.async { [weak self] in
@@ -181,7 +189,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MenuHost {
         settings.save()
         var options = ToastOptions(
             title: "Знайдено відеокарту \(whisper.gpuName ?? "")",
-            message: "Можна увімкнути точнішу модель «\(WhisperModels.small.id)» (\(WhisperModels.small.sizeMb) МБ) — з відеокартою вона працює так само швидко.",
+            message: "Можна увімкнути розпізнавання «\(WhisperModels.small.title)» (\(WhisperModels.small.sizeMb) МБ): з відеокартою воно так само швидке, а розуміє краще.",
             kind: .info, durationMs: 12000)
         options.actionText = "Увімкнути"
         options.onAction = { [weak self] in self?.switchModel(WhisperModels.small) }
@@ -193,17 +201,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MenuHost {
         settings.model = model.id
         settings.save()
         let needsDownload = !WhisperService.isModelDownloaded(model.id)
-        ToastCenter.shared.showToast("Модель «\(model.id)»",
-                                     needsDownload ? "Завантажую \(model.sizeMb) МБ… Поки що працює попередня модель." : "Перемикаю модель розпізнавання…",
+        ToastCenter.shared.showToast("Розпізнавання «\(model.title)»",
+                                     needsDownload ? "Завантажую \(model.sizeMb) МБ… Поки що працює попереднє розпізнавання." : "Перемикаю розпізнавання…",
                                      .info, 4000)
         Task {
             if await whisper.switchModel(model.id) {
                 let place = whisper.isRunningOnGpu ? "на відеокарті" : "на процесорі"
-                ToastCenter.shared.showToast("Модель «\(model.id)» готова", "\(model.title): \(model.hint). Працює \(place).", .success, 5000)
+                ToastCenter.shared.showToast("Розпізнавання «\(model.title)» готове", "\(model.hint.prefix(1).uppercased() + model.hint.dropFirst()). Працює \(place).", .success, 5000)
             } else {
                 settings.model = whisper.selectedModel.id // the service kept the previous model
                 settings.save()
-                ToastCenter.shared.showToast("Не вдалося змінити модель", whisper.lastError ?? "Невідома помилка.", .error, 8000)
+                ToastCenter.shared.showToast("Не вдалося змінити розпізнавання", whisper.lastError ?? "Невідома помилка.", .error, 8000)
             }
             updateStatusItem()
         }
@@ -314,7 +322,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MenuHost {
         guard let statusItem, let whisper else { return }
         let tip: String
         switch whisper.state {
-        case .downloading: tip = "ScreenVoicer — модель \(Formats.percent(whisper.downloadProgress))"
+        case .downloading: tip = "ScreenVoicer — готую розпізнавання \(Formats.percent(whisper.downloadProgress))"
         case .failed: tip = "ScreenVoicer — голос недоступний"
         default: tip = "ScreenVoicer\nКлік або \(Self.hotkeyText) — знімок, правий клік — меню"
         }
@@ -341,27 +349,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MenuHost {
 
     var voiceStatus: (text: String, kind: TrayStatusKind) {
         guard let t = whisper else { return ("Запускаюсь…", .busy) }
-        let place = t.isRunningOnGpu ? "\(t.gpuName ?? "відеокарта") (Metal)" : "процесор"
+        let place = t.isRunningOnGpu ? (t.gpuName ?? "відеокарта") : "процесор"
         switch t.state {
         case .ready:
             if let next = t.downloadingModel {
-                return ("Завантажую «\(next.id)»: \(Formats.percent(t.downloadProgress))", .busy)
+                return ("Завантажую «\(next.title)»: \(Formats.percent(t.downloadProgress))", .busy)
             }
-            return ("Голос готовий · \(t.activeModel?.id ?? "") · \(place)", .ready)
+            return ("Голос готовий · \(t.activeModel?.title ?? "") · \(place)", .ready)
         case .downloading:
-            return ("Завантажую модель «\(t.downloadingModel?.id ?? "")»: \(Formats.percent(t.downloadProgress))", .busy)
+            return ("Завантажую розпізнавання «\(t.downloadingModel?.title ?? "")»: \(Formats.percent(t.downloadProgress))", .busy)
         case .failed:
             return ("Голос недоступний — відкрийте «Розпізнавання»", .error)
         default:
-            return ("Модель розпізнавання запускається…", .busy)
+            return ("Розпізнавання запускається…", .busy)
         }
     }
 
     var aboutText: String {
-        let model = whisper?.activeModel?.id ?? "—"
-        let place = whisper?.isRunningOnGpu == true ? "\(whisper?.gpuName ?? "") (Metal)" : "процесорі"
+        let model = whisper?.activeModel?.title ?? "—"
+        let place = whisper?.isRunningOnGpu == true ? (whisper?.gpuName ?? "відеокарті") : "процесорі"
         return "ScreenVoicer \(AppInfo.version) — скриншоти з голосовими коментарями для баг-репортів і AI-асистентів.\n"
-            + "Розпізнавання: «\(model)» на \(place).\n"
+            + "Розпізнавання: «\(model)», офлайн, на \(place).\n"
             + "Скриншоти: \(Paths.pretty(settings?.outputDirectory ?? ""))"
     }
 

@@ -1,0 +1,58 @@
+name: Windows
+
+# Builds the Windows app and its installer on every push that touches the installer, and serves the release
+# workflow (workflow_call) so a tag publishes the Windows and Mac assets together.
+on:
+  push:
+    branches: ['**']
+    paths: ['installer.iss', 'installer/**', '.github/workflows/windows.yml']
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        required: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Version
+        id: v
+        shell: bash
+        run: |
+          v="${{ inputs.version }}"
+          if [ -z "$v" ]; then v="$(grep -m1 -E '^## [0-9]+\.[0-9]+\.[0-9]+' CHANGELOG.md | sed -E 's/^## //')"; fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+
+      - name: Publish single-file exe
+        run: dotnet publish ScreenVoicer.csproj -c Release -o publish -p:Version=${{ steps.v.outputs.version }}
+
+      # The dark, branded wizard needs Inno Setup 6.7+; the windows-2025 runner image ships 6.7.1.
+      # (Installing another copy on the runner never returns, so the build uses the preinstalled one.)
+      - name: Build installer
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress }
+          (Get-Item "${env:ProgramFiles(x86)}\Inno Setup 6\Compil32.exe").VersionInfo.FileVersion
+          & $iscc /DMyAppVersion=${{ steps.v.outputs.version }} installer.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Collect
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force out | Out-Null
+          Copy-Item installer_output\ScreenVoicer-Setup.exe out\
+          Copy-Item publish\ScreenVoicer.exe out\ScreenVoicer-portable.exe
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: out/*
+          if-no-files-found: error

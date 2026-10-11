@@ -1,0 +1,32 @@
+<!doctype html>
+<!-- Source of the installer artwork. Render with a browser at the sizes in installer/README.md (Chrome DevTools: viewport = size, device scale = 1, 1.5, 2, 2.5). -->
+<html lang="uk"><head><meta charset="utf-8"><title>ScreenVoicer installer art</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0F0F13; overflow: hidden; }
+  body { display: grid; place-items: center; font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; }
+  .big { display: grid; justify-items: center; gap: 14px; transform: translateY(-6%); }
+  .big svg { width: 76px; height: 76px; }
+  .big span { color: #F4F4F7; font-size: 17px; font-weight: 600; letter-spacing: -.01em; }
+  .small svg { width: 70vmin; height: 70vmin; }
+  /* the macOS DMG background: light, because Finder always draws dark icon labels over a picture */
+  .dmg { background: #F4F4F7; width: 100%; height: 100%; position: relative; }
+  .dmg .brand { position: absolute; left: 32px; top: 26px; display: flex; align-items: center; gap: 10px; color: #1D1D22; font: 600 17px/1 -apple-system, "SF Pro Text", "Segoe UI", sans-serif; }
+  .dmg .brand svg { width: 26px; height: 26px; }
+  .dmg .arrow { position: absolute; left: 262px; top: 186px; width: 136px; height: 40px; }
+  .dmg .hint { position: absolute; left: 0; right: 0; bottom: 30px; text-align: center; color: #55555F; font: 500 13px/1.5 -apple-system, "SF Pro Text", "Segoe UI", sans-serif; }
+  .dmg .hint b { color: #1D1D22; font-weight: 600; }
+</style></head>
+<body>
+<script>
+  const kind = new URLSearchParams(location.search).get('kind') || 'big';
+  const mark = '<svg viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="#ff8a4c" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22v-8a8 8 0 0 1 8-8h8M42 6h8a8 8 0 0 1 8 8v8M58 42v8a8 8 0 0 1-8 8h-8M22 58h-8a8 8 0 0 1-8-8v-8"/><path d="M22 28v8M32 20v24M42 28v8"/></g></svg>';
+  if (kind === 'big') document.body.innerHTML = '<div class="big">' + mark + '<span>ScreenVoicer</span></div>';
+  if (kind === 'small') document.body.innerHTML = '<div class="small">' + mark + '</div>';
+  if (kind === 'dmg') {
+    document.body.style.display = 'block';
+    document.body.innerHTML = '<div class="dmg"><div class="brand">' + mark + 'ScreenVoicer</div>' +
+      '<svg class="arrow" viewBox="0 0 136 40" aria-hidden="true"><path d="M6 20H126M108 6L128 20L108 34" fill="none" stroke="#ff8a4c" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+      '<div class="hint"><b>Перетягніть ScreenVoicer у «Програми».</b><br>Не відкривається? Системні параметри → Приватність і безпека → «Все одно відкрити».</div></div>';
+  }
+</script>
+</body></html>

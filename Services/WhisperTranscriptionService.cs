@@ -268,8 +268,8 @@ namespace ScreenVoicer.Services
             {
                 Log.Error($"[Whisper] Failed to prepare model '{target.Id}'", ex);
                 ReportFailure(target, ex is HttpRequestException or IOException
-                    ? $"Не вдалося завантажити модель «{target.Id}» ({ex.Message}). Перевірте інтернет і спробуйте ще раз."
-                    : $"Не вдалося підготувати модель «{target.Id}»: {ex.Message}");
+                    ? $"Не вдалося завантажити розпізнавання «{target.Title}» ({ex.Message}). Перевірте інтернет і спробуйте ще раз."
+                    : $"Не вдалося підготувати розпізнавання «{target.Title}»: {ex.Message}");
                 return false;
             }
             finally

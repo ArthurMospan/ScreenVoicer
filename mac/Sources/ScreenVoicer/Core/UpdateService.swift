@@ -70,7 +70,7 @@ enum UpdateService {
         let (data, response) = try await URLSession.shared.data(for: request)
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
         if status == 404 { return nil } // no release yet
-        guard (200..<300).contains(status) else { throw UpdateError(message: "GitHub відповів \(status)") }
+        guard (200..<300).contains(status) else { throw UpdateError(message: "Сервер оновлень відповів \(status)") }
         return parseLatestRelease(data, current: SemVer(AppInfo.version) ?? SemVer("0.0.0")!)
     }
 

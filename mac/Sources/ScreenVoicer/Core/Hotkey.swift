@@ -43,7 +43,7 @@ struct HotkeyGesture: Equatable {
     /// Keys that are fine without a modifier (nobody types them), as on Windows.
     private static let standaloneKeys: Set<UInt32> = Set([
         kVK_F1, kVK_F2, kVK_F3, kVK_F4, kVK_F5, kVK_F6, kVK_F7, kVK_F8, kVK_F9, kVK_F10, kVK_F11, kVK_F12,
-        kVK_F13, kVK_F14, kVK_F15, kVK_F16, kVK_F17, kVK_F18, kVK_F19, kVK_F20, kVK_Help
+        kVK_F13, kVK_F14, kVK_F15, kVK_F16, kVK_F17, kVK_F18, kVK_F19, kVK_F20
     ].map { UInt32($0) })
 
     /// Shortcuts macOS or every app needs (Windows has its own list).

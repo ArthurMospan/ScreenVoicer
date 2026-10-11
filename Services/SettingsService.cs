@@ -23,7 +23,6 @@ namespace ScreenVoicer.Services
         public string Hotkey { get; set; } = DefaultHotkey;
         public bool ModelHintShown { get; set; }
         public string? UpdateNotifiedVersion { get; set; }
-        public bool InsertHintShown { get; set; }
         public bool TrayIconPromoted { get; set; }
 
         public SettingsService(string? dataDirectory = null)
@@ -68,7 +67,6 @@ namespace ScreenVoicer.Services
                 UseGpu = data.UseGpu ?? true;
                 ModelHintShown = data.ModelHintShown;
                 UpdateNotifiedVersion = data.UpdateNotifiedVersion;
-                InsertHintShown = data.InsertHintShown;
                 TrayIconPromoted = data.TrayIconPromoted;
                 if (!string.IsNullOrWhiteSpace(data.Hotkey) && HotkeyGesture.TryParse(data.Hotkey, out _))
                 {
@@ -98,7 +96,6 @@ namespace ScreenVoicer.Services
                         Hotkey = Hotkey,
                         ModelHintShown = ModelHintShown,
                         UpdateNotifiedVersion = UpdateNotifiedVersion,
-                        InsertHintShown = InsertHintShown,
                         TrayIconPromoted = TrayIconPromoted
                     };
 
@@ -125,7 +122,6 @@ namespace ScreenVoicer.Services
             public string? Hotkey { get; set; }
             public bool ModelHintShown { get; set; }
             public string? UpdateNotifiedVersion { get; set; }
-            public bool InsertHintShown { get; set; }
             public bool TrayIconPromoted { get; set; }
         }
     }
