@@ -1,4 +1,4 @@
-﻿; Inno Setup script for ScreenVoicer (needs Inno Setup 6.7+ for the dark wizard; release.yml installs it).
+﻿; Inno Setup script for ScreenVoicer (needs Inno Setup 6.7+ for the dark wizard; the GitHub Windows runner has 6.7.1).
 ; Build the exe first:  dotnet publish -c Release -o ./publish
 ; CI (.github/workflows/release.yml) passes the version from the git tag: iscc /DMyAppVersion=1.2.3 installer.iss
 ;
