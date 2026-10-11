@@ -44,11 +44,12 @@ jobs:
           mac/scripts/dmg.sh
           # what a user sees: the app, the «Applications» shortcut, the background and the window layout
           hdiutil attach -nobrowse -readonly -mountpoint /tmp/sv-dmg mac/build/ScreenVoicer-macOS.dmg
-          ls -la /tmp/sv-dmg /tmp/sv-dmg/.background
+          ls -la /tmp/sv-dmg
           test -d /tmp/sv-dmg/ScreenVoicer.app
           test "$(readlink /tmp/sv-dmg/Applications)" = "/Applications"
           test -f /tmp/sv-dmg/.DS_Store
-          ls /tmp/sv-dmg/.background | grep -qi tiff
+          test -f /tmp/sv-dmg/.background.tiff
+          test -f /tmp/sv-dmg/.VolumeIcon.icns
           codesign --verify --deep --strict /tmp/sv-dmg/ScreenVoicer.app
           hdiutil detach /tmp/sv-dmg
 
