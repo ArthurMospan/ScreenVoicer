@@ -1,0 +1,2066 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>ScreenVoicer — варіант H</title>
+<meta name="description" content="Скриншот із голосовим коментарем за 10 секунд. Безкоштовно для Windows і Mac, голос розпізнається на вашому комп’ютері.">
+<meta name="theme-color" content="#09090b">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' fill='none' stroke='%23ff8a4c' stroke-width='7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 22v-8a8 8 0 0 1 8-8h8M42 6h8a8 8 0 0 1 8 8v8M58 42v8a8 8 0 0 1-8 8h-8M22 58h-8a8 8 0 0 1-8-8v-8M22 28v8M32 20v24M42 28v8'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&display=swap">
+<script>document.documentElement.classList.add('js')</script>
+<style>
+/* Variant H, «Макрооб'єктив». The glass toolbar sits flat under the headline, descends onto a dimmed desktop where the whole flow plays once,
+   then every feature is a pinned macro chapter: the camera pushes into one part of the real UI (rebuilt in HTML/CSS/SVG).
+   One rAF loop draws only the scenes on screen. Solid colours only. */
+:root {
+  --bg: #09090b;
+  --panel: #111114;
+  --line: rgba(255,255,255,.08);
+  --text: #f5f5f7;
+  --muted: #a8a8b4;
+  --faint: #7c7c88;
+  --accent: #ff8a4c;
+  --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Segoe UI Mono", Consolas, monospace;
+  --gutter: 24px;
+  --pad: clamp(28px, 5vh, 56px);
+  color-scheme: dark;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; overflow-x: clip; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 400 17px/1.5 var(--font); -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; overflow-x: clip; }
+a { color: inherit; }
+h1, h2, p { margin: 0; }
+h1, h2 { font-weight: 650; text-wrap: balance; }
+:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.ic { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+@media (max-width: 640px) { :root { --gutter: 16px; } }
+
+/* ── header ── */
+.top { position: absolute; z-index: 30; left: 0; right: 0; top: 0; }
+.top .in { display: flex; align-items: center; justify-content: space-between; height: 68px; padding: 0 clamp(16px, 4vw, 48px); }
+.brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; border-radius: 8px; }
+.brand svg { width: 24px; height: 24px; flex: none; }
+.word { font-weight: 600; font-size: 16px; letter-spacing: -.02em; }
+.word span { color: var(--accent); }
+.top .btn { min-height: 38px; padding: 0 16px; font-size: 14px; }
+
+/* ── buttons ── */
+.cta { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 50px; padding: 0 24px; border: 0; border-radius: 999px; font: 500 15.5px/1 var(--font); letter-spacing: -.01em; text-decoration: none; white-space: nowrap; cursor: pointer; transition: background-color .2s ease, box-shadow .2s ease; }
+.btn svg { width: 17px; height: 17px; flex: none; fill: currentColor; }
+.btn-primary { background: #fff; color: #000; }
+.btn-primary:hover { background: #e6e6ea; }
+.btn-secondary { background: transparent; color: var(--text); box-shadow: inset 0 0 0 1px rgba(255,255,255,.22); }
+.btn-secondary:hover { box-shadow: inset 0 0 0 1px rgba(255,255,255,.4); }
+.meta { display: flex; flex-wrap: wrap; justify-content: center; margin-top: 18px; font-size: 14px; color: var(--faint); }
+.meta span { white-space: nowrap; }
+.meta span + span::before { content: "·"; margin: 0 9px; }
+@media (max-width: 520px) {
+  .cta { flex-direction: column; align-items: stretch; }
+  .btn { min-height: 52px; }
+}
+
+/* ── hero: pinned while the toolbar lands and the flow plays ── */
+.hero { position: relative; height: 430vh; }
+.hero-pin { position: sticky; top: 0; height: 100vh; height: 100svh; overflow: hidden; }
+.hero-copy { position: absolute; z-index: 4; left: 0; right: 0; top: 0; padding: clamp(92px, 13vh, 148px) var(--gutter) 0; text-align: center; }
+.hero h1 { font-size: clamp(44px, 6.6vw, 92px); line-height: 1.02; letter-spacing: -.035em; }
+.hero h1 .acc { color: var(--accent); }
+.hero .sub { max-width: 30em; margin: 22px auto 30px; font-size: clamp(17px, 1.5vw, 20px); line-height: 1.45; color: var(--muted); text-wrap: balance; }
+.hbox { position: absolute; z-index: 2; left: 0; top: 0; width: 0; height: 0; }
+.hclip { position: absolute; inset: 0; overflow: hidden; border-radius: 18px; background: #34363d; box-shadow: 0 0 0 1px rgba(255,255,255,.1), 0 30px 80px rgba(0,0,0,.55); transform-origin: 50% 0; opacity: 0; visibility: hidden; }
+.hbox .stage { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+.htop { z-index: 3; }
+.hsteps { position: absolute; z-index: 2; left: 50%; top: 0; transform: translateX(-50%); width: min(760px, calc(100% - 32px)); display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)) 34px; gap: 16px; align-items: center; opacity: 0; visibility: hidden; }
+.step { min-width: 0; color: var(--faint); font: 500 14px/1.2 var(--font); white-space: nowrap; transition: color .4s ease; }
+.step.on { color: var(--text); }
+.step .track { display: block; height: 1px; margin-top: 11px; background: rgba(255,255,255,.14); overflow: hidden; }
+.step .track i { display: block; height: 100%; background: var(--text); transform-origin: 0 50%; transform: scaleX(0); }
+.replay { width: 34px; height: 34px; border-radius: 50%; border: 0; padding: 0; display: grid; place-items: center; background: transparent; color: var(--muted); box-shadow: inset 0 0 0 1px rgba(255,255,255,.2); cursor: pointer; opacity: 0; visibility: hidden; transition: color .2s ease; }
+.replay:hover { color: var(--text); }
+.replay svg { width: 15px; height: 15px; }
+.hint { position: absolute; z-index: 4; left: 50%; bottom: 22px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 12.5px; color: var(--faint); }
+.hint svg { width: 16px; height: 16px; animation: nudge 1.8s ease-in-out infinite; }
+@keyframes nudge { 50% { transform: translateY(4px); } }
+@media (max-width: 640px) {
+  .hero { height: 400vh; }
+  .hero-copy { padding-top: 84px; }
+  .hero .sub { margin: 16px auto 24px; }
+  .hclip { border-radius: 14px; }
+  .hsteps { gap: 8px; grid-template-columns: repeat(5, minmax(0, 1fr)) 32px; }
+  .step { font-size: 12px; }
+  .hint { display: none; }
+}
+
+/* ── macro chapters: pinned, headline beside (desktop) or above (phone) ── */
+.ch { position: relative; height: 175vh; }
+.ch-pin { position: sticky; top: 0; height: 100vh; height: 100svh; display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 12fr); gap: clamp(32px, 4vw, 72px); align-items: center; padding: var(--pad) clamp(24px, 4vw, 64px); max-width: 1680px; margin: 0 auto; }
+.ch.flip .ch-pin { grid-template-columns: minmax(0, 12fr) minmax(0, 5fr); }
+.ch.flip .ch-copy { order: 2; }
+.ch-copy { max-width: 440px; }
+.kicker { display: flex; align-items: center; gap: 10px; margin-bottom: 22px; font: 500 13px/1 var(--mono); color: var(--faint); letter-spacing: .02em; }
+.kicker b { color: var(--accent); font-weight: 600; }
+.ch h2 { font-size: clamp(34px, 3.3vw, 54px); line-height: 1.04; letter-spacing: -.03em; }
+.ch p { margin-top: 18px; font-size: clamp(17px, 1.25vw, 19px); line-height: 1.5; color: var(--muted); }
+.legend { list-style: none; margin: 28px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.legend li { display: flex; align-items: center; gap: 12px; font-size: 15px; color: var(--faint); transition: color .3s ease; }
+.legend li::before { content: ""; width: 18px; height: 2px; border-radius: 1px; background: rgba(255,255,255,.18); transition: background-color .3s ease, width .3s ease; }
+.legend li.on { color: var(--text); }
+.legend li.on::before { width: 30px; background: var(--accent); }
+.lens { position: relative; height: calc(100svh - 2 * var(--pad)); max-height: 880px; border-radius: 24px; overflow: hidden; background: #0e0e11; box-shadow: 0 0 0 1px var(--line); contain: layout paint; }
+.lens > .stage { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+.vf { position: absolute; z-index: 5; inset: 14px; pointer-events: none; }
+.vf i { position: absolute; width: 26px; height: 26px; border: 2px solid rgba(255,255,255,.85); filter: drop-shadow(0 0 1px rgba(0,0,0,.6)); }
+.vf i:nth-child(1) { left: 0; top: 0; border-right: 0; border-bottom: 0; border-top-left-radius: 9px; }
+.vf i:nth-child(2) { right: 0; top: 0; border-left: 0; border-bottom: 0; border-top-right-radius: 9px; }
+.vf i:nth-child(3) { right: 0; bottom: 0; border-left: 0; border-top: 0; border-bottom-right-radius: 9px; }
+.vf i:nth-child(4) { left: 0; bottom: 0; border-right: 0; border-top: 0; border-bottom-left-radius: 9px; }
+.hud { position: absolute; z-index: 6; padding: 6px 9px; border-radius: 8px; font: 500 12px/1 var(--mono); color: #e9e9ee; background: rgba(12,12,15,.66); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); pointer-events: none; }
+.hud.tl { left: 26px; top: 26px; }
+.hud.br { right: 26px; bottom: 26px; }
+@media (max-width: 640px) {
+  .ch { height: 165vh; }
+  .ch-pin, .ch.flip .ch-pin { display: flex; flex-direction: column; align-items: stretch; gap: 16px; padding: 28px 16px 16px; }
+  .ch.flip .ch-copy { order: 0; }
+  .ch-copy { max-width: none; }
+  .kicker { margin-bottom: 12px; }
+  .ch h2 { font-size: 30px; line-height: 1.08; }
+  .ch p { margin-top: 10px; font-size: 16px; line-height: 1.45; }
+  .legend { flex-direction: row; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+  .legend li { gap: 0; padding: 6px 11px; border-radius: 999px; font-size: 13px; background: rgba(255,255,255,.07); }
+  .legend li::before { display: none; }
+  .legend li.on { background: #f5f5f7; color: #0b0b0d; }
+  .lens { flex: 1; min-height: 0; height: auto; max-height: none; border-radius: 18px; }
+  .vf { inset: 10px; }
+  .vf i { width: 20px; height: 20px; }
+  .hud.tl { left: 18px; top: 18px; }
+  .hud.br { right: 18px; bottom: 18px; }
+}
+
+/* ── final call ── */
+.final { padding: clamp(110px, 14vw, 190px) 0 clamp(80px, 10vw, 130px); }
+.final-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: clamp(40px, 5vw, 80px); align-items: center; max-width: 1240px; margin: 0 auto; padding: 0 var(--gutter); }
+.final h2 { font-size: clamp(38px, 4.8vw, 66px); line-height: 1.02; letter-spacing: -.035em; }
+.final .lead { margin: 20px 0 34px; font-size: clamp(17px, 1.4vw, 20px); line-height: 1.45; color: var(--muted); max-width: 26em; }
+.final .cta { justify-content: flex-start; }
+.final .meta { justify-content: flex-start; }
+.final .note { margin-top: 26px; max-width: 34em; font-size: 13px; line-height: 1.5; color: var(--faint); }
+.lens.mini { height: auto; aspect-ratio: 16 / 11; max-height: none; }
+footer { padding: 0 var(--gutter) 44px; font-size: 13px; color: var(--faint); text-align: center; }
+@media (max-width: 860px) {
+  .final-grid { grid-template-columns: minmax(0, 1fr); text-align: center; }
+  .final .lead { margin-left: auto; margin-right: auto; }
+  .final .cta, .final .meta { justify-content: center; }
+  .final .note { margin-left: auto; margin-right: auto; }
+}
+@media (max-width: 520px) { .final .meta { gap: 4px 14px; } .final .meta span + span::before { content: none; } }
+
+/* reduced motion: no pinning, still frames */
+.reduced .hero { height: auto; }
+.reduced .hero-pin { position: relative; }
+.reduced .ch { height: auto; }
+.reduced .ch-pin { position: relative; }
+@media (prefers-reduced-motion: reduce) { .hint svg { animation: none; } .btn, .step, .legend li, .legend li::before { transition: none; } }
+
+/* ═════════ the product UI, rebuilt ═════════ */
+.stage { font-family: var(--font); color: var(--text); text-align: left; line-height: 1.4; -webkit-font-smoothing: antialiased; }
+.stage * { pointer-events: none; }
+.abs { position: absolute; }
+.cover { position: absolute; left: 0; top: 0; overflow: visible; }
+.wall { position: absolute; inset: 0; }
+.dimall { position: absolute; inset: 0; background: rgba(0,0,0,.55); }
+
+/* matte glass: flat translucent tint, blur, one thin inner edge, soft shadow — no sheen */
+.glass { background: rgba(32,32,40,.65); -webkit-backdrop-filter: blur(30px) saturate(140%); backdrop-filter: blur(30px) saturate(140%); box-shadow: inset 0 0 0 1px rgba(255,255,255,.18), 0 10px 30px rgba(0,0,0,.30), 0 1px 3px rgba(0,0,0,.25); }
+
+/* toolbar */
+.tb { position: absolute; display: flex; align-items: center; padding: 5px; border-radius: 23px; white-space: nowrap; }
+.b { position: relative; flex: none; width: 34px; height: 34px; border-radius: 17px; display: grid; place-items: center; color: #ececf1; }
+.b .ic { position: relative; width: 18px; height: 18px; }
+.b.on { background: rgba(255,255,255,.22); }
+.b.w { width: 44px; display: flex; align-items: center; justify-content: center; gap: 1px; }
+.b .chev { width: 10px; height: 10px; stroke-width: 2.6; opacity: .7; }
+.b.chv { width: 16px; margin: 0 2px 0 -3px; }
+.b.down { background: rgba(255,255,255,.36); }
+.cdot { width: 14px; height: 14px; border-radius: 50%; background: #ef4444; box-shadow: inset 0 0 0 1px rgba(255,255,255,.35); }
+.dv { position: relative; flex: none; width: 1px; height: 18px; margin: 0 6px; background: rgba(255,255,255,.16); }
+.mic > i { position: absolute; inset: 0; border-radius: 50%; opacity: 0; }
+.mic .rp { background: #ff4d5e; }
+.mic .rl { box-shadow: inset 0 0 0 2px #ff8e99; }
+.mic .rd { background: #ff4d5e; }
+.mic.rec .rd { opacity: 1; }
+.mic.rec .ic { color: #fff; }
+.field { position: relative; flex: none; width: 300px; height: 34px; margin: 0 6px 0 4px; overflow: hidden; font-size: 14px; line-height: 34px; }
+.field .ph, .field .txt { position: absolute; left: 2px; top: 0; white-space: pre; }
+.field .ph { color: #cfcfd6; }
+.field .txt { color: #f4f4f7; }
+.field .txt .w { opacity: 0; }
+.field .caret { position: absolute; left: 2px; top: 9px; width: 1.5px; height: 16px; background: #ffc68a; opacity: 0; }
+.save { border-radius: 11px; background: rgba(255,255,255,.34); box-shadow: inset 0 0 0 1px rgba(255,255,255,.5); color: #fff; }
+.save .ic { stroke-width: 2.4; }
+.save.down { background: rgba(255,255,255,.5); }
+.b .x { width: 16px; height: 16px; }
+/* the toolbar: flat glass (the 3D slab and floor shadow of an earlier draft stay hidden) */
+.tb3 { transform-origin: 50% 50%; }
+.tb3 > .tb-plate, .tb3 > .tb-base, .tb3 > .tb-shadow { position: absolute; inset: 0; border-radius: 23px; }
+.tb3 > .tb-base, .tb3 > .tb-shadow { display: none; }
+.tb3.flat { transform-style: flat; }
+.tb3.flat > .tb-base, .tb3.flat > .tb-shadow { display: none; }
+
+/* status pill, flyout, tooltips */
+.pill { position: absolute; display: flex; align-items: center; gap: 8px; height: 28px; padding: 0 14px 0 12px; border-radius: 15px; font-size: 12.5px; font-weight: 600; color: #f4f4f5; white-space: nowrap; opacity: 0; }
+.pill .wave { display: none; align-items: center; gap: 2px; height: 14px; }
+.pill .wave i { display: block; width: 2.5px; height: 14px; border-radius: 2px; background: #f87171; transform: scaleY(.3); }
+.pill .spin { display: none; width: 13px; height: 13px; color: #ffc68a; stroke-width: 2.4; }
+.pill.rec .wave { display: flex; }
+.pill.rec .pt { color: #f87171; }
+.pill.busy .spin { display: block; }
+.flyout { position: absolute; display: flex; align-items: center; padding: 4px; border-radius: 21px; }
+.sw { flex: none; width: 28px; height: 34px; display: grid; place-items: center; }
+.sw i { width: 14px; height: 14px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(255,255,255,.35); }
+.sw.on i { box-shadow: 0 0 0 2px rgba(20,20,26,.9), 0 0 0 3.5px #fff; }
+.sz { flex: none; width: 28px; height: 34px; display: grid; place-items: center; border-radius: 14px; }
+.sz i { border-radius: 50%; background: #ececf1; }
+.sz.on { background: rgba(255,255,255,.18); }
+.tip { position: absolute; padding: 5px 9px; border-radius: 8px; background: rgba(20,20,26,.94); box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); color: #fff; font-size: 12px; font-weight: 500; white-space: nowrap; opacity: 0; transform: translateX(-50%); }
+
+/* selection size, keystrokes, keycaps, cursor, click */
+.sizeb { position: absolute; left: 0; top: 0; padding: 3px 7px; border-radius: 7px; background: rgba(20,20,26,.85); box-shadow: inset 0 0 0 1px rgba(255,255,255,.18); color: #fff; font-size: 11.5px; font-weight: 600; line-height: 16px; white-space: nowrap; opacity: 0; }
+.keys { position: absolute; display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-radius: 16px; background: rgba(18,18,22,.9); box-shadow: inset 0 0 0 1px rgba(255,255,255,.12), 0 12px 30px rgba(0,0,0,.3); opacity: 0; color: #7c7c88; font: 500 14px/1 var(--mono); white-space: nowrap; }
+.keys kbd { display: inline-grid; place-items: center; min-width: 40px; height: 38px; padding: 0 11px; border-radius: 9px; background: #26262c; color: #f4f4f7; font: inherit; box-shadow: inset 0 -2px 0 rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.1); }
+.keys kbd.down { background: #f4f4f7; color: #0b0b0d; box-shadow: none; transform: translateY(1px); }
+.cap { position: absolute; display: grid; place-items: center; border-radius: 14px; background: #2a2a31; color: #f4f4f7; font: 600 18px/1 var(--font); box-shadow: inset 0 -5px 0 rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.12), 0 12px 28px rgba(0,0,0,.4); opacity: 0; }
+.cap.down { background: #f4f4f7; color: #0b0b0d; box-shadow: inset 0 -2px 0 rgba(0,0,0,.18), 0 4px 10px rgba(0,0,0,.35); }
+.caps { position: absolute; display: flex; align-items: center; gap: 10px; opacity: 0; }
+.caps .cap { position: relative; opacity: 1; height: 64px; font-size: 19px; }
+.caps b { color: #d4d4da; font: 500 22px/1 var(--font); text-shadow: 0 1px 3px rgba(0,0,0,.6); }
+.cursor { position: absolute; left: 0; top: 0; z-index: 30; }
+.cursor svg { position: absolute; display: block; }
+.cursor .ca { left: -2px; top: -2px; width: 22px; height: 30px; }
+.cursor .cx { left: -13px; top: -13px; width: 26px; height: 26px; display: none; }
+.cursor .ce { left: -15px; top: -9px; width: 30px; height: 18px; display: none; }
+.cursor .cn { left: -9px; top: -15px; width: 18px; height: 30px; display: none; }
+.cursor.cross .ca, .cursor.ew .ca, .cursor.ns .ca { display: none; }
+.cursor.cross .cx, .cursor.ew .ce, .cursor.ns .cn { display: block; }
+.ripple { position: absolute; left: -17px; top: -17px; width: 34px; height: 34px; border-radius: 50%; background: rgba(255,255,255,.16); box-shadow: 0 0 0 1px rgba(255,255,255,.7); opacity: 0; z-index: 29; }
+
+/* toast */
+.toast { position: absolute; width: 376px; border-radius: 16px; background: rgba(26,26,32,.94); -webkit-backdrop-filter: blur(30px) saturate(140%); backdrop-filter: blur(30px) saturate(140%); box-shadow: inset 0 0 0 1px rgba(255,255,255,.18), 0 18px 44px rgba(0,0,0,.4); overflow: hidden; opacity: 0; }
+.toast .tr { display: flex; gap: 12px; padding: 13px 10px 0 14px; }
+.toast .tbadge { flex: none; width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: rgba(255,255,255,.06); box-shadow: inset 0 0 0 1px rgba(255,255,255,.18); color: #4ade80; }
+.toast .tbadge .ic { width: 20px; height: 20px; stroke-width: 2.2; }
+.toast .tt { flex: 1; min-width: 0; padding-top: 2px; }
+.toast .t1 { font-size: 13.5px; font-weight: 600; color: #f3f3f6; }
+.toast .t2 { margin-top: 2px; font-size: 12.5px; line-height: 18px; color: #a9a9b6; }
+.toast .tx { flex: none; width: 24px; height: 24px; margin-top: -4px; display: grid; place-items: center; color: #8c8c99; }
+.toast .tx .ic { width: 13px; height: 13px; stroke-width: 2.4; }
+.toast .ta { display: flex; justify-content: flex-end; gap: 6px; padding: 10px 12px 12px; }
+.toast .tbtn { height: 28px; padding: 0 11px; border-radius: 9px; display: flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600; }
+.toast .tbtn .ic { width: 13px; height: 13px; stroke-width: 2.2; }
+.toast .tc { background: rgba(255,255,255,.08); box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); color: #e6e6ec; }
+.toast .tg { background: rgba(255,255,255,.92); color: #1d1d22; }
+.toast .tg.down { background: #fff; transform: scale(.96); }
+.toast .tl { height: 2px; margin: 0 12px; background: #ff8a4c; opacity: .55; transform-origin: 0 50%; }
+
+/* light windows and taskbars used as backdrops */
+.lwin { position: absolute; border-radius: 10px; background: #fff; overflow: hidden; box-shadow: 0 0 0 1px rgba(0,0,0,.25), 0 20px 50px rgba(0,0,0,.35); color: #111827; }
+.lwin > b { position: absolute; left: 0; right: 0; top: 0; height: 30px; background: #e8ebf0; }
+.lwin i, .page-l i { position: absolute; display: block; border-radius: 6px; background: #e5e7eb; }
+.page-l { position: absolute; inset: 0; background: #eceef2; }
+.tbar { position: absolute; left: 0; right: 0; height: 48px; background: #1d1e24; box-shadow: 0 -1px 0 rgba(255,255,255,.06); }
+.tbar .apps { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); display: flex; gap: 8px; }
+.tbar .apps i { width: 32px; height: 32px; border-radius: 7px; display: grid; place-items: center; }
+.tbar .apps i::after { content: ""; width: 18px; height: 18px; border-radius: 5px; background: var(--c); }
+.tbar .apps i.cur { background: rgba(255,255,255,.08); }
+.clock { position: absolute; color: #e5e7eb; font-size: 11.5px; line-height: 15px; text-align: right; }
+
+/* hero desktop */
+.win { left: 120px; top: 40px; width: 1040px; height: 676px; border-radius: 10px; background: #fff; overflow: hidden; color: #111827; font-size: 14px; box-shadow: 0 0 0 1px rgba(0,0,0,.3), 0 24px 60px rgba(0,0,0,.35); }
+.wtop { position: absolute; left: 0; top: 0; right: 0; height: 44px; background: #e8ebf0; }
+.tab { position: absolute; left: 10px; bottom: 0; width: 250px; height: 35px; border-radius: 9px 9px 0 0; background: #fff; display: flex; align-items: center; gap: 9px; padding: 0 12px; font-size: 12.5px; color: #1f2937; }
+.tab .fav { width: 14px; height: 14px; border-radius: 4px; background: #2563eb; flex: none; }
+.tab .ic { width: 12px; height: 12px; margin-left: auto; color: #6b7280; stroke-width: 2.2; }
+.wctl { position: absolute; right: 0; top: 0; display: flex; }
+.wctl span { width: 46px; height: 32px; display: grid; place-items: center; color: #4b5563; }
+.wctl .ic { width: 12px; height: 12px; stroke-width: 1.6; }
+.addr { position: absolute; left: 0; right: 0; top: 44px; height: 44px; display: flex; align-items: center; gap: 16px; padding: 0 16px; border-bottom: 1px solid #e5e7eb; color: #6b7280; }
+.addr .ic { width: 16px; height: 16px; stroke-width: 2; }
+.url { flex: 1; height: 30px; border-radius: 15px; background: #f1f3f6; display: flex; align-items: center; padding: 0 14px; font-size: 13px; color: #4b5563; white-space: nowrap; overflow: hidden; }
+.side { position: absolute; left: 0; top: 88px; bottom: 0; width: 220px; background: #f7f8fa; border-right: 1px solid #eceef1; padding: 20px 12px; }
+.sbrand { display: flex; align-items: center; gap: 10px; padding: 0 10px 18px; font-weight: 700; font-size: 15px; }
+.sbrand i { width: 22px; height: 22px; border-radius: 7px; background: #111827; }
+.nv { height: 36px; border-radius: 8px; display: flex; align-items: center; padding: 0 12px; color: #4b5563; }
+.nv.on { background: #e8eefd; color: #1d4ed8; font-weight: 600; }
+.mh { left: 268px; top: 112px; font-size: 26px; font-weight: 700; letter-spacing: -.02em; line-height: 32px; }
+.msub { left: 268px; top: 148px; color: #6b7280; }
+.ava { left: 268px; top: 188px; width: 56px; height: 56px; border-radius: 50%; background: #f59e0b; color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 18px; }
+.avn { left: 340px; top: 196px; font-weight: 600; font-size: 15px; }
+.avl { left: 340px; top: 220px; color: #2563eb; font-size: 13px; }
+.lbl { left: 268px; font-size: 13px; font-weight: 600; color: #374151; line-height: 16px; }
+.inp { left: 268px; width: 360px; height: 44px; border: 1px solid #d1d5db; border-radius: 8px; padding: 0 14px; display: flex; align-items: center; color: #111827; }
+.inp.focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.16); }
+.wb { top: 536px; width: 112px; height: 44px; border-radius: 8px; display: grid; place-items: center; font-weight: 600; }
+.wb.ghost { left: 268px; box-shadow: inset 0 0 0 1px #d1d5db; color: #374151; }
+.wb.blue { left: 392px; background: #2563eb; color: #fff; }
+.c2 { left: 680px; top: 188px; width: 312px; padding: 18px; border-radius: 12px; background: #f7f8fa; box-shadow: inset 0 0 0 1px #eceef1; }
+.c2 b { display: block; font-size: 14px; }
+.c2 span { display: block; margin-top: 4px; color: #6b7280; font-size: 13px; line-height: 18px; }
+.c2 .swt { position: absolute; right: 18px; top: 18px; width: 36px; height: 21px; border-radius: 11px; background: #2563eb; }
+.c2 .swt::after { content: ""; position: absolute; right: 3px; top: 3px; width: 15px; height: 15px; border-radius: 50%; background: #fff; }
+.chat { width: 470px; height: 540px; border-radius: 12px; background: #18181d; color: #e8e8ed; overflow: hidden; box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 24px 60px rgba(0,0,0,.4); opacity: 0; }
+.chat .chh { position: absolute; left: 0; right: 0; top: 0; height: 62px; display: flex; align-items: center; gap: 12px; padding: 0 18px; border-bottom: 1px solid rgba(255,255,255,.07); }
+.cav { width: 38px; height: 38px; border-radius: 50%; background: #3f3f46; display: grid; place-items: center; font-weight: 700; font-size: 13px; color: #fff; flex: none; }
+.chn { font-weight: 600; font-size: 15px; }
+.chs { font-size: 12.5px; color: #9a9aa6; }
+.chat .min { left: 18px; top: 86px; max-width: 300px; padding: 9px 12px 10px; border-radius: 14px 14px 14px 4px; background: #26262e; font-size: 13.5px; line-height: 19px; }
+.chat .min b { display: block; font-size: 12.5px; color: #b4b4c0; font-weight: 600; margin-bottom: 2px; }
+.chat .mout { right: 18px; top: 220px; width: 282px; padding: 6px 6px 8px; border-radius: 14px 14px 4px 14px; background: #2e3446; font-size: 13.5px; line-height: 19px; transform-origin: 100% 100%; opacity: 0; }
+.chat .mout svg { display: block; width: 270px; height: 147px; border-radius: 10px; }
+.chat .mout p { padding: 8px 6px 0; }
+.chat .mout small { display: block; text-align: right; padding: 2px 6px 0; font-size: 11px; color: #a9b0c2; }
+.chat .comp { position: absolute; left: 12px; right: 12px; bottom: 12px; height: 44px; border-radius: 22px; background: #23232a; display: flex; align-items: center; padding: 0 16px; color: #8a8a96; font-size: 13.5px; }
+
+/* c1: tray menu, countdown */
+.menu { position: absolute; padding: 8px; border-radius: 18px; background: rgba(28,28,35,.78); -webkit-backdrop-filter: blur(30px) saturate(140%); backdrop-filter: blur(30px) saturate(140%); box-shadow: inset 0 0 0 1px rgba(255,255,255,.18), 0 18px 44px rgba(0,0,0,.45); opacity: 0; color: #f1f1f4; }
+.menu .mh2 { display: flex; align-items: center; gap: 10px; padding: 4px 6px 10px; }
+.menu .mk { width: 30px; height: 30px; flex: none; }
+.menu .mt { font-size: 14px; font-weight: 600; line-height: 18px; }
+.menu .mt span { color: var(--accent); }
+.menu .ms { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: #bdbdc7; line-height: 16px; }
+.menu .ms i { width: 7px; height: 7px; border-radius: 50%; background: #4ade80; }
+.menu .mcap { height: 42px; border-radius: 12px; background: rgba(255,255,255,.92); color: #1d1d22; display: flex; align-items: center; gap: 9px; padding: 0 10px 0 12px; font-size: 13.5px; font-weight: 600; }
+.menu .mcap .ic { width: 18px; height: 18px; color: #ff8a4c; stroke-width: 2.2; }
+.menu .hk { margin-left: auto; font-size: 11px; padding: 3px 7px; border-radius: 7px; background: rgba(0,0,0,.07); color: #4a4a52; }
+.menu .mdel { display: flex; align-items: center; gap: 6px; padding: 10px 6px 4px; font-size: 12.5px; color: #bdbdc7; }
+.menu .mdel .ic { width: 15px; height: 15px; margin-right: 1px; }
+.menu .mdel span:first-of-type { margin-left: 4px; }
+.chip { padding: 5px 10px; border-radius: 9px; background: rgba(255,255,255,.08); color: #e6e6ec; font-weight: 600; font-size: 12px; }
+.chip.hov { background: rgba(255,255,255,.18); color: #fff; }
+.chip.on { background: rgba(255,255,255,.32); color: #fff; }
+.msep { display: block; height: 1px; margin: 6px 8px; background: rgba(255,255,255,.09); }
+.mrow { display: flex; align-items: center; gap: 11px; height: 34px; padding: 0 9px; border-radius: 10px; font-size: 13px; }
+.mrow .ic { width: 17px; height: 17px; color: #d8d8df; }
+.mrow .mv { margin-left: auto; color: #bdbdc7; font-size: 12px; }
+.seg2 { margin-left: auto; display: flex; padding: 2px; border-radius: 9px; background: rgba(255,255,255,.06); }
+.seg2 b { padding: 3px 7px; border-radius: 7px; font-size: 11px; font-weight: 600; color: #c9c9d2; }
+.seg2 b.on { background: rgba(255,255,255,.22); color: #fff; }
+.count { position: absolute; width: 120px; height: 120px; border-radius: 50%; display: grid; place-items: center; font: 650 54px/1 var(--font); color: #fff; opacity: 0; }
+.count svg { position: absolute; left: 6px; top: 6px; width: 108px; height: 108px; transform: rotate(-90deg); }
+
+/* c2: dashboard */
+.dash { position: absolute; left: 40px; top: 76px; width: 680px; height: 396px; border-radius: 14px; background: #fff; box-shadow: 0 0 0 1px #e5e7eb; color: #111827; }
+.dash .dt { position: absolute; left: 24px; top: 20px; font-size: 15px; font-weight: 600; color: #374151; }
+.dash .dv2 { position: absolute; left: 24px; top: 44px; font-size: 30px; font-weight: 700; letter-spacing: -.02em; }
+.dash .dd { position: absolute; left: 24px; top: 88px; font-size: 13px; color: #16a34a; font-weight: 600; }
+.dash .bars { position: absolute; left: 24px; right: 24px; top: 130px; height: 230px; display: flex; align-items: flex-end; gap: 14px; border-bottom: 1px solid #e5e7eb; }
+.dash .bars i { flex: 1; border-radius: 6px 6px 0 0; background: #93c5fd; }
+.dash .bars i.hi { background: #2563eb; }
+
+/* c3: order card */
+.order { position: absolute; left: 56px; top: 126px; width: 528px; height: 278px; border-radius: 14px; background: #fff; box-shadow: 0 0 0 1px #e5e7eb; color: #111827; font-size: 14px; }
+.order .oh { position: absolute; left: 24px; top: 18px; font-size: 17px; font-weight: 700; }
+.order .or { position: absolute; left: 24px; right: 24px; display: flex; justify-content: space-between; color: #374151; }
+.order .or.tot { color: #111827; font-weight: 700; font-size: 15px; }
+.order .ohr { position: absolute; left: 24px; right: 24px; top: 162px; height: 1px; background: #e5e7eb; }
+.order .pay { position: absolute; left: 24px; top: 222px; width: 150px; height: 40px; border-radius: 9px; background: #111827; color: #fff; display: grid; place-items: center; font-weight: 600; }
+
+/* c4: profile card, pixel blocks */
+.prof { position: absolute; left: 40px; top: 104px; width: 520px; height: 290px; border-radius: 14px; background: #fff; box-shadow: 0 0 0 1px #e5e7eb; color: #111827; font-size: 14px; }
+.prof .pav { position: absolute; left: 28px; top: 24px; width: 52px; height: 52px; border-radius: 50%; background: #f59e0b; color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 17px; }
+.prof .pn { position: absolute; left: 94px; top: 30px; font-size: 16px; font-weight: 700; }
+.prof .pr { position: absolute; left: 94px; top: 54px; font-size: 13px; color: #6b7280; }
+.prof .pl { position: absolute; left: 28px; font-size: 12.5px; font-weight: 600; color: #374151; }
+.prof .pi { position: absolute; left: 28px; width: 400px; height: 42px; border-radius: 8px; box-shadow: inset 0 0 0 1px #d1d5db; display: flex; align-items: center; padding: 0 14px; }
+.px { position: absolute; }
+.px i { position: absolute; display: block; }
+
+/* c6: AI assistant */
+.ai { position: absolute; inset: 0; background: #16161b; color: #e8e8ed; font-size: 13.5px; }
+.ai .aside { position: absolute; left: 0; top: 0; bottom: 0; width: 170px; background: #111115; border-right: 1px solid rgba(255,255,255,.06); }
+.ai .aside i { position: absolute; left: 16px; height: 10px; border-radius: 5px; background: #2a2a31; }
+.ai .anew { position: absolute; left: 12px; top: 16px; right: 12px; height: 34px; border-radius: 10px; background: #222228; display: flex; align-items: center; padding: 0 12px; font-size: 12.5px; color: #d6d6dd; gap: 8px; }
+.ai .anew .ic { width: 15px; height: 15px; }
+.ai .ahd { position: absolute; left: 170px; right: 0; top: 0; height: 52px; display: flex; align-items: center; gap: 9px; padding: 0 22px; border-bottom: 1px solid rgba(255,255,255,.06); font-weight: 600; font-size: 14px; }
+.ai .ahd .ic { width: 17px; height: 17px; color: #ffc68a; }
+.ai .aq { position: absolute; right: 24px; top: 70px; padding: 8px 12px; border-radius: 14px; background: #26262e; color: #d6d6dd; }
+.ai .aa i { position: absolute; left: 200px; height: 9px; border-radius: 5px; background: #2c2c34; }
+.ai .sent { position: absolute; right: 24px; top: 132px; width: 270px; padding: 6px; border-radius: 14px 14px 4px 14px; background: #2e3446; opacity: 0; }
+.ai .sent svg { display: block; width: 258px; height: 120px; border-radius: 9px; }
+.ai .sent p { padding: 7px 6px 2px; line-height: 18px; }
+.ai .dots { position: absolute; left: 200px; top: 352px; display: flex; gap: 5px; opacity: 0; }
+.ai .dots i { width: 7px; height: 7px; border-radius: 50%; background: #9a9aa6; }
+.ai .reply { position: absolute; left: 200px; top: 338px; width: 470px; line-height: 20px; color: #e3e3ea; opacity: 0; }
+.ai .reply .ic { width: 16px; height: 16px; color: #ffc68a; vertical-align: -3px; margin-right: 6px; }
+.ai .comp2 { position: absolute; left: 194px; right: 24px; bottom: 16px; border-radius: 18px; background: #222229; box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); }
+.ai .comp2 .cph { position: absolute; left: 16px; bottom: 15px; color: #85858f; }
+.ai .comp2 .catt { position: absolute; left: 12px; top: 10px; width: 96px; height: 54px; border-radius: 8px; overflow: hidden; box-shadow: 0 0 0 1px rgba(255,255,255,.12); opacity: 0; }
+.ai .comp2 .catt svg { width: 96px; height: 54px; display: block; }
+.ai .comp2 .ctx { position: absolute; left: 16px; bottom: 14px; right: 60px; white-space: nowrap; overflow: hidden; color: #ececf1; opacity: 0; }
+.ai .comp2 .csend { position: absolute; right: 8px; bottom: 7px; width: 34px; height: 34px; border-radius: 50%; background: #ececf1; color: #16161b; display: grid; place-items: center; }
+.ai .comp2 .csend .ic { width: 16px; height: 16px; stroke-width: 2.2; }
+
+/* c7: folder, task, the PNG in layers */
+.fwin { position: absolute; border-radius: 12px; background: #fff; overflow: hidden; color: #111827; box-shadow: 0 0 0 1px rgba(0,0,0,.3), 0 20px 50px rgba(0,0,0,.4); }
+.fwin .fh { position: absolute; left: 0; right: 0; top: 0; height: 38px; background: #eef0f3; display: flex; align-items: center; gap: 8px; padding: 0 14px; font-size: 12.5px; font-weight: 600; color: #374151; }
+.fwin .fh .ic { width: 15px; height: 15px; }
+.tile { position: absolute; width: 140px; border-radius: 10px; padding: 0 0 6px; }
+.tile .th { width: 140px; height: 88px; border-radius: 8px; overflow: hidden; background: #f3f4f6; box-shadow: 0 0 0 1px #e5e7eb; }
+.tile .th svg { display: block; width: 140px; height: 88px; }
+.tile .tn { margin-top: 6px; font-size: 10.5px; line-height: 14px; color: #374151; text-align: center; word-break: break-all; padding: 0 6px; }
+.tile.sel { background: #dbeafe; box-shadow: 0 0 0 6px #dbeafe; }
+.png3 { position: absolute; width: 140px; height: 88px; transform-origin: 50% 50%; }
+.png3.flat { transform-style: flat; }
+.png3 > div { position: absolute; inset: 0; border-radius: 8px; }
+.png3 .pl-img { overflow: hidden; background: #fff; box-shadow: 0 0 0 1px #e5e7eb; }
+.png3 .pl-img svg { display: block; width: 140px; height: 88px; }
+.png3 .pl-txt { padding: 9px 10px; background: #1c1c22; box-shadow: inset 0 0 0 1px rgba(255,255,255,.18); color: #f1f1f4; font-size: 9.5px; line-height: 13px; }
+.png3 .pl-txt b { display: block; font-size: 8.5px; color: #ffc68a; font-weight: 600; margin-bottom: 3px; letter-spacing: .02em; }
+.drop { position: absolute; border-radius: 10px; box-shadow: inset 0 0 0 1.5px #c7ccd4; display: grid; place-items: center; color: #8a909b; font-size: 12.5px; }
+.drop.over { box-shadow: inset 0 0 0 2px #2563eb; background: #eff6ff; color: #2563eb; }
+.att { position: absolute; opacity: 0; }
+.att .ath { width: 276px; height: 100px; border-radius: 8px; overflow: hidden; box-shadow: 0 0 0 1px #e5e7eb; }
+.att .ath svg { display: block; width: 276px; height: 100px; }
+.att p { margin-top: 8px; font-size: 12.5px; line-height: 17px; color: #111827; width: 276px; }
+.ghost { position: absolute; width: 100px; height: 62px; border-radius: 8px; overflow: hidden; box-shadow: 0 0 0 1px #d1d5db, 0 12px 30px rgba(0,0,0,.35); opacity: 0; }
+.ghost svg { display: block; width: 100px; height: 62px; }
+
+/* c8: gallery */
+.gal { position: absolute; inset: 0; background: #121216; color: #f1f1f4; }
+.gal .gh { position: absolute; left: 0; right: 0; top: 0; height: 68px; border-bottom: 1px solid rgba(255,255,255,.07); }
+.gal .glogo { position: absolute; left: 22px; top: 19px; width: 30px; height: 30px; }
+.gal .gtit { position: absolute; left: 62px; top: 16px; font-size: 15px; font-weight: 600; line-height: 19px; }
+.gal .gtit span { color: var(--accent); }
+.gal .gsub { position: absolute; left: 62px; top: 36px; font-size: 12px; color: #9a9aa6; }
+.gal .gq { position: absolute; left: 226px; top: 16px; width: 300px; height: 36px; border-radius: 11px; background: #1c1c22; box-shadow: inset 0 0 0 1px rgba(255,255,255,.1); display: flex; align-items: center; gap: 9px; padding: 0 12px; font-size: 12.5px; }
+.gal .gq.focus { box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.45); }
+.gal .gq .ic { width: 15px; height: 15px; color: #9a9aa6; flex: none; }
+.gal .gq .qp { color: #85858f; white-space: nowrap; }
+.gal .gq .qt { color: #f1f1f4; white-space: pre; }
+.gal .gq .qc { width: 1.5px; height: 15px; background: #ffc68a; margin-left: -8px; }
+.gal .gbtn { position: absolute; top: 16px; height: 36px; border-radius: 11px; display: flex; align-items: center; gap: 7px; padding: 0 13px; font-size: 12.5px; font-weight: 600; background: rgba(255,255,255,.07); box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); }
+.gal .gbtn .ic { width: 15px; height: 15px; }
+.gal .gbtn.new { background: #ff8a4c; color: #1a1209; box-shadow: none; }
+.gc { position: absolute; width: 236px; height: 222px; border-radius: 14px; background: #1a1a20; box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); }
+.gc.sel { box-shadow: inset 0 0 0 2px #ff8a4c; }
+.gc .gi { position: absolute; left: 12px; top: 12px; width: 212px; height: 114px; border-radius: 9px; overflow: hidden; background: #f3f4f6; }
+.gc .gi svg { display: block; width: 212px; height: 114px; }
+.gc .gb { position: absolute; bottom: 6px; padding: 2px 6px; border-radius: 6px; background: rgba(20,20,26,.82); color: #f1f1f4; font-size: 9.5px; font-weight: 600; line-height: 13px; }
+.gc .gb.l { left: 6px; }
+.gc .gb.r { right: 6px; }
+.gc .gx { position: absolute; left: 8px; top: 8px; width: 20px; height: 20px; border-radius: 6px; background: rgba(20,20,26,.5); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.85); display: grid; place-items: center; color: transparent; }
+.gc .gx .ic { width: 13px; height: 13px; stroke-width: 2.8; }
+.gc .gx.on { background: #ff8a4c; box-shadow: none; color: #fff; }
+.gc .gt { position: absolute; left: 14px; top: 134px; width: 208px; font-size: 13px; line-height: 18px; color: #e8e8ee; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.gc .ga { position: absolute; left: 12px; top: 182px; display: flex; gap: 5px; }
+.gc .gbt { height: 28px; padding: 0 9px; border-radius: 8px; display: grid; place-items: center; font-size: 11.5px; font-weight: 600; color: #e6e6ec; background: rgba(255,255,255,.06); box-shadow: inset 0 0 0 1px rgba(255,255,255,.1); }
+.gc .gbt.i { width: 26px; padding: 0; }
+.gc .gbt .ic { width: 14px; height: 14px; }
+.gc .gbt.del { color: #f87171; }
+.gc .gbt.hov { background: rgba(255,255,255,.16); }
+.gbar { position: absolute; left: 120px; top: 494px; width: 520px; height: 50px; border-radius: 16px; display: flex; align-items: center; gap: 10px; padding: 0 8px 0 18px; opacity: 0; }
+.gbar .bt { font-size: 13.5px; font-weight: 600; margin-right: auto; }
+.gbar .bb { height: 34px; padding: 0 13px; border-radius: 10px; display: flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 600; }
+.gbar .bb .ic { width: 15px; height: 15px; stroke-width: 2.1; }
+.gbar .bp { background: rgba(255,255,255,.92); color: #1d1d22; }
+.gbar .bp.done { background: #f4f4f7; color: #15803d; }
+.gbar .bg { background: rgba(255,255,255,.08); box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); color: #e6e6ec; }
+
+/* c9: messenger + share page */
+.msg { position: absolute; border-radius: 14px; background: #17181d; overflow: hidden; color: #e8e8ed; font-size: 13px; box-shadow: 0 0 0 1px rgba(255,255,255,.07); }
+.msg .mhd { position: absolute; left: 0; right: 0; top: 0; height: 58px; display: flex; align-items: center; gap: 11px; padding: 0 16px; border-bottom: 1px solid rgba(255,255,255,.06); }
+.msg .mhd .cav { width: 34px; height: 34px; font-size: 12px; background: #4b5563; }
+.msg .bin { position: absolute; left: 14px; top: 76px; padding: 8px 12px; border-radius: 14px 14px 14px 4px; background: #24252c; }
+.msg .bout { position: absolute; right: 12px; top: 128px; width: 270px; padding: 8px 9px 6px; border-radius: 14px 14px 4px 14px; background: #2b3245; transform-origin: 100% 0; opacity: 0; }
+.msg .bout .lk { color: #9cc2ff; text-decoration: underline; font-size: 12px; line-height: 16px; word-break: break-all; }
+.msg .prev { margin-top: 7px; padding: 2px 0 2px 9px; border-left: 2px solid #ff8a4c; }
+.msg .prev .ps { font-weight: 600; font-size: 12px; color: #ffb48a; }
+.msg .prev .pt2 { font-weight: 600; font-size: 12.5px; margin-top: 1px; }
+.msg .prev .pd { font-size: 12px; color: #c5c8d2; line-height: 16px; margin-top: 2px; }
+.msg .prev svg { display: block; width: 240px; height: 131px; border-radius: 8px; margin-top: 7px; }
+.msg .btime { text-align: right; font-size: 10.5px; color: #a9b0c2; margin-top: 4px; }
+.msg .mcomp { position: absolute; left: 10px; right: 10px; bottom: 10px; height: 40px; border-radius: 20px; background: #22232a; display: flex; align-items: center; padding: 0 14px; color: #85858f; }
+.brw { position: absolute; border-radius: 12px; background: #0d0d10; overflow: hidden; box-shadow: 0 0 0 1px rgba(255,255,255,.1), 0 20px 50px rgba(0,0,0,.4); }
+.brw .bt2 { position: absolute; left: 0; right: 0; top: 0; height: 34px; background: #1f2026; }
+.brw .bt2 .tb2 { position: absolute; left: 8px; bottom: 0; width: 210px; height: 27px; border-radius: 8px 8px 0 0; background: #2a2b33; display: flex; align-items: center; gap: 7px; padding: 0 10px; font-size: 11px; color: #d6d6dd; white-space: nowrap; overflow: hidden; }
+.brw .bt2 .tb2 svg { width: 13px; height: 13px; flex: none; }
+.brw .ad { position: absolute; left: 0; right: 0; top: 34px; height: 38px; background: #2a2b33; display: flex; align-items: center; gap: 8px; padding: 0 12px; }
+.brw .ad .url { height: 26px; background: #1c1d22; color: #b9bbc6; font-size: 11.5px; padding: 0 11px; gap: 6px; }
+.brw .ad .url .ic { width: 12px; height: 12px; flex: none; }
+.brw .pg { position: absolute; left: 0; right: 0; top: 72px; bottom: 0; overflow: hidden; }
+.brw .pgs { position: absolute; left: 0; top: 0; width: 100%; height: 900px; }
+.sp-h { position: absolute; left: 16px; right: 16px; top: 14px; height: 32px; display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; }
+.sp-h svg { width: 22px; height: 22px; }
+.sp-h span span { color: var(--accent); }
+.sp-b { height: 30px; padding: 0 11px; border-radius: 9px; display: flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600; background: rgba(255,255,255,.08); box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); color: #e6e6ec; }
+.sp-b .ic { width: 13px; height: 13px; stroke-width: 2.1; }
+.sp-b.pr { background: rgba(255,255,255,.92); color: #1d1d22; box-shadow: none; }
+.sp-b.done { background: #f4f4f7; color: #15803d; }
+.sp-b.hov { background: rgba(255,255,255,.18); }
+.sp-t { position: absolute; left: 16px; top: 62px; font-size: 18px; font-weight: 650; letter-spacing: -.01em; }
+.sp-m { position: absolute; left: 16px; top: 88px; font-size: 11.5px; color: #9a9aa6; }
+.sp-st { position: absolute; left: 16px; width: 436px; }
+.sp-st .disc { position: absolute; left: 10px; top: 10px; z-index: 1; width: 28px; height: 28px; border-radius: 50%; background: #ff8a4c; color: #fff; display: grid; place-items: center; font-size: 13px; font-weight: 700; box-shadow: 0 0 0 2.5px #fff; }
+.sp-st .im { width: 436px; height: 238px; border-radius: 12px; overflow: hidden; box-shadow: 0 0 0 1px rgba(255,255,255,.1); }
+.sp-st .im svg { display: block; width: 436px; height: 238px; }
+.sp-st .cp { margin-top: 10px; padding: 11px 14px; border-radius: 12px; background: rgba(255,255,255,.05); box-shadow: inset 0 0 0 1px rgba(255,255,255,.1); font-size: 13.5px; line-height: 19px; color: #f1f1f4; }
+.sp-st .sb { display: flex; gap: 6px; margin-top: 10px; }
+
+/* c10: update toast */
+.upd .tbadge { color: #ffc68a; }
+.upd .prog { height: 3px; margin: 0 12px 12px; border-radius: 2px; background: rgba(255,255,255,.1); overflow: hidden; opacity: 0; }
+.upd .prog i { display: block; height: 100%; background: #ff8a4c; transform-origin: 0 50%; transform: scaleX(0); }
+
+/* c11: two systems */
+#c11 { width: 900px; height: 460px; }
+#c11 .os { position: absolute; left: 0; top: 0; width: 440px; height: 460px; border-radius: 14px; overflow: hidden; }
+#c11 .os.mac { left: 460px; }
+.mbar { position: absolute; left: 0; right: 0; top: 0; height: 26px; background: rgba(28,28,34,.86); display: flex; align-items: center; gap: 14px; padding: 0 12px; font-size: 11.5px; color: #ececf1; font-weight: 500; }
+.mbar svg { width: 13px; height: 13px; flex: none; }
+.mbar .r { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+.mbar .r svg { width: 15px; height: 15px; }
+.oslbl { position: absolute; left: 14px; display: flex; align-items: center; gap: 7px; height: 30px; padding: 0 12px; border-radius: 10px; font-size: 12.5px; font-weight: 600; color: #f1f1f4; }
+.oslbl svg { width: 14px; height: 14px; fill: currentColor; }
+.ostb { position: absolute; left: 27px; transform-origin: 0 0; transform: scale(.56); }
+.ostb .tb { position: relative; }
+.ostoast { position: absolute; right: 14px; transform-origin: 100% 100%; }
+@media (max-width: 640px) {
+  #c11 { width: 440px; height: 930px; }
+  #c11 .os.mac { left: 0; top: 470px; }
+}
+
+/* c12: installer */
+.inst { position: absolute; left: 80px; top: 40px; width: 360px; height: 250px; border-radius: 18px; padding: 20px 22px; color: #f1f1f4; }
+.inst .ih { display: flex; align-items: center; gap: 11px; }
+.inst .ih svg { width: 34px; height: 34px; }
+.inst .it { font-size: 15px; font-weight: 650; line-height: 19px; }
+.inst .it span { color: var(--accent); }
+.inst .is { font-size: 12px; color: #a9a9b6; }
+.inst .ix { margin-top: 18px; font-size: 13px; line-height: 19px; color: #c9c9d2; height: 38px; }
+.inst .ipr { margin-top: 14px; height: 5px; border-radius: 3px; background: rgba(255,255,255,.1); overflow: hidden; }
+.inst .ipr i { display: block; height: 100%; background: #ff8a4c; transform-origin: 0 50%; transform: scaleX(0); }
+.inst .ick { margin-top: 14px; display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: #d6d6dd; }
+.inst .ick i { width: 16px; height: 16px; border-radius: 5px; background: #ff8a4c; display: grid; place-items: center; color: #fff; }
+.inst .ick .ic { width: 11px; height: 11px; stroke-width: 3; }
+.inst .ib { position: absolute; right: 22px; bottom: 20px; display: flex; gap: 8px; }
+.inst .ibt { height: 34px; padding: 0 16px; border-radius: 10px; display: grid; place-items: center; font-size: 12.5px; font-weight: 600; background: rgba(255,255,255,.08); box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); color: #e6e6ec; }
+.inst .ibt.pr { background: rgba(255,255,255,.92); color: #1d1d22; box-shadow: none; }
+.inst .ibt.down { transform: scale(.95); background: #fff; }
+
+#dbgOut { position: fixed; z-index: 99; left: 8px; bottom: 8px; padding: 6px 10px; border-radius: 8px; background: #000; color: #0f0; font: 12px/1.3 var(--mono); }
+</style>
+</head>
+<body>
+
+<!-- icon sprite: line icons are stroked by .ic, filled glyphs carry their own fill -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="i-mark" viewBox="0 0 64 64"><g fill="none" stroke="#ff8a4c" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22v-8a8 8 0 0 1 8-8h8M42 6h8a8 8 0 0 1 8 8v8M58 42v8a8 8 0 0 1-8 8h-8M22 58h-8a8 8 0 0 1-8-8v-8"/><path d="M22 28v8M32 20v24M42 28v8"/></g></symbol>
+    <symbol id="i-region" viewBox="0 0 24 24"><path d="M4 9V6.5A2.5 2.5 0 0 1 6.5 4H9M15 4h2.5A2.5 2.5 0 0 1 20 6.5V9M20 15v2.5a2.5 2.5 0 0 1-2.5 2.5H15M9 20H6.5A2.5 2.5 0 0 1 4 17.5V15"/></symbol>
+    <symbol id="i-screen" viewBox="0 0 24 24"><path d="M4.5 5h15A1.5 1.5 0 0 1 21 6.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 15.5v-9A1.5 1.5 0 0 1 4.5 5zM9 20.5h6M12 17v3.5"/></symbol>
+    <symbol id="i-timer" viewBox="0 0 24 24"><path d="M12 21a7.5 7.5 0 1 0 0-15 7.5 7.5 0 0 0 0 15zM12 10v3.5l2.5 1.5M9.5 2.5h5M19 6.5l1.5-1.5"/></symbol>
+    <symbol id="i-pen" viewBox="0 0 24 24"><path d="M15 5.5l3.5 3.5L9 18.5 4.5 19.5 5.5 15zM13 7.5l3.5 3.5"/></symbol>
+    <symbol id="i-hl" viewBox="0 0 24 24"><path d="M14.5 4.5l5 5-7 7-5-5zM7.5 11.5L5.5 17 7 18.5l5.5-2M4 20.5h7"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5.5 18.5l13-13M10 5.5h8.5V14"/></symbol>
+    <symbol id="i-rect" viewBox="0 0 24 24"><path d="M6.5 5h11A2.5 2.5 0 0 1 20 7.5v9a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 16.5v-9A2.5 2.5 0 0 1 6.5 5z"/></symbol>
+    <symbol id="i-text" viewBox="0 0 24 24"><path d="M5 7.5V5h14v2.5M12 5v14M9 19h6"/></symbol>
+    <symbol id="i-num" viewBox="0 0 24 24"><path d="M12 3.5a8.5 8.5 0 1 1 0 17 8.5 8.5 0 0 1 0-17zM10.5 9.5L12.5 8v8.5"/></symbol>
+    <symbol id="i-hide" viewBox="0 0 24 24"><path d="M6.5 4.5H17.5A2 2 0 0 1 19.5 6.5V17.5A2 2 0 0 1 17.5 19.5H6.5A2 2 0 0 1 4.5 17.5V6.5A2 2 0 0 1 6.5 4.5ZM4.5 9.5H19.5M4.5 14.5H19.5M9.5 4.5V19.5M14.5 4.5V19.5"/></symbol>
+    <symbol id="i-eraser" viewBox="0 0 24 24"><path d="M9 20h11M5.7 14.3l8.6-8.6a2 2 0 0 1 2.8 0l2.2 2.2a2 2 0 0 1 0 2.8L11 19H8.4zM9.5 10.5l5 5"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="M6.5 9.5L12 15l5.5-5.5"/></symbol>
+    <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14L4.5 9.5 9 5M4.5 9.5H14a5.5 5.5 0 0 1 0 11h-3"/></symbol>
+    <symbol id="i-redo" viewBox="0 0 24 24"><path d="M15 14l4.5-4.5L15 5M19.5 9.5H10a5.5 5.5 0 0 0 0 11h3"/></symbol>
+    <symbol id="i-mic" viewBox="0 0 24 24"><path d="M12 3.5a3 3 0 0 1 3 3V12a3 3 0 0 1-6 0V6.5a3 3 0 0 1 3-3zM5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v2.5"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 4v3M12 17v3M4 12h3M17 12h3M6.3 6.3l2.1 2.1M15.6 15.6l2.1 2.1M6.3 17.7l2.1-2.1M15.6 8.4l2.1-2.1"/></symbol>
+    <symbol id="i-min" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+    <symbol id="i-max" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></symbol>
+    <symbol id="i-fwd" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+    <symbol id="i-reload" viewBox="0 0 24 24"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3M19.5 4.5v4h-4"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="M4.5 12L20 4.5 16 20l-4-6.5zM12 13.5l8-9"/></symbol>
+    <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14A4 4 0 0 0 15.66 14L18.66 11A4 4 0 0 0 13 5.34L11.5 6.84M14 10A4 4 0 0 0 8.34 10L5.34 13A4 4 0 0 0 11 18.66L12.5 17.16"/></symbol>
+    <symbol id="i-gallery" viewBox="0 0 24 24"><path d="M5 4.5H10.5V10H5ZM13.5 4.5H19V10H13.5ZM5 13.5H10.5V19H5ZM13.5 13.5H19V19H13.5Z"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3.5 7A1.5 1.5 0 0 1 5 5.5H9L11 7.5H19A1.5 1.5 0 0 1 20.5 9V17.5A1.5 1.5 0 0 1 19 19H5A1.5 1.5 0 0 1 3.5 17.5Z"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4.5 7H19.5M9.5 7V4.5H14.5V7M6.5 7L7.5 19.5H16.5L17.5 7M10 11V16M14 11V16"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4.5V15M7.5 10.5L12 15L16.5 10.5M5 19.5H19"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><path d="M9 9.5A1.5 1.5 0 0 1 10.5 8h7A1.5 1.5 0 0 1 19 9.5v9a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 9 18.5zM15 8V5.5A1.5 1.5 0 0 0 13.5 4h-7A1.5 1.5 0 0 0 5 5.5v9A1.5 1.5 0 0 0 6.5 16H9"/></symbol>
+    <symbol id="i-camera" viewBox="0 0 24 24"><path d="M4.5 8.5A1.5 1.5 0 0 1 6 7h2l1.5-2h5L16 7h2a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 18 19H6a1.5 1.5 0 0 1-1.5-1.5zM12 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><path d="M7.5 11V8a4.5 4.5 0 0 1 9 0v3M6 11h12v9H6z"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-wifi" viewBox="0 0 24 24"><path d="M4 9.5a12 12 0 0 1 16 0M7 13a7.5 7.5 0 0 1 10 0M10 16.5a3 3 0 0 1 4 0"/></symbol>
+    <symbol id="i-win" viewBox="0 0 24 24"><path fill="currentColor" d="M3 3.5h8.25v8.25H3zM12.75 3.5H21v8.25h-8.25zM3 12.25h8.25v8.25H3zM12.75 12.25H21v8.25h-8.25z"/></symbol>
+    <symbol id="i-apple" viewBox="0 0 24 24"><path fill="currentColor" d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701"/></symbol>
+    <!-- the selected region as it lands in a chat -->
+    <symbol id="shot-form" viewBox="0 0 480 262">
+      <rect width="480" height="262" fill="#fff"/>
+      <text x="24" y="24" font-family="Inter, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#374151">Email</text>
+      <rect x="24.5" y="32.5" width="359" height="43" rx="8" fill="#fff" stroke="#2563eb" stroke-width="1.5"/>
+      <text x="39" y="59" font-family="Inter, Segoe UI, sans-serif" font-size="14" fill="#111827">olena.koval@example.com</text>
+      <text x="24" y="108" font-family="Inter, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#374151">Телефон</text>
+      <rect x="24.5" y="116.5" width="359" height="43" rx="8" fill="#fff" stroke="#d1d5db"/>
+      <text x="39" y="143" font-family="Inter, Segoe UI, sans-serif" font-size="14" fill="#111827">+380 67 123 45 67</text>
+      <rect x="24.5" y="192.5" width="111" height="43" rx="8" fill="#fff" stroke="#d1d5db"/>
+      <text x="80" y="219" text-anchor="middle" font-family="Inter, Segoe UI, sans-serif" font-size="14" font-weight="600" fill="#374151">Скасувати</text>
+      <rect x="148" y="192" width="112" height="44" rx="8" fill="#2563eb"/>
+      <text x="204" y="219" text-anchor="middle" font-family="Inter, Segoe UI, sans-serif" font-size="14" font-weight="600" fill="#fff">Зберегти</text>
+      <path d="M268 202C252 182 168 178 144 194C122 210 136 242 184 248C232 254 278 242 280 220C282 206 270 192 242 188" fill="none" stroke="#ef4444" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="shot-cart" viewBox="0 0 480 262">
+      <rect width="480" height="262" fill="#fff"/>
+      <text x="24" y="36" font-family="Inter, Segoe UI, sans-serif" font-size="17" font-weight="700" fill="#111827">Ваше замовлення</text>
+      <text x="24" y="76" font-family="Inter, Segoe UI, sans-serif" font-size="14" fill="#374151">Навушники Pulse × 2</text>
+      <text x="456" y="76" text-anchor="end" font-family="Inter, Segoe UI, sans-serif" font-size="14" fill="#374151">2 400 ₴</text>
+      <text x="24" y="110" font-family="Inter, Segoe UI, sans-serif" font-size="14" fill="#374151">Чохол × 1</text>
+      <text x="456" y="110" text-anchor="end" font-family="Inter, Segoe UI, sans-serif" font-size="14" fill="#374151">350 ₴</text>
+      <rect x="24" y="128" width="432" height="1" fill="#e5e7eb"/>
+      <text x="24" y="164" font-family="Inter, Segoe UI, sans-serif" font-size="15" font-weight="700" fill="#111827">Разом</text>
+      <text x="456" y="164" text-anchor="end" font-family="Inter, Segoe UI, sans-serif" font-size="15" font-weight="700" fill="#111827">2 400 ₴</text>
+      <rect x="14" y="140" width="452" height="36" rx="8" fill="none" stroke="#ef4444" stroke-width="3.5"/>
+      <rect x="24" y="204" width="150" height="40" rx="9" fill="#111827"/>
+      <text x="99" y="229" text-anchor="middle" font-family="Inter, Segoe UI, sans-serif" font-size="14" font-weight="600" fill="#fff">Оплатити</text>
+      <circle cx="458" cy="140" r="13" fill="#ef4444" stroke="#fff" stroke-width="2.5"/>
+      <text x="458" y="145" text-anchor="middle" font-family="Inter, Segoe UI, sans-serif" font-size="13" font-weight="700" fill="#fff">1</text>
+    </symbol>
+  </defs>
+</svg>
+
+<header class="top">
+  <div class="in">
+    <a class="brand" href="#top" aria-label="ScreenVoicer — на початок"><svg aria-hidden="true"><use href="#i-mark"/></svg><span class="word">Screen<span>Voicer</span></span></a>
+    <a class="btn btn-secondary" href="#get">Завантажити</a>
+  </div>
+</header>
+
+<main id="top">
+  <!-- ───────── hero: the toolbar, then the whole flow ───────── -->
+  <section class="hero" aria-labelledby="h1">
+    <div class="hero-pin" id="heroPin">
+      <div class="hero-copy" id="heroCopy">
+        <h1 id="h1">Скриншот. Голос. <span class="acc">Готово.</span></h1>
+        <p class="sub">Виділіть місце на екрані й скажіть, що не так. Картинка з вашими словами — вже в буфері обміну.</p>
+        <div class="cta" data-cta>
+          <a class="btn btn-primary" data-os="win" href="https://github.com/ArthurMospan/ScreenVoicer/releases/latest/download/ScreenVoicer-Setup.exe"><svg aria-hidden="true"><use href="#i-win"/></svg>Завантажити для Windows</a>
+          <a class="btn btn-secondary" data-os="mac" href="https://github.com/ArthurMospan/ScreenVoicer/releases/latest/download/ScreenVoicer-macOS.zip"><svg aria-hidden="true"><use href="#i-apple"/></svg>Завантажити для Mac</a>
+        </div>
+        <p class="meta"><span>Безкоштовно</span><span>Windows і Mac</span><span>Без акаунта</span></p>
+      </div>
+
+      <div class="hbox" id="hbox" role="img" aria-label="Анімація: панель ScreenVoicer опускається на затемнений робочий стіл, мишкою виділяється форма, кнопку «Зберегти» обводять червоним, сказане з’являється текстом, після Enter виринає сповіщення «Скопійовано в буфер обміну», а картинка з коментарем вставляється в чат.">
+        <div class="hclip" id="hclip">
+          <div class="stage" id="hero" style="width:1280px;height:800px" aria-hidden="true">
+            <div class="abs win">
+              <div class="wtop">
+                <div class="tab"><i class="fav"></i>Налаштування акаунта<svg class="ic" viewBox="0 0 24 24"><use href="#i-close"/></svg></div>
+                <div class="wctl"><span><svg class="ic" viewBox="0 0 24 24"><use href="#i-min"/></svg></span><span><svg class="ic" viewBox="0 0 24 24"><use href="#i-max"/></svg></span><span><svg class="ic" viewBox="0 0 24 24"><use href="#i-close"/></svg></span></div>
+              </div>
+              <div class="addr">
+                <svg class="ic" viewBox="0 0 24 24"><use href="#i-back"/></svg><svg class="ic" viewBox="0 0 24 24"><use href="#i-fwd"/></svg><svg class="ic" viewBox="0 0 24 24"><use href="#i-reload"/></svg>
+                <div class="url">app.example.com/settings/profile</div>
+              </div>
+              <div class="side">
+                <div class="sbrand"><i></i>Кабінет</div>
+                <div class="nv on">Профіль</div><div class="nv">Безпека</div><div class="nv">Сповіщення</div><div class="nv">Оплата</div><div class="nv">Команда</div>
+              </div>
+              <div class="abs mh">Профіль</div>
+              <div class="abs msub">Ці дані бачать ваші колеги.</div>
+              <div class="abs ava">ОК</div>
+              <div class="abs avn">Олена Коваль</div>
+              <div class="abs avl">Змінити фото</div>
+              <div class="abs lbl" style="top:272px">Ім’я</div>
+              <div class="abs inp" style="top:292px">Олена Коваль</div>
+              <div class="abs lbl" style="top:356px">Email</div>
+              <div class="abs inp focus" style="top:376px">olena.koval@example.com</div>
+              <div class="abs lbl" style="top:440px">Телефон</div>
+              <div class="abs inp" style="top:460px">+380 67 123 45 67</div>
+              <div class="abs wb ghost">Скасувати</div>
+              <div class="abs wb blue">Зберегти</div>
+              <div class="abs c2"><b>Двоетапний вхід</b><span>Код із застосунку під час входу з нового пристрою.</span><i class="swt"></i></div>
+            </div>
+            <div class="tbar" style="top:752px">
+              <div class="apps"><i style="--c:#3b82f6"></i><i style="--c:#9ca3af"></i><i style="--c:#d4a23a"></i><i class="cur" style="--c:#2563eb"></i><i style="--c:#6b7280"></i><i style="--c:#374151"></i></div>
+              <svg class="abs" viewBox="0 0 64 64" style="left:1170px;top:15px;width:18px;height:18px"><use href="#i-mark"/></svg>
+              <div class="clock" style="right:14px;top:9px">14:32<br>11.10.2026</div>
+            </div>
+            <div class="abs chat" id="h-chat" style="left:330px;top:120px">
+              <div class="chh"><div class="cav">КП</div><div><div class="chn">Команда продукту</div><div class="chs">5 учасників</div></div></div>
+              <div class="abs min"><b>Андрій</b>Хтось перевіряв профіль після релізу?</div>
+              <div class="abs mout" id="h-msg"><svg viewBox="0 0 480 262"><use href="#shot-form"/></svg><p>Кнопка «Зберегти» не реагує, якщо змінити email</p><small>14:33</small></div>
+              <div class="comp">Повідомлення…<svg class="ic" viewBox="0 0 24 24" style="width:18px;height:18px;margin-left:auto;color:#a8a8b4"><use href="#i-send"/></svg></div>
+            </div>
+            <svg class="cover" id="h-ov" width="1280" height="800" viewBox="0 0 1280 800">
+              <path class="dimp" fill="rgba(0,0,0,.55)" fill-rule="evenodd" d="M0 0H1280V800H0Z"/>
+              <g class="fr" fill="none"><rect stroke="rgba(0,0,0,.4)" stroke-width="3"/><rect stroke="#fff" stroke-width="1.25"/></g>
+              <g class="hd"></g>
+            </svg>
+            <svg class="cover" id="h-ink" width="1280" height="800" viewBox="0 0 1280 800" fill="none" stroke="#ef4444" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+              <path id="h-pen" d="M632 586C616 566 532 562 508 578C486 594 500 626 548 632C596 638 642 626 644 604C646 590 634 576 606 572"/>
+            </svg>
+            <div class="sizeb" id="h-size">0 × 0</div>
+            <div data-toast id="h-toast" style="left:580px;top:604px"></div>
+          </div>
+        </div>
+        <div class="stage htop" id="heroTop" style="width:1280px;height:800px" aria-hidden="true">
+          <div data-toolbar id="h-tb" style="top:16px"></div>
+          <div data-pill id="h-pill" style="left:640px;top:70px"></div>
+          <div class="keys" id="h-k1" style="left:640px;top:690px"><kbd>Enter</kbd></div>
+          <div class="keys" id="h-k2" style="left:640px;top:690px"><kbd>Ctrl</kbd>+<kbd>V</kbd></div>
+          <div class="ripple" id="h-rip"></div>
+          <div data-cursor id="h-cur"></div>
+        </div>
+      </div>
+
+      <div class="hsteps" id="hsteps" aria-hidden="true">
+        <span class="step">Виділіть<span class="track"><i></i></span></span>
+        <span class="step">Позначте<span class="track"><i></i></span></span>
+        <span class="step">Скажіть<span class="track"><i></i></span></span>
+        <span class="step">Enter<span class="track"><i></i></span></span>
+        <span class="step">Вставте<span class="track"><i></i></span></span>
+        <button class="replay" id="replay" type="button" aria-label="Показати ще раз"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-reload"/></svg></button>
+      </div>
+      <div class="hint" id="hint" aria-hidden="true">Гортайте<svg class="ic" viewBox="0 0 24 24"><use href="#i-chev"/></svg></div>
+    </div>
+  </section>
+
+  <!-- ───────── 01 capture ───────── -->
+  <section class="ch" aria-labelledby="t1">
+    <div class="ch-pin">
+      <div class="ch-copy">
+        <div class="kicker"><b>01</b>Знімок</div>
+        <h2 id="t1">Три клавіші — і знімок.</h2>
+        <p>Alt+Shift+S (на Mac ⌥⇧S) або клік по іконці біля годинника. Правий клік відкриває меню з таймером.</p>
+        <ul class="legend" data-legend="c1"><li>Alt+Shift+S</li><li>Клік по іконці</li><li>На Mac ⌥⇧S</li><li>Із затримкою</li></ul>
+      </div>
+      <div class="lens" role="img" aria-label="Великий план: Alt+Shift+S, клік по іконці ScreenVoicer у треї, на Mac ⌥⇧S, а правий клік відкриває скляне меню, де вибирають «Із затримкою — 3 с», і йде відлік 3, 2, 1.">
+        <div class="stage" id="c1" style="width:800px;height:500px" aria-hidden="true">
+          <div class="wall" style="background:#2b2d35"></div>
+          <div class="lwin" style="left:40px;top:36px;width:560px;height:384px"><b></b>
+            <i style="left:24px;top:56px;width:220px;height:20px;background:#cfd3da"></i>
+            <i style="left:24px;top:92px;width:380px;height:10px"></i><i style="left:24px;top:112px;width:330px;height:10px"></i><i style="left:24px;top:132px;width:360px;height:10px"></i>
+            <i style="left:24px;top:170px;width:240px;height:150px;border-radius:10px;background:#eef2f7"></i>
+            <i style="left:284px;top:170px;width:250px;height:150px;border-radius:10px;background:#eef2f7"></i>
+            <i style="left:24px;top:336px;width:120px;height:32px;border-radius:8px;background:#2563eb"></i>
+          </div>
+          <div class="tbar" style="top:452px">
+            <div class="apps"><i style="--c:#3b82f6"></i><i class="cur" style="--c:#9ca3af"></i><i style="--c:#d4a23a"></i><i style="--c:#6b7280"></i></div>
+            <svg class="ic abs" viewBox="0 0 24 24" style="left:640px;top:17px;width:14px;height:14px;color:#cbd5e1"><use href="#i-chev" transform="rotate(180 12 12)"/></svg>
+            <div class="clock" style="left:712px;top:9px">14:32<br>11.10.2026</div>
+          </div>
+          <svg class="abs" id="c1-ico" viewBox="0 0 64 64" style="left:668px;top:466px;width:20px;height:20px"><use href="#i-mark"/></svg>
+          <div class="dimall" id="c1-dim" style="opacity:0"></div>
+          <div class="caps" id="c1-mac" style="left:444px;top:262px"><span class="cap" style="width:84px">⌥</span><b>+</b><span class="cap" style="width:84px">⇧</span><b>+</b><span class="cap" style="width:66px">S</span></div>
+          <div class="caps" id="c1-hk" style="left:428px;top:262px"><span class="cap" style="width:84px">Alt</span><b>+</b><span class="cap" style="width:110px">Shift</span><b>+</b><span class="cap" style="width:66px">S</span></div>
+          <div class="menu" id="c1-menu" style="left:488px;top:168px;width:292px">
+            <div class="mh2"><svg class="mk" viewBox="0 0 64 64"><use href="#i-mark"/></svg><div><div class="mt">Screen<span>Voicer</span></div><div class="ms"><i></i>Готовий до роботи</div></div></div>
+            <div class="mcap"><svg class="ic" viewBox="0 0 24 24"><use href="#i-camera"/></svg>Зробити знімок<span class="hk">Alt+Shift+S</span></div>
+            <div class="mdel"><svg class="ic" viewBox="0 0 24 24"><use href="#i-timer"/></svg>Із затримкою<span class="chip" id="c1-d3">3 с</span><span class="chip">5 с</span><span class="chip">10 с</span></div>
+            <i class="msep"></i>
+            <div class="mrow"><svg class="ic" viewBox="0 0 24 24"><use href="#i-gallery"/></svg>Галерея<span class="mv">12</span></div>
+            <div class="mrow"><svg class="ic" viewBox="0 0 24 24"><use href="#i-folder"/></svg>Папка зі скриншотами</div>
+            <i class="msep"></i>
+            <div class="mrow"><svg class="ic" viewBox="0 0 24 24"><use href="#i-mic"/></svg>Мова голосу<span class="seg2"><b class="on">УКР</b><b>ENG</b><b>Авто</b></span></div>
+          </div>
+          <div class="count glass" id="c1-cnt" style="left:540px;top:230px"><svg viewBox="0 0 108 108"><circle cx="54" cy="54" r="51" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="3"/><circle class="ring" cx="54" cy="54" r="51" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-dasharray="320.4" stroke-dashoffset="0"/></svg><span>3</span></div>
+          <div class="ripple" id="c1-rip"></div>
+          <div data-cursor id="c1-cur"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───────── 02 region + handles ───────── -->
+  <section class="ch flip" aria-labelledby="t2">
+    <div class="ch-pin">
+      <div class="ch-copy">
+        <div class="kicker"><b>02</b>Область</div>
+        <h2 id="t2">Виділіть. Підправте за край.</h2>
+        <p>Потягніть рамку, потім — будь-який із восьми квадратиків, щоб змінити розмір. Або одразу «Весь екран».</p>
+      </div>
+      <div class="lens" role="img" aria-label="Великий план: навколо виділеної області вісім білих квадратиків; за правий і нижній рамку розтягують, розмір змінюється до 1200 × 640, а кнопка «Весь екран» виділяє весь екран.">
+        <div class="stage" id="c2" style="width:760px;height:500px" aria-hidden="true">
+          <div class="page-l" style="background:#f3f4f6">
+            <i style="left:0;top:0;width:760px;height:52px;border-radius:0;background:#fff"></i>
+            <i style="left:40px;top:17px;width:100px;height:18px;background:#c4c9d1"></i>
+            <i style="left:470px;top:20px;width:60px;height:12px;background:#d1d5db"></i>
+            <i style="left:550px;top:20px;width:60px;height:12px;background:#d1d5db"></i>
+            <i style="left:630px;top:20px;width:60px;height:12px;background:#d1d5db"></i>
+          </div>
+          <div class="dash">
+            <div class="dt">Продажі за жовтень</div>
+            <div class="dv2">248 400 ₴</div>
+            <div class="dd">+12% за місяць</div>
+            <div class="bars"><i style="height:38%"></i><i style="height:52%"></i><i style="height:45%"></i><i style="height:61%"></i><i style="height:57%"></i><i style="height:70%"></i><i style="height:64%"></i><i style="height:78%"></i><i style="height:72%"></i><i style="height:86%"></i><i style="height:81%"></i><i class="hi" style="height:96%"></i></div>
+          </div>
+          <svg class="cover" id="c2-ov" width="760" height="500" viewBox="0 0 760 500">
+            <path class="dimp" fill="rgba(0,0,0,.55)" fill-rule="evenodd" d="M0 0H760V500H0Z"/>
+            <g class="fr" fill="none"><rect stroke="rgba(0,0,0,.4)" stroke-width="3"/><rect stroke="#fff" stroke-width="1.25"/></g>
+            <g class="hd"></g>
+          </svg>
+          <div class="tb glass" id="c2-tbm" style="left:324px;top:14px"><span class="b on" id="c2-reg"><svg class="ic" viewBox="0 0 24 24"><use href="#i-region"/></svg></span><span class="b" id="c2-scr"><svg class="ic" viewBox="0 0 24 24"><use href="#i-screen"/></svg></span><span class="b"><svg class="ic" viewBox="0 0 24 24"><use href="#i-timer"/></svg></span></div>
+          <div class="tip" id="c2-tip" style="left:380px;top:64px">Весь екран</div>
+          <div class="sizeb" id="c2-size">0 × 0</div>
+          <div class="ripple" id="c2-rip"></div>
+          <div data-cursor id="c2-cur"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───────── 03 tools + markers ───────── -->
+  <section class="ch" aria-labelledby="t3">
+    <div class="ch-pin">
+      <div class="ch-copy">
+        <div class="kicker"><b>03</b>Позначки</div>
+        <h2 id="t3">Покажіть, де саме.</h2>
+        <p>Рамка, маркер, стрілка, підпис і мітки 1-2-3. Шість кольорів, три товщини, крок назад і вперед.</p>
+      </div>
+      <div class="lens" role="img" aria-label="Великий план: на кошику з’являються рамка навколо суми, мітки 1, 2 і 3, виділення маркером, червоний підпис «має бути 2 750 ₴» і стрілка; мітку 3 прибирають кнопкою «назад» і повертають кнопкою «вперед».">
+        <div class="stage" id="c3" style="width:640px;height:460px" aria-hidden="true">
+          <div class="page-l" style="background:#f3f4f6">
+            <i style="left:0;top:0;width:640px;height:56px;border-radius:0;background:#fff"></i>
+            <i style="left:28px;top:18px;width:96px;height:20px;background:#b9bec7"></i>
+          </div>
+          <div class="order">
+            <div class="oh">Ваше замовлення</div>
+            <div class="or" style="top:58px"><span>Навушники Pulse × 2</span><span>2 400 ₴</span></div>
+            <div class="or" style="top:94px"><span>Чохол × 1</span><span>350 ₴</span></div>
+            <div class="or" style="top:130px"><span>Доставка</span><span>0 ₴</span></div>
+            <div class="ohr"></div>
+            <div class="or tot" style="top:178px"><span>Разом</span><span>2 400 ₴</span></div>
+            <div class="pay">Оплатити</div>
+          </div>
+          <svg class="cover" width="640" height="460" viewBox="0 0 640 460"><path fill="rgba(0,0,0,.55)" fill-rule="evenodd" d="M0 0H640V460H0ZM36 112V444H604V112Z"/><rect x="36" y="112" width="568" height="332" fill="none" stroke="rgba(0,0,0,.4)" stroke-width="3"/><rect x="36" y="112" width="568" height="332" fill="none" stroke="#fff" stroke-width="1.25"/></svg>
+          <svg class="cover" width="640" height="460" viewBox="0 0 640 460" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path id="c3-hl" d="M78 229H78" stroke="#facc15" stroke-opacity=".45" stroke-width="24" stroke-linecap="butt"/>
+            <rect id="c3-rect" x="68" y="296" width="0" height="0" rx="8" stroke="#ef4444" stroke-width="3.5"/>
+            <path id="c3-arw" d="" stroke="#ef4444" stroke-width="3.5"/>
+            <g id="c3-tag"><rect x="300" y="371" width="40" height="30" rx="8" fill="#ef4444" stroke="none"/><text x="312" y="391" fill="#fff" stroke="none" font-family="Inter, Segoe UI, sans-serif" font-size="15" font-weight="700"></text></g>
+            <g id="c3-m1" style="transform-origin:590px 296px"><circle cx="590" cy="296" r="13" fill="#ef4444" stroke="#fff" stroke-width="2.5"/><text x="590" y="301" text-anchor="middle" fill="#fff" stroke="none" font-family="Inter, Segoe UI, sans-serif" font-size="14" font-weight="700">1</text></g>
+            <g id="c3-m2" style="transform-origin:590px 229px"><circle cx="590" cy="229" r="13" fill="#ef4444" stroke="#fff" stroke-width="2.5"/><text x="590" y="234" text-anchor="middle" fill="#fff" stroke="none" font-family="Inter, Segoe UI, sans-serif" font-size="14" font-weight="700">2</text></g>
+            <g id="c3-m3" style="transform-origin:246px 350px"><circle cx="246" cy="350" r="13" fill="#ef4444" stroke="#fff" stroke-width="2.5"/><text x="246" y="355" text-anchor="middle" fill="#fff" stroke="none" font-family="Inter, Segoe UI, sans-serif" font-size="14" font-weight="700">3</text></g>
+          </svg>
+          <div class="flyout glass" id="c3-fly" data-flyout style="left:180px;top:12px"></div>
+          <div class="flyout glass" style="left:143px;top:60px">
+            <span class="sw on"><i style="background:#ef4444"></i></span><span class="sw"><i style="background:#facc15"></i></span><span class="sw"><i style="background:#22c55e"></i></span><span class="sw"><i style="background:#3b82f6"></i></span><span class="sw"><i style="background:#18181b"></i></span><span class="sw"><i style="background:#fff"></i></span>
+            <span class="dv"></span>
+            <span class="sz"><i style="width:6px;height:6px"></i></span><span class="sz on"><i style="width:9px;height:9px"></i></span><span class="sz"><i style="width:12px;height:12px"></i></span>
+            <span class="dv"></span>
+            <span class="b" id="c3-undo"><svg class="ic" viewBox="0 0 24 24"><use href="#i-undo"/></svg></span><span class="b" id="c3-redo"><svg class="ic" viewBox="0 0 24 24"><use href="#i-redo"/></svg></span>
+          </div>
+          <div class="ripple" id="c3-rip"></div>
+          <div data-cursor id="c3-cur"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───────── 04 hide ───────── -->
+  <section class="ch flip" aria-labelledby="t4">
+    <div class="ch-pin">
+      <div class="ch-copy">
+        <div class="kicker"><b>04</b>Приховати</div>
+        <h2 id="t4">Пошту й паролі — під пікселі.</h2>
+        <p>Інструмент «Приховати» (клавіша B): обведіть пошту, пароль чи обличчя — і там лишаться великі квадрати.</p>
+      </div>
+      <div class="lens" role="img" aria-label="Великий план: натиснуто B, вибрано інструмент «Приховати», мишкою обводять адресу пошти, а потім номер телефону — і вони перетворюються на великі сірі квадрати.">
+        <div class="stage" id="c4" style="width:600px;height:420px" aria-hidden="true">
+          <div class="page-l" style="background:#eef0f3">
+            <i style="left:0;top:0;width:600px;height:52px;border-radius:0;background:#fff"></i>
+            <i style="left:28px;top:17px;width:90px;height:18px;background:#c4c9d1"></i>
+          </div>
+          <div class="prof">
+            <div class="pav">ОК</div>
+            <div class="pn">Олена Коваль</div>
+            <div class="pr">Менеджерка проєктів</div>
+            <div class="pl" style="top:102px">Email</div>
+            <div class="pi" style="top:120px">olena.koval@example.com</div>
+            <div class="pl" style="top:178px">Телефон</div>
+            <div class="pi" style="top:196px">+380 67 123 45 67</div>
+          </div>
+          <svg class="cover" width="600" height="420" viewBox="0 0 600 420"><path fill="rgba(0,0,0,.55)" fill-rule="evenodd" d="M0 0H600V420H0ZM24 88V410H576V88Z"/><rect x="24" y="88" width="552" height="322" fill="none" stroke="rgba(0,0,0,.4)" stroke-width="3"/><rect x="24" y="88" width="552" height="322" fill="none" stroke="#fff" stroke-width="1.25"/></svg>
+          <div class="px" id="c4-px1" style="left:76px;top:227px"></div>
+          <div class="px" id="c4-px2" style="left:76px;top:303px"></div>
+          <svg class="cover" width="600" height="420" viewBox="0 0 600 420"><rect id="c4-drag" fill="none" stroke="#fff" stroke-width="1.5" stroke-dasharray="5 4" style="opacity:0"/></svg>
+          <div class="flyout glass" id="c4-fly" data-flyout style="left:160px;top:16px"></div>
+          <div class="tip" id="c4-tip" style="left:398px;top:66px">Приховати (B)</div>
+          <div class="cap" id="c4-b" style="left:470px;top:12px;width:52px;height:48px;font-size:20px">B</div>
+          <div class="ripple" id="c4-rip"></div>
+          <div data-cursor id="c4-cur"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───────── 05 voice ───────── -->
+  <section class="ch" aria-labelledby="t5">
+    <div class="ch-pin">
+      <div class="ch-copy">
+        <div class="kicker"><b>05</b>Голос</div>
+        <h2 id="t5">Говоріть. Текст з’являється одразу.</h2>
+        <p>Затисніть Пробіл і скажіть, що не так. Розпізнається на вашому комп’ютері, офлайн — нікуди не надсилається.</p>
+        <ul class="legend" data-legend="c5"><li>Українська</li><li>English</li></ul>
+      </div>
+      <div class="lens" role="img" aria-label="Великий план: поки затиснуто Пробіл, мікрофон червоний, а сказане з’являється текстом у полі коментаря — спершу українською, потім англійською.">
+        <div class="stage" id="c5" style="width:600px;height:360px" aria-hidden="true">
+          <div class="page-l" style="background:#202127">
+            <i style="left:0;top:0;width:600px;height:30px;border-radius:0;background:#2a2b32"></i>
+            <i style="left:24px;top:150px;width:180px;height:16px;background:#4a4c55"></i>
+            <i style="left:24px;top:178px;width:240px;height:8px;background:#383a42"></i>
+            <i style="left:330px;top:150px;width:240px;height:150px;border-radius:12px;background:#30323a"></i>
+          </div>
+          <div class="dimall"></div>
+          <div data-toolbar id="c5-tb" style="left:-206px;top:70px"></div>
+          <div data-pill id="c5-pill" style="left:84px;top:124px"></div>
+          <div class="cap" id="c5-sp" style="left:130px;top:222px;width:300px;height:64px;font-size:17px;opacity:1">Пробіл</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───────── 06 Enter → clipboard → chat / AI ───────── -->
+  <section class="ch flip" aria-labelledby="t6">
+    <div class="ch-pin">
+      <div class="ch-copy">
+        <div class="kicker"><b>06</b>Буфер обміну</div>
+        <h2 id="t6">Enter — і вставляйте куди треба.</h2>
+        <p>Картинка з коментарем уже в буфері обміну. Ctrl+V — у чат, задачу або AI-асистента: ChatGPT, Claude, Cursor.</p>
+        <ul class="legend" data-legend="c6"><li>Enter</li><li>Скопійовано</li><li>Ctrl+V</li></ul>
+      </div>
+      <div class="lens" role="img" aria-label="Великий план: натиснуто Enter, панель зникає, виринає «Скопійовано в буфер обміну» з кнопками «Копіювати», «Галерея», «Посилання»; після Ctrl+V картинка з коментарем потрапляє в поле AI-асистента й надсилається.">
+        <div class="stage" id="c6" style="width:720px;height:460px" aria-hidden="true">
+          <div class="ai">
+            <div class="aside"><div class="anew"><svg class="ic" viewBox="0 0 24 24"><use href="#i-plus"/></svg>Нова розмова</div><i style="top:72px;width:110px"></i><i style="top:96px;width:90px"></i><i style="top:120px;width:120px"></i><i style="top:144px;width:80px"></i></div>
+            <div class="ahd"><svg class="ic" viewBox="0 0 24 24"><use href="#i-spark"/></svg>AI-асистент</div>
+            <div class="aq">Допоможи знайти баг у формі профілю</div>
+            <div class="aa"><i style="top:118px;width:300px"></i><i style="top:136px;width:260px"></i><i style="top:154px;width:200px"></i></div>
+            <div class="sent" id="c6-sent"><svg viewBox="0 0 480 262" preserveAspectRatio="xMidYMid slice"><use href="#shot-form"/></svg><p>Кнопка «Зберегти» не реагує, якщо змінити email</p></div>
+            <div class="dots" id="c6-dots"><i></i><i></i><i></i></div>
+            <div class="reply" id="c6-reply"><svg class="ic" viewBox="0 0 24 24"><use href="#i-spark"/></svg>Бачу: після зміни email кнопка неактивна. Перевірмо, чи форма помічає нове значення поля.</div>
+            <div class="comp2" id="c6-comp" style="height:56px">
+              <span class="cph" id="c6-ph">Напишіть повідомлення…</span>
+              <div class="catt" id="c6-att"><svg viewBox="0 0 480 262" preserveAspectRatio="xMidYMid slice"><use href="#shot-form"/></svg></div>
+              <span class="ctx" id="c6-ctx">Кнопка «Зберегти» не реагує, якщо змінити email</span>
+              <span class="csend" id="c6-send"><svg class="ic" viewBox="0 0 24 24"><use href="#i-up"/></svg></span>
+            </div>
+          </div>
+          <div class="dimall" id="c6-dim"></div>
+          <div data-toolbar id="c6-tb" style="left:16px;top:20px"></div>
+          <div class="cap" id="c6-ent" style="left:540px;top:104px;width:120px;height:62px;font-size:18px">Enter</div>
+          <div data-toast id="c6-toast" style="left:330px;top:232px"></div>
+          <div class="keys" id="c6-cv" style="left:250px;top:300px"><kbd>Ctrl</kbd>+<kbd>V</kbd></div>
+          <div class="keys" id="c6-en" style="left:250px;top:300px"><kbd>Enter</kbd></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───────── 07 comment inside the PNG ───────── -->
+  <section class="ch" aria-labelledby="t7">
+    <div class="ch-pin">
+      <div class="ch-copy">
+        <div class="kicker"><b>07</b>Файл</div>
+        <h2 id="t7">Коментар живе всередині картинки.</h2>
+        <p>Він записаний у сам PNG. Перешліть або перенесіть файл — опис поїде разом із ним.</p>
+      </div>
+      <div class="lens" role="img" aria-label="Великий план: файл PNG розкладається на два шари — картинку й коментар усередині; потім файл перетягують у задачу, і під картинкою з’являється той самий коментар.">
+        <div class="stage" id="c7" style="width:760px;height:460px" aria-hidden="true">
+          <div class="wall" style="background:#25262d"></div>
+          <div class="fwin" style="left:24px;top:32px;width:340px;height:396px">
+            <div class="fh"><svg class="ic" viewBox="0 0 24 24"><use href="#i-folder"/></svg>Знімки</div>
+            <div class="tile" id="c7-t1" style="left:20px;top:56px"><div class="th"></div><div class="tn">screenshot_20261011_143207.png</div></div>
+            <div class="tile" style="left:180px;top:56px"><div class="th"><svg viewBox="0 0 480 262" preserveAspectRatio="xMidYMid slice"><use href="#shot-cart"/></svg></div><div class="tn">screenshot_20261011_130512.png</div></div>
+            <div class="tile" style="left:20px;top:218px"><div class="th" style="background:#e8edf5"></div><div class="tn">screenshot_20261010_184133.png</div></div>
+            <div class="tile" style="left:180px;top:218px"><div class="th" style="background:#eef0f3"></div><div class="tn">screenshot_20261010_161204.png</div></div>
+          </div>
+          <div class="fwin" style="left:396px;top:32px;width:340px;height:396px">
+            <div class="fh"><svg class="ic" viewBox="0 0 24 24"><use href="#i-check"/></svg>Задача #142</div>
+            <div class="abs" style="left:20px;top:56px;font-size:15px;font-weight:700">Профіль: не зберігається email</div>
+            <i class="abs" style="left:20px;top:92px;width:290px;height:9px;border-radius:5px;background:#e5e7eb"></i>
+            <i class="abs" style="left:20px;top:110px;width:250px;height:9px;border-radius:5px;background:#e5e7eb"></i>
+            <i class="abs" style="left:20px;top:128px;width:270px;height:9px;border-radius:5px;background:#e5e7eb"></i>
+            <div class="abs" style="left:20px;top:182px;font-size:12.5px;font-weight:600;color:#374151">Вкладення</div>
+            <div class="drop" id="c7-drop" style="left:20px;top:206px;width:300px;height:170px">Перетягніть файл сюди</div>
+          </div>
+          <div class="att" id="c7-att" style="left:428px;top:248px"><div class="ath"><svg viewBox="0 0 480 262" preserveAspectRatio="xMidYMid slice"><use href="#shot-form"/></svg></div><p id="c7-cap">Кнопка «Зберегти» не реагує, якщо змінити email</p></div>
+          <div class="png3 flat" id="c7-png" style="left:44px;top:88px">
+            <div class="pl-txt" id="c7-ptxt"><b>КОМЕНТАР</b>Кнопка «Зберегти» не реагує, якщо змінити email</div>
+            <div class="pl-img" id="c7-pimg"><svg viewBox="0 0 480 262" preserveAspectRatio="xMidYMid slice"><use href="#shot-form"/></svg></div>
+          </div>
+          <div class="ghost" id="c7-ghost"><svg viewBox="0 0 480 262" preserveAspectRatio="xMidYMid slice"><use href="#shot-form"/></svg></div>
+          <div class="ripple" id="c7-rip"></div>
+          <div data-cursor id="c7-cur"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───────── 08 gallery ───────── -->
+  <section class="ch flip" aria-labelledby="t8">
+    <div class="ch-pin">
+      <div class="ch-copy">
+        <div class="kicker"><b>08</b>Галерея</div>
+        <h2 id="t8">Усі знімки — в галереї.</h2>
+        <p>Шукайте за словами з коментаря або за датою. Скопіюйте ще раз, відкрийте папку, видаліть. Позначте кілька — і створіть одне посилання.</p>
+      </div>
+      <div class="lens" role="img" aria-label="Великий план галереї: картки з картинкою й підписом-коментарем, пошук «кнопка» лишає дві картки, дві картки позначають, і внизу з’являється «Вибрано: 2 знімки · Створити посилання · Зняти вибір».">
+        <div class="stage" id="c8" style="width:760px;height:560px" aria-hidden="true">
+          <div class="gal">
+            <div class="gh">
+              <svg class="glogo" viewBox="0 0 64 64"><use href="#i-mark"/></svg>
+              <div class="gtit">Screen<span>Voicer</span></div>
+              <div class="gsub">12 знімків</div>
+              <div class="gq" id="c8-q"><svg class="ic" viewBox="0 0 24 24"><use href="#i-search"/></svg><span class="qp" id="c8-qp">Пошук за коментарем або датою</span><span class="qt" id="c8-qt"></span><i class="qc" id="c8-qc" style="opacity:0"></i></div>
+              <div class="gbtn" style="left:540px"><svg class="ic" viewBox="0 0 24 24"><use href="#i-folder"/></svg>Папка</div>
+              <div class="gbtn new" style="left:628px"><svg class="ic" viewBox="0 0 24 24"><use href="#i-camera"/></svg>Знімок</div>
+            </div>
+            <div id="c8-cards"></div>
+            <div class="gbar glass" id="c8-bar"><span class="bt" id="c8-bt">Вибрано: 2 знімки</span><span class="bb bp" id="c8-mk"><svg class="ic" viewBox="0 0 24 24"><use href="#i-link"/></svg><span>Створити посилання</span></span><span class="bb bg" id="c8-un">Зняти вибір</span></div>
+          </div>
+          <div class="ripple" id="c8-rip"></div>
+          <div data-cursor id="c8-cur"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───────── 09 share link ───────── -->
+  <section class="ch" aria-labelledby="t9">
+    <div class="ch-pin">
+      <div class="ch-copy">
+        <div class="kicker"><b>09</b>Посилання</div>
+        <h2 id="t9">Одне посилання на кілька знімків.</h2>
+        <p>Знімки великі, коментарі під ними, кроки 1, 2, 3. У Telegram, WhatsApp і Slack видно картку з прев’ю. Живе 30 днів, видалити можна будь-коли.</p>
+      </div>
+      <div class="lens" role="img" aria-label="Великий план: у месенджері посилання розгортається в картку з картинкою й коментарем; після кліку відкривається темна сторінка зі знімками-кроками 1 і 2, коментарями під ними та кнопками «Копіювати для AI», «Завантажити все», «Копіювати», «Завантажити».">
+        <div class="stage" id="c9" style="width:840px;height:540px" aria-hidden="true">
+          <div class="wall" style="background:#1b1c21"></div>
+          <div class="msg" style="left:16px;top:24px;width:320px;height:492px">
+            <div class="mhd"><div class="cav">ОТ</div><div><div class="chn" style="font-size:14px">Олег Ткач</div><div class="chs" style="font-size:11.5px">у мережі</div></div></div>
+            <div class="bin">Що там із профілем?</div>
+            <div class="bout" id="c9-out">
+              <div class="lk">screenvoicer.masspain.workers.dev/s/7Kq2xM</div>
+              <div class="prev" id="c9-prev"><div class="ps">ScreenVoicer</div><div class="pt2">2 скриншоти з коментарями</div><div class="pd">Кнопка «Зберегти» не реагує, якщо змінити email</div><svg viewBox="0 0 480 262" preserveAspectRatio="xMidYMid slice"><use href="#shot-form"/></svg></div>
+              <div class="btime">14:36</div>
+            </div>
+            <div class="mcomp">Повідомлення…</div>
+          </div>
+          <div class="brw" style="left:356px;top:24px;width:468px;height:492px">
+            <div class="bt2"><div class="tb2"><svg viewBox="0 0 64 64"><use href="#i-mark"/></svg>2 скриншоти з коментарями</div></div>
+            <div class="ad"><div class="url"><svg class="ic" viewBox="0 0 24 24"><use href="#i-lock"/></svg>screenvoicer.masspain.workers.dev/s/7Kq2xM</div></div>
+            <div class="pg"><div class="pgs" id="c9-page">
+              <div class="sp-h"><svg viewBox="0 0 64 64"><use href="#i-mark"/></svg><span>Screen<span>Voicer</span></span><span style="margin-left:auto"></span><span class="sp-b pr" id="c9-ai"><svg class="ic" viewBox="0 0 24 24"><use href="#i-copy"/></svg><span>Копіювати для AI</span></span><span class="sp-b"><svg class="ic" viewBox="0 0 24 24"><use href="#i-download"/></svg>Завантажити все</span></div>
+              <div class="sp-t">2 скриншоти з коментарями</div>
+              <div class="sp-m">Посилання діє 30 днів · його можна видалити будь-коли</div>
+              <div class="sp-st" style="top:112px"><span class="disc">1</span><div class="im"><svg viewBox="0 0 480 262" preserveAspectRatio="xMidYMid slice"><use href="#shot-form"/></svg></div><div class="cp">Кнопка «Зберегти» не реагує, якщо змінити email</div><div class="sb"><span class="sp-b"><svg class="ic" viewBox="0 0 24 24"><use href="#i-copy"/></svg>Копіювати</span><span class="sp-b"><svg class="ic" viewBox="0 0 24 24"><use href="#i-download"/></svg>Завантажити</span></div></div>
+              <div class="sp-st" style="top:478px"><span class="disc">2</span><div class="im"><svg viewBox="0 0 480 262" preserveAspectRatio="xMidYMid slice"><use href="#shot-cart"/></svg></div><div class="cp">Сума не враховує знижку на чохол</div><div class="sb"><span class="sp-b"><svg class="ic" viewBox="0 0 24 24"><use href="#i-copy"/></svg>Копіювати</span><span class="sp-b" id="c9-dl"><svg class="ic" viewBox="0 0 24 24"><use href="#i-download"/></svg>Завантажити</span></div></div>
+            </div></div>
+          </div>
+          <div class="ripple" id="c9-rip"></div>
+          <div data-cursor id="c9-cur"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───────── 10 self-update ───────── -->
+  <section class="ch flip" aria-labelledby="t10">
+    <div class="ch-pin">
+      <div class="ch-copy">
+        <div class="kicker"><b>10</b>Оновлення</div>
+        <h2 id="t10">Оновлюється в один клік.</h2>
+        <p>Вийшла нова версія — з’явиться сповіщення. Натисніть «Оновити»: програма встановиться й перезапуститься сама.</p>
+      </div>
+      <div class="lens" role="img" aria-label="Великий план: сповіщення «Доступна версія 1.12.0» з кнопкою «Оновити»; після кліку йде завантаження, програма перезапускається, і підказка біля іконки показує «ScreenVoicer 1.12.0».">
+        <div class="stage" id="c10" style="width:640px;height:420px" aria-hidden="true">
+          <div class="wall" style="background:#2b2d35"></div>
+          <div class="lwin" style="left:36px;top:30px;width:430px;height:300px"><b></b>
+            <i style="left:22px;top:52px;width:200px;height:18px;background:#cfd3da"></i>
+            <i style="left:22px;top:86px;width:360px;height:10px"></i><i style="left:22px;top:106px;width:320px;height:10px"></i>
+            <i style="left:22px;top:140px;width:386px;height:130px;border-radius:10px;background:#eef2f7"></i>
+          </div>
+          <div class="tbar" style="top:372px">
+            <div class="apps" style="left:40%"><i style="--c:#3b82f6"></i><i class="cur" style="--c:#9ca3af"></i><i style="--c:#d4a23a"></i></div>
+            <svg class="ic abs" viewBox="0 0 24 24" style="left:508px;top:17px;width:14px;height:14px;color:#cbd5e1"><use href="#i-chev" transform="rotate(180 12 12)"/></svg>
+            <div class="clock" style="left:566px;top:9px">14:40<br>11.10.2026</div>
+          </div>
+          <svg class="abs" id="c10-ico" viewBox="0 0 64 64" style="left:536px;top:386px;width:20px;height:20px"><use href="#i-mark"/></svg>
+          <div class="tip" id="c10-tip" style="left:546px;top:340px">ScreenVoicer 1.12.0</div>
+          <div class="toast upd" id="c10-toast" style="left:248px;top:200px">
+            <div class="tr"><div class="tbadge"><svg class="ic" viewBox="0 0 24 24"><use href="#i-spark"/></svg></div><div class="tt"><div class="t1" id="c10-t1">Доступна версія 1.12.0</div><div class="t2">Нова версія ScreenVoicer готова до встановлення.</div></div><div class="tx"><svg class="ic" viewBox="0 0 24 24"><use href="#i-close"/></svg></div></div>
+            <div class="ta"><span class="tbtn tg" id="c10-btn">Оновити</span></div>
+            <div class="prog" id="c10-prog"><i></i></div>
+          </div>
+          <div class="ripple" id="c10-rip"></div>
+          <div data-cursor id="c10-cur"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───────── 11 Windows + Mac ───────── -->
+  <section class="ch" aria-labelledby="t11">
+    <div class="ch-pin">
+      <div class="ch-copy">
+        <div class="kicker"><b>11</b>Windows і Mac</div>
+        <h2 id="t11">Windows і Mac. Однаково.</h2>
+        <p>Той самий вигляд, ті самі кроки. Клавіші ті самі: Alt — це ⌥, Ctrl — це ⌘.</p>
+      </div>
+      <div class="lens" role="img" aria-label="Поруч Windows і Mac: однакова панель, однакові кроки; на Windows натискають Alt+Shift+S і Ctrl+V, на Mac — ⌥⇧S і ⌘V.">
+        <div class="stage" id="c11" aria-hidden="true">
+          <div class="os win" data-os="win">
+            <div class="wall" style="background:#30344a"></div>
+            <div class="lwin" style="left:28px;top:56px;width:384px;height:300px"><b></b><i style="left:20px;top:48px;width:170px;height:16px;background:#cfd3da"></i><i style="left:20px;top:80px;width:300px;height:9px"></i><i style="left:20px;top:98px;width:260px;height:9px"></i><i style="left:20px;top:128px;width:344px;height:140px;border-radius:10px;background:#eef2f7"></i></div>
+            <div class="tbar" style="top:412px"><div class="apps"><i class="cur" style="--c:#3b82f6"></i><i style="--c:#9ca3af"></i><i style="--c:#d4a23a"></i></div><svg class="abs" viewBox="0 0 64 64" style="left:330px;top:15px;width:18px;height:18px"><use href="#i-mark"/></svg><div class="clock" style="right:12px;top:9px">14:32<br>11.10.2026</div></div>
+          </div>
+          <div class="os mac" data-os="mac">
+            <div class="wall" style="background:#3b3f52"></div>
+            <div class="lwin" style="left:28px;top:70px;width:384px;height:300px"><b></b><i style="left:20px;top:48px;width:170px;height:16px;background:#cfd3da"></i><i style="left:20px;top:80px;width:300px;height:9px"></i><i style="left:20px;top:98px;width:260px;height:9px"></i><i style="left:20px;top:128px;width:344px;height:140px;border-radius:10px;background:#eef2f7"></i></div>
+            <div class="mbar"><svg viewBox="0 0 24 24"><use href="#i-apple"/></svg><b style="font-weight:700">Finder</b><span>Файл</span><span>Правка</span><span class="r"><svg viewBox="0 0 64 64"><use href="#i-mark"/></svg><svg class="ic" viewBox="0 0 24 24"><use href="#i-wifi"/></svg>Сб 14:32</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───────── final call ───────── -->
+  <section class="final" id="get" aria-labelledby="tf">
+    <div class="final-grid">
+      <div>
+        <h2 id="tf">Спробуйте на своєму екрані.</h2>
+        <p class="lead">Безкоштовно й без акаунта. «Встановити» → «Готово» — і перший знімок за 10 секунд.</p>
+        <div class="cta" data-cta>
+          <a class="btn btn-primary" data-os="win" href="https://github.com/ArthurMospan/ScreenVoicer/releases/latest/download/ScreenVoicer-Setup.exe"><svg aria-hidden="true"><use href="#i-win"/></svg>Завантажити для Windows</a>
+          <a class="btn btn-secondary" data-os="mac" href="https://github.com/ArthurMospan/ScreenVoicer/releases/latest/download/ScreenVoicer-macOS.zip"><svg aria-hidden="true"><use href="#i-apple"/></svg>Завантажити для Mac</a>
+        </div>
+        <p class="meta"><span>Безкоштовно</span><span>Windows 10/11</span><span>macOS 14+</span><span>Без акаунта</span></p>
+        <p class="note">Якщо Windows попередить про невідомого видавця, натисніть «Докладніше» → «Однаково запустити». На Mac перший запуск дозвольте в Системних параметрах → Приватність і безпека → «Все одно відкрити».</p>
+      </div>
+      <div class="lens mini" role="img" aria-label="Великий план інсталятора: натискають «Встановити», смужка заповнюється, і з’являється кнопка «Готово».">
+        <div class="stage" id="c12" style="width:520px;height:330px" aria-hidden="true">
+          <div class="wall" style="background:#1f2026"></div>
+          <div class="inst glass" id="c12-win">
+            <div class="ih"><svg viewBox="0 0 64 64"><use href="#i-mark"/></svg><div><div class="it">Screen<span>Voicer</span></div><div class="is">Встановлення</div></div></div>
+            <div class="ix" id="c12-tx">Скриншот із голосовим коментарем. Безкоштовно, без акаунта.</div>
+            <div class="ipr"><i id="c12-bar"></i></div>
+            <div class="ick"><i><svg class="ic" viewBox="0 0 24 24"><use href="#i-check"/></svg></i>Запустити ScreenVoicer</div>
+            <div class="ib"><span class="ibt" id="c12-cancel">Скасувати</span><span class="ibt pr" id="c12-go">Встановити</span></div>
+          </div>
+          <div class="ripple" id="c12-rip"></div>
+          <div data-cursor id="c12-cur"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>ScreenVoicer — скриншот із голосовим коментарем</footer>
+
+<script>
+(() => {
+  'use strict';
+  const D = document, root = D.documentElement;
+  const $ = (s, r = D) => r.querySelector(s);
+  const $$ = (s, r = D) => Array.from(r.querySelectorAll(s));
+  const g = id => D.getElementById(id);
+
+  /* ── maths ── */
+  const clamp = (x, a = 0, b = 1) => (x < a ? a : x > b ? b : x);
+  const lerp = (a, b, p) => a + (b - a) * p;
+  const seg = (t, a, b) => clamp((t - a) / (b - a));
+  const io = p => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2);
+  const ex = p => (p >= 1 ? 1 : 1 - Math.pow(2, -10 * p));
+  const pop = p => { const c = 1.4; return p <= 0 ? 0 : 1 + (c + 1) * Math.pow(p - 1, 3) + c * Math.pow(p - 1, 2); };
+  const fade = (t, a, b, c, d) => seg(t, a, b) * (1 - seg(t, c, d));
+  const r2 = v => Math.round(v * 100) / 100;
+
+  /* ── cached writes: touch the DOM only when a value changes ── */
+  const set = (el, k, v) => { const c = '_s' + k; if (el[c] !== v) { el[c] = v; el.style[k] = v; } };
+  const op = (el, v) => { v = r2(clamp(v)); set(el, 'opacity', String(v)); set(el, 'visibility', v > 0 ? 'visible' : 'hidden'); };
+  const tf = (el, v) => set(el, 'transform', v);
+  const at = (el, k, v) => { const c = '_a' + k; v = String(v); if (el[c] !== v) { el[c] = v; el.setAttribute(k, v); } };
+  const tx = (el, v) => { if (el._t !== v) { el._t = v; el.textContent = v; } };
+  const cl = (el, c, on) => { const k = '_c' + c; on = !!on; if (el[k] !== on) { el[k] = on; el.classList.toggle(c, on); } };
+  const icon = (id, c = '') => `<svg class="ic ${c}" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-${id}"/></svg>`;
+
+  /* keyframed paths: [[t, x, y], ...] and cameras [[t, cx, cy, w], ...] (zoom eased in log space) */
+  const track = keys => t => {
+    if (t <= keys[0][0]) return [keys[0][1], keys[0][2]];
+    for (let i = 1; i < keys.length; i++) {
+      const k = keys[i];
+      if (t <= k[0]) { const j = keys[i - 1]; const p = io(clamp((t - j[0]) / (k[0] - j[0] || 1))); return [lerp(j[1], k[1], p), lerp(j[2], k[2], p)]; }
+    }
+    const l = keys[keys.length - 1]; return [l[1], l[2]];
+  };
+  const track3 = keys => t => {
+    if (t <= keys[0][0]) return keys[0].slice(1);
+    for (let i = 1; i < keys.length; i++) {
+      const k = keys[i];
+      if (t <= k[0]) { const j = keys[i - 1]; const p = io(clamp((t - j[0]) / (k[0] - j[0] || 1))); return [lerp(j[1], k[1], p), lerp(j[2], k[2], p), Math.exp(lerp(Math.log(j[3]), Math.log(k[3]), p))]; }
+    }
+    return keys[keys.length - 1].slice(1);
+  };
+  /* centre of an element in its stage's coordinates (offsets ignore transforms) */
+  const centre = (el, stage) => {
+    let x = el.offsetWidth / 2, y = el.offsetHeight / 2, n = el;
+    while (n && n !== stage) { x += n.offsetLeft; y += n.offsetTop; n = n.offsetParent; }
+    return [x, y];
+  };
+
+  const smallMQ = matchMedia('(max-width: 640px)');
+  const reduceMQ = matchMedia('(prefers-reduced-motion: reduce)');
+  const params = new URLSearchParams(location.hash.slice(1));
+  let reduced = reduceMQ.matches || params.has('rm');
+  root.classList.toggle('reduced', reduced);
+
+  /* ── shared UI pieces ── */
+  const TOOLS = ['pen', 'hl', 'arrow', 'rect', 'text', 'num', 'hide', 'eraser'];
+  const TB = `<span class="b on">${icon('region')}</span><span class="b">${icon('screen')}</span><span class="b">${icon('timer')}</span><span class="dv"></span>` +
+    `<span class="b w tool">${icon('pen', 'tic')}${icon('chev', 'chev')}</span><span class="b w"><i class="cdot"></i>${icon('chev', 'chev')}</span>` +
+    `<span class="b">${icon('undo')}</span><span class="b">${icon('redo')}</span><span class="dv"></span>` +
+    `<span class="b mic"><i class="rp"></i><i class="rl"></i><i class="rd"></i>${icon('mic')}</span><span class="b chv">${icon('chev', 'chev')}</span>` +
+    `<span class="field"><span class="ph">Говоріть або напишіть коментар</span><span class="txt"></span><i class="caret"></i></span>` +
+    `<span class="b save">${icon('check')}</span><span class="b">${icon('close', 'x')}</span>`;
+  const PILL = `<span class="wave"><i></i><i></i><i></i><i></i><i></i></span>${icon('spark', 'spin')}<span class="pt"></span>`;
+  const COMMENT = 'Кнопка «Зберегти» не реагує, якщо змінити email';
+  const SHORT = 'Ціна не оновлюється після знижки';
+  const TOAST = c => `<div class="tr"><div class="tbadge">${icon('check')}</div><div class="tt"><div class="t1">Скопійовано в буфер обміну</div><div class="t2">«${c}»</div></div><div class="tx">${icon('close')}</div></div>` +
+    `<div class="ta"><span class="tbtn tc">Копіювати</span><span class="tbtn tg">Галерея</span><span class="tbtn tc">${icon('link')}Посилання</span></div><div class="tl"></div>`;
+  const line2 = d => `<path d="${d}" stroke="#000" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="${d}" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+  const CURSOR = `<svg class="ca" viewBox="0 0 22 30"><path d="M2 2v22.5l5.6-5.3 3.6 8.3 3.6-1.6-3.6-8.1H19z" fill="#fff" stroke="#000" stroke-width="1.4" stroke-linejoin="round"/></svg>` +
+    `<svg class="cx" viewBox="0 0 26 26"><path d="M13 1v9M13 16v9M1 13h9M16 13h9" stroke="#000" stroke-width="3.4"/><path d="M13 1v9M13 16v9M1 13h9M16 13h9" stroke="#fff" stroke-width="1.4"/></svg>` +
+    `<svg class="ce" viewBox="0 0 30 18">${line2('M3 9h24M3 9l5-5M3 9l5 5M27 9l-5-5M27 9l-5 5')}</svg>` +
+    `<svg class="cn" viewBox="0 0 18 30">${line2('M9 3v24M9 3l-5 5M9 3l5 5M9 27l-5-5M9 27l5-5')}</svg>`;
+
+  /* the two systems of chapter 11 get the same overlay pieces */
+  $$('#c11 .os').forEach(p => {
+    const mac = p.dataset.os === 'mac', ky = mac ? 92 : 70;
+    p.insertAdjacentHTML('beforeend',
+      `<svg class="cover" width="440" height="460" viewBox="0 0 440 460"><path class="dimp" fill="rgba(0,0,0,.55)" fill-rule="evenodd" d="M0 0H440V460H0Z"/><g class="fr" fill="none"><rect stroke="rgba(0,0,0,.4)" stroke-width="3"/><rect stroke="#fff" stroke-width="1.25"/></g><g class="hd"></g></svg>` +
+      `<div class="ostb" style="top:${mac ? 36 : 14}px"><div data-toolbar></div></div>` +
+      `<div class="keys k1" style="left:220px;top:${ky}px">${mac ? '<kbd>⌥</kbd><kbd>⇧</kbd><kbd>S</kbd>' : '<kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd>'}</div>` +
+      `<div class="keys k2" style="left:220px;top:${ky}px"><kbd>Enter</kbd></div>` +
+      `<div class="keys k3" style="left:220px;top:${ky}px">${mac ? '<kbd>⌘</kbd><kbd>V</kbd>' : '<kbd>Ctrl</kbd>+<kbd>V</kbd>'}</div>` +
+      `<div class="ostoast" style="bottom:${mac ? 14 : 60}px"><div data-toast data-c="${SHORT}" style="position:relative"></div></div>` +
+      `<span class="oslbl glass" style="bottom:${mac ? 14 : 60}px">${mac ? '<svg viewBox="0 0 24 24"><use href="#i-apple"/></svg>macOS' : '<svg viewBox="0 0 24 24"><use href="#i-win"/></svg>Windows'}</span>`);
+  });
+
+  $$('[data-pill]').forEach(el => { el.className = 'pill glass'; el.innerHTML = PILL; });
+  $$('[data-toast]').forEach(el => { el.className = 'toast'; el.innerHTML = TOAST(el.dataset.c || COMMENT); });
+  $$('[data-cursor]').forEach(el => { el.className = 'cursor'; el.innerHTML = CURSOR; });
+  $$('[data-flyout]').forEach(el => { el.innerHTML = TOOLS.map(n => `<span class="b" data-t="${n}">${icon(n)}</span>`).join(''); });
+  $$('.hd').forEach(el => { el.innerHTML = '<rect fill="#fff" stroke="rgba(0,0,0,.45)" stroke-width="1" rx="1.5"/>'.repeat(8); });
+
+  function toolbar(el, words, depth) {
+    el.className = depth ? 'tb tb3' : 'tb glass';
+    el.innerHTML = (depth ? '<i class="tb-shadow"></i><i class="tb-base"></i><i class="tb-plate glass"></i>' : '') + TB;
+    const q = s => $(s, el);
+    const o = { el, mic: q('.mic'), rp: q('.rp'), rl: q('.rl'), ph: q('.ph'), txt: q('.txt'), caret: q('.caret'), save: q('.save'), field: q('.field'), words: [], rights: [], shifts: [], fw: 300, caretX: 0, _w: null, _E: -1 };
+    /* when the line overflows it scrolls by whole words, so the visible text never starts mid-word */
+    o.measure = () => {
+      o.fw = o.field.clientWidth;
+      o.rights = o.words.map(w => w.offsetLeft + w.offsetWidth);
+      const starts = o.words.map(w => w.offsetLeft);
+      o.shifts = o.rights.map(r => { const need = r - o.fw + 10; if (need <= 0) return 0; const s = starts.find(x => x >= need); return s === undefined ? need : s; });
+    };
+    o.setWords = w => {
+      if (o._w === w) return;
+      o._w = w;
+      o.txt.innerHTML = w.split(' ').map(x => `<span class="w">${x}</span>`).join(' ');
+      o.words = $$('.w', o.txt);
+      o.measure();
+    };
+    o.setWords(words);
+    /* k: words visible (fraction = the last one fading in); caret: blink phase in seconds, or -1 */
+    o.text = (k, caret) => {
+      const n = o.words.length;
+      let shown = 0;
+      for (let i = 0; i < n; i++) { const a = clamp((k - i) * 2); op(o.words[i], a); if (a > 0) shown = i + 1; }
+      const last = shown ? o.rights[shown - 1] || 0 : 0, prev = shown > 1 ? o.rights[shown - 2] || 0 : 0;
+      const p = io(clamp((k - (shown - 1)) * 2));
+      const right = shown ? lerp(prev, last, p) : 0;
+      const shift = shown && o.shifts.length ? lerp(shown > 1 ? o.shifts[shown - 2] : 0, o.shifts[shown - 1], p) : 0;
+      tf(o.txt, `translateX(${-r2(shift)}px)`);
+      op(o.ph, k > 0 ? 0 : 1);
+      op(o.caret, caret >= 0 && caret % 1.1 < 0.6 ? 1 : 0);
+      tf(o.caret, `translateX(${r2(right - shift + (shown ? 1 : 0))}px)`);
+      o.caretX = right - shift;
+    };
+    /* r: seconds since recording started, or -1 */
+    o.rec = r => {
+      cl(o.mic, 'rec', r >= 0);
+      if (r < 0) { op(o.rp, 0); op(o.rl, 0); return; }
+      const ph = r % 1, p = ph < 0.5 ? ph / 0.5 : (1 - ph) / 0.5;
+      op(o.rp, 0.6 - 0.52 * p); tf(o.rp, `scale(${r2(1 + 0.4 * p)})`);
+      const lv = Math.abs(Math.sin(r * 5.3) * Math.sin(r * 1.9 + 1));
+      op(o.rl, 0.8); tf(o.rl, `scale(${r2(1.04 + 0.2 * lv)})`);
+    };
+    if (depth) {
+      /* exploded view: every part hovers at its own height over the glass plate */
+      const Z = e => (e.classList.contains('mic') ? 44 : e.classList.contains('save') ? 34 : e.classList.contains('field') ? 12 : e.classList.contains('dv') ? 8 : e.classList.contains('chv') ? 16 : 24);
+      o.parts = $$('.b, .dv, .field', el).map((e, i) => [e, Z(e) + (i % 2) * 7]);
+      o.pose = E => { E = r2(E); if (E === o._E) return; o._E = E; o.parts.forEach(([e, z]) => tf(e, E > 0 ? `translateZ(${r2(z * E)}px)` : 'none')); };
+    }
+    return o;
+  }
+  function pill(el) {
+    const o = { el, pt: $('.pt', el), bars: $$('.wave i', el), spin: $('.spin', el) };
+    o.set = (kind, text, t) => {
+      cl(el, 'rec', kind === 'rec'); cl(el, 'busy', kind === 'busy');
+      tx(o.pt, text);
+      if (kind === 'rec') o.bars.forEach((b, i) => tf(b, `scaleY(${r2(0.25 + 0.75 * Math.abs(Math.sin(t * (4.4 + i * 1.3) + i * 1.3) * Math.sin(t * 1.7 + i)))})`));
+      if (kind === 'busy') tf(o.spin, `rotate(${Math.round((t * 360) % 360)}deg)`);
+    };
+    return o;
+  }
+  const flyout = el => { const o = { el, btns: {} }; $$('[data-t]', el).forEach(b => { o.btns[b.dataset.t] = b; }); o.on = n => TOOLS.forEach(k => cl(o.btns[k], 'on', k === n)); return o; };
+  const cursor = el => ({ el, at(x, y, mode) { tf(el, `translate(${r2(x)}px,${r2(y)}px)`); cl(el, 'cross', mode === 'cross'); cl(el, 'ew', mode === 'ew'); cl(el, 'ns', mode === 'ns'); } });
+  /* click ring for the last click within 0.5 s */
+  const ripple = (el, clicks) => (t, pos) => {
+    let c = null;
+    for (const k of clicks) if (t >= k && t < k + 0.5) c = k;
+    if (c === null) { op(el, 0); return; }
+    const p = (t - c) / 0.5, [x, y] = pos(c);
+    op(el, 0.9 * (1 - p)); tf(el, `translate(${r2(x)}px,${r2(y)}px) scale(${r2(0.4 + 0.8 * ex(p))})`);
+  };
+  /* keystroke chip: in over [a,b], out over [c,d], keys go down one by one from `press` */
+  const keyOverlay = (el, a, b, c, d, press) => {
+    const kbd = $$('kbd', el);
+    return t => {
+      op(el, fade(t, a, b, c, d)); tf(el, `translateX(-50%) translateY(${r2((1 - ex(seg(t, a, b))) * 8)}px)`);
+      kbd.forEach((k, i) => cl(k, 'down', t >= press + i * 0.14 && t < c));
+    };
+  };
+  /* a big keycap: in [a,b], out [c,d], held down between press and release */
+  const capAnim = (el, a, b, c, d, press, release) => t => {
+    op(el, fade(t, a, b, c, d));
+    const dn = t >= press && t < release;
+    cl(el, 'down', dn);
+    tf(el, `translateY(${r2((1 - ex(seg(t, a, b))) * 12 + (dn ? 3 : 0))}px)`);
+  };
+  const capsAnim = (el, a, b, c, d, press, release) => {
+    const caps = $$('.cap', el);
+    return t => {
+      op(el, fade(t, a, b, c, d)); tf(el, `translateY(${r2((1 - ex(seg(t, a, b))) * 12)}px)`);
+      caps.forEach((k, i) => { const dn = t >= press + i * 0.14 && t < release; cl(k, 'down', dn); tf(k, dn ? 'translateY(3px)' : 'none'); });
+    };
+  };
+  /* the capture overlay: dim with a hole, a white frame and 8 square handles */
+  function selFrame(svg, W, H, hs) {
+    const dim = $('.dimp', svg), fr = $('.fr', svg), rs = $$('.fr rect', svg), hd = $$('.hd rect', svg);
+    return (x1, y1, x2, y2, show, ha, fa = 1) => {
+      at(dim, 'd', `M0 0H${W}V${H}H0Z` + (show ? `M${r2(x1)} ${r2(y1)}V${r2(y2)}H${r2(x2)}V${r2(y1)}Z` : ''));
+      op(fr, show ? fa : 0);
+      if (show) rs.forEach(r => { at(r, 'x', r2(x1)); at(r, 'y', r2(y1)); at(r, 'width', r2(Math.max(0, x2 - x1))); at(r, 'height', r2(Math.max(0, y2 - y1))); });
+      const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+      const P = [[x1, y1], [mx, y1], [x2, y1], [x2, my], [x2, y2], [mx, y2], [x1, y2], [x1, my]];
+      hd.forEach((r, i) => {
+        const a = show && ha ? ha(i) : 0, z = hs * clamp(a, 0, 1.6);
+        op(r, a > 0 ? fa : 0);
+        if (a > 0) { at(r, 'x', r2(P[i][0] - z / 2)); at(r, 'y', r2(P[i][1] - z / 2)); at(r, 'width', r2(z)); at(r, 'height', r2(z)); }
+      });
+    };
+  }
+  /* «Приховати»: big flat blocks in the greys of the text they cover */
+  function pixels(el, cols, rows, cell, seed) {
+    let h = seed;
+    const rnd = () => (h = (h * 16807) % 2147483647) / 2147483647;
+    const pal = ['#f6f7f9', '#e5e7eb', '#d1d5db', '#a3a9b3', '#7b828e', '#596070'];
+    const cells = [];
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+      const core = r === 1 ? 1 : 0.5;
+      let v = core * (0.3 + 0.7 * rnd());
+      if (rnd() < 0.16) v *= 0.35;
+      const i = D.createElement('i');
+      i.style.cssText = `left:${c * cell}px;top:${r * cell}px;width:${cell}px;height:${cell}px;background:${pal[Math.min(5, Math.floor(v * 6))]}`;
+      el.appendChild(i);
+      cells.push({ el: i, x: (c + 0.5) * cell, y: (r + 0.5) * cell });
+    }
+    return cells;
+  }
+
+  /* ═════════ hero: the toolbar, landing, then the flow once ═════════ */
+  const hero = (() => {
+    const sec = $('.hero');
+    if (!sec) return null;
+    const pin = g('heroPin'), copy = g('heroCopy'), box = g('hbox'), clip = g('hclip'), desk = g('hero'), topL = g('heroTop');
+    const stepsEl = g('hsteps'), hint = g('hint'), replay = g('replay');
+    const tb = toolbar(g('h-tb'), COMMENT, true);
+    const pl = pill(g('h-pill')), cur = cursor(g('h-cur'));
+    const frame = selFrame(g('h-ov'), 1280, 800, 9), ov = g('h-ov'), ink = g('h-ink'), pen = g('h-pen'), size = g('h-size');
+    const toast = g('h-toast'), tline = $('.tl', toast), chat = g('h-chat'), msg = g('h-msg');
+    const kE = keyOverlay(g('h-k1'), 9.3, 9.5, 10.1, 10.35, 9.6), kV = keyOverlay(g('h-k2'), 11.1, 11.3, 11.9, 12.15, 11.35);
+    const steps = $$('.step', stepsEl), bars = steps.map(b => $('.track i', b));
+    const BOUNDS = [0, 2.9, 5.0, 9.3, 10.6, 13], DUR = 13, SEL = [364, 386, 844, 642], W0 = 6.0, W1 = 8.4;
+    const H = { sec, visible: false, idle: 0, flow: 0, forcedOff: false, frozen: null, still: 8.35, m: null };
+    let path = null, rip = null, penLen = 400, fieldC = [640, 38];
+
+    H.measure = () => {
+      tb.measure();
+      tb.el.style.left = Math.round(640 - tb.el.offsetWidth / 2) + 'px';
+      const phone = smallMQ.matches;
+      const vw = root.clientWidth, vh = pin.clientHeight || innerHeight;
+      const view = phone ? { x: 320, y: 0, w: 640 } : { x: 0, y: 0, w: 1280 };
+      let bw, bh;
+      if (phone) { bw = vw - 32; bh = bw * 1.25; const mh = vh - 150; if (bh > mh) { bh = mh; bw = bh / 1.25; } }
+      else { bw = Math.min(vw - 96, (vh - 150) * 1.6, 1240); bh = bw / 1.6; }
+      const cb = copy.offsetTop + copy.offsetHeight;
+      const bx = (vw - bw) / 2;
+      let by = Math.max(12, (vh - bh - 60) / 2);
+      if (reduced) { by = cb + 48; pin.style.height = r2(by + bh + 90) + 'px'; } else pin.style.height = '';
+      box.style.left = r2(bx) + 'px'; box.style.top = r2(by) + 'px'; box.style.width = r2(bw) + 'px'; box.style.height = r2(bh) + 'px';
+      stepsEl.style.top = r2(by + bh + 18) + 'px';
+      H.m = {
+        phone, vw, vh, view, bw, bh, bx, by, k: bw / view.w, tbW: tb.el.offsetWidth, tbH: tb.el.offsetHeight,
+        ty: cb + Math.max(120, (vh - cb) / 2), tw: phone ? vw * 1.5 : Math.min(vw * 0.8, 1150),
+        top: sec.getBoundingClientRect().top + scrollY, len: Math.max(1, sec.offsetHeight - vh)
+      };
+      const off = ([x, y]) => [x + 7, y + 9];
+      const mic = off(centre(tb.mic, topL));
+      fieldC = centre(tb.field, topL);
+      penLen = pen.getTotalLength();
+      at(pen, 'stroke-dasharray', r2(penLen));
+      const pe = pen.getPointAtLength(penLen);
+      path = track([
+        [0, 930, 560], [0.3, 930, 560], [1.1, SEL[0], SEL[1]], [1.2, SEL[0], SEL[1]], [2.4, SEL[2], SEL[3]], [2.5, SEL[2], SEL[3]],
+        [3.4, 632, 586], [3.6, 632, 586], [4.8, pe.x, pe.y], [5.0, pe.x, pe.y], [5.55, mic[0], mic[1]], [8.75, mic[0], mic[1]],
+        [9.4, 790, 520], [10.3, 790, 520], [10.8, 420, 640], [13, 420, 640]
+      ]);
+      rip = ripple(g('h-rip'), [5.7, 8.6, 10.9]);
+    };
+    const curAt = t => {
+      if (t >= 1.2 && t < 2.4) { const p = io(seg(t, 1.2, 2.4)); return [lerp(SEL[0], SEL[2], p), lerp(SEL[1], SEL[3], p)]; }
+      if (t >= 3.6 && t < 4.8) { const pt = pen.getPointAtLength(penLen * io(seg(t, 3.6, 4.8))); return [pt.x, pt.y]; }
+      return path(t);
+    };
+
+    H.tick = (dt, y) => {
+      const m = H.m;
+      if (!m) return;
+      const p = reduced ? 1 : clamp((y - m.top) / m.len);
+      if (!reduced) H.idle += dt;
+      const L = reduced ? 1 : io(seg(p, 0.03, 0.30));
+      const cf = reduced ? 0 : seg(p, 0, 0.1);
+      op(copy, 1 - cf); tf(copy, cf ? `translateY(${r2(-56 * cf)}px)` : 'none');
+      op(hint, reduced ? 0 : 1 - seg(p, 0, 0.025));
+      const dk = reduced ? 1 : seg(L, 0.3, 0.9);
+      op(clip, dk); tf(clip, `scale(${r2(1 + 0.06 * (1 - io(dk)))})`);
+      op(stepsEl, reduced ? 0 : seg(p, 0.29, 0.33));
+      if (!reduced) {
+        if (p < 0.26) { H.flow = 0; H.forcedOff = false; }
+        else if (p >= 0.3) {
+          H.flow = Math.min(DUR, H.flow + dt);
+          /* scrolling on fast-forwards, so nobody leaves before the paste */
+          if (!H.forcedOff) H.flow = Math.max(H.flow, seg(p, 0.34, 0.95) * DUR);
+        }
+      }
+      const t = H.frozen !== null ? H.frozen : reduced ? H.still : H.flow;
+      const landed = L >= 1;
+
+      /* camera: the whole screen; on phones a closer look at the comment while speaking */
+      let v = m.view;
+      if (m.phone && landed) {
+        const z = io(fade(t, 5.0, 5.6, 9.3, 9.9));
+        if (z > 0) {
+          const w = lerp(640, 420, z), h = w * m.bh / m.bw;
+          const cx = lerp(640, fieldC[0] - 30, z), cy = lerp(400, h / 2, z);
+          v = { x: clamp(cx - w / 2, 0, 1280 - w), y: clamp(cy - h / 2, 0, 800 - h), w };
+        }
+      }
+      const k = m.bw / v.w, T = `translate(${r2(-v.x * k)}px,${r2(-v.y * k)}px) scale(${k.toFixed(5)})`;
+      tf(desk, T); tf(topL, T);
+
+      /* the toolbar: flat and crisp under the headline, then it descends onto the desktop (no 3D: the owner's call) */
+      const E = 1 - L;
+      if (E > 0.0005) {
+        const kk = m.k;
+        const lx = m.bx + (640 - m.view.x) * kk, ly = m.by + (16 + m.tbH / 2 - m.view.y) * kk;
+        const dx = (m.vw / 2 - lx) / kk, dy = (m.ty - ly) / kk;
+        const S0 = m.tw / (m.tbW * kk), S = Math.exp(Math.log(S0) * io(E));
+        cl(tb.el, 'flat', true);
+        tf(tb.el, `translate(${r2(dx * E)}px,${r2(dy * E)}px) scale(${S.toFixed(4)})`);
+        tb.pose(0);
+        op(tb.el, 1);
+      } else { tb.pose(0); tf(tb.el, 'none'); cl(tb.el, 'flat', true); }
+      render(t, landed);
+    };
+
+    function render(t, landed) {
+      const ovA = 1 - seg(t, 9.75, 9.95);
+      op(ov, ovA);
+      const dp = io(seg(t, 1.2, 2.4)), x1 = SEL[0], y1 = SEL[1], x2 = lerp(x1, SEL[2], dp), y2 = lerp(y1, SEL[3], dp);
+      const has = t >= 1.2 && x2 - x1 > 2;
+      frame(x1, y1, x2, y2, has, i => pop(seg(t, 2.45 + i * 0.035, 2.75 + i * 0.035)));
+      op(size, has ? ovA : 0);
+      if (has) { tx(size, `${Math.round((x2 - x1) * 2.5)} × ${Math.round((y2 - y1) * 2.5)}`); tf(size, `translate(${x1}px,${y1 - 28}px)`); }
+      op(ink, ovA);
+      at(pen, 'stroke-dashoffset', r2(penLen * (1 - io(seg(t, 3.6, 4.8)))));
+      op(pen, t >= 3.6 ? 1 : 0);
+      if (landed) op(tb.el, ovA);
+      tb.rec(t >= 5.7 && t < 8.6 ? t - 5.7 : -1);
+      const nW = tb.words.length, kk = (t - W0) / ((W1 - W0) / (nW - 1)) + 1;
+      tb.text(clamp(kk, 0, nW), t >= 5.7 && t < 9.75 ? t - 5.7 : -1);
+      const pressed = t >= 9.6 && t < 9.74;
+      cl(tb.save, 'down', pressed); if (landed) tf(tb.save, pressed ? 'scale(.92)' : 'none');
+      op(pl.el, fade(t, 5.7, 5.95, 9.0, 9.25)); tf(pl.el, 'translateX(-50%)');
+      if (t < 8.6) pl.set('rec', 'Говоріть… щоб зупинити — Пробіл або мікрофон', t); else pl.set('busy', 'Розпізнаю…', t);
+      kE(t); kV(t);
+      op(toast, fade(t, 10.0, 10.4, 12.6, 12.9)); tf(toast, `translateY(${r2((1 - ex(seg(t, 10.0, 10.4))) * 14)}px)`);
+      tf(tline, `scaleX(${r2(1 - seg(t, 10.4, 12.6))})`);
+      op(chat, seg(t, 10.5, 10.9)); tf(chat, `translateY(${r2((1 - ex(seg(t, 10.5, 10.9))) * 16)}px)`);
+      const mm = seg(t, 11.6, 11.85); op(msg, mm); tf(msg, `scale(${r2(0.96 + 0.04 * ex(mm))})`);
+      if (landed && path) {
+        const [cx, cy] = curAt(t);
+        cur.at(cx, cy, t < 4.9 ? 'cross' : '');
+        op(cur.el, 1);
+        rip(t, curAt);
+      } else op(cur.el, 0);
+      for (let i = 0; i < 5; i++) {
+        const on = (t >= BOUNDS[i] && t < BOUNDS[i + 1]) || (i === 4 && t >= DUR);
+        cl(steps[i], 'on', landed && on);
+        tf(bars[i], `scaleX(${r2(t >= BOUNDS[i + 1] ? 1 : on ? seg(t, BOUNDS[i], BOUNDS[i + 1]) : 0)})`);
+      }
+      op(replay, landed && !reduced && H.frozen === null && t >= DUR - 0.3 ? 1 : 0);
+    }
+    replay.addEventListener('click', () => { H.flow = 0; H.forcedOff = true; kick(); });
+    return H;
+  })();
+
+  /* ═════════ macro chapters: the camera pushes in as the chapter arrives ═════════ */
+  const scenes = [];
+  const label = n => `${String(n).padStart(2, '0')} / 11`;
+  function chapter(id, o) {
+    const st = g(id);
+    if (!st) return null;
+    const lens = st.parentElement, sec = st.closest('section');
+    const s = { id, root: st, lens, sec, dur: o.dur, still: o.still, t: 0, visible: false, seen: false, frozen: null, pinned: sec.classList.contains('ch'), lw: 1, lh: 1, W: 1, H: 1, top: 0 };
+    if (o.cam) {
+      const cd = track3(o.cam.d), cp = track3(o.cam.p || o.cam.d);
+      s.cam = (t, phone) => (phone ? cp : cd)(t);
+    }
+    const items = o.legend ? $$(`[data-legend="${o.legend}"] li`) : [];
+    s.leg = i => items.forEach((li, j) => cl(li, 'on', j === i));
+    lens.insertAdjacentHTML('beforeend', `<div class="vf" aria-hidden="true"><i></i><i></i><i></i><i></i></div><span class="hud tl" aria-hidden="true">${o.label}</span><span class="hud br" aria-hidden="true">×1.0</span>`);
+    s.zoom = $('.hud.br', lens);
+    o.setup(s);
+    scenes.push(s);
+    return s;
+  }
+
+  /* ── 01 capture: Alt+Shift+S, tray click, ⌥⇧S on a Mac, timer ── */
+  chapter('c1', {
+    dur: 15, still: 11.4, legend: 'c1', label: label(1),
+    cam: {
+      d: [[0, 614, 312, 500], [3.3, 614, 312, 500], [3.9, 620, 360, 380], [6.4, 620, 360, 380], [6.9, 590, 300, 440], [9.4, 590, 300, 440], [9.9, 630, 320, 400], [14.6, 630, 320, 400], [15, 614, 312, 500]],
+      p: [[0, 614, 312, 420], [3.3, 614, 312, 420], [3.9, 640, 340, 300], [6.4, 640, 340, 300], [6.9, 580, 294, 360], [9.4, 580, 294, 360], [9.9, 634, 320, 320], [14.6, 634, 320, 320], [15, 614, 312, 420]]
+    },
+    setup(s) {
+      const dim = g('c1-dim'), menu = g('c1-menu'), cnt = g('c1-cnt'), cntN = $('span', cnt), ring = $('.ring', cnt), d3 = g('c1-d3');
+      const cur = cursor(g('c1-cur'));
+      const hk = capsAnim(g('c1-hk'), 0.4, 0.65, 2.4, 2.8, 0.9, 1.6);
+      const mac = capsAnim(g('c1-mac'), 6.7, 7.0, 8.9, 9.3, 7.2, 8.4);
+      const TR = [680, 478];
+      let path = null;
+      const rip = ripple(g('c1-rip'), [4.6, 10.3, 11.6]);
+      s.measure = () => {
+        const c = centre(d3, s.root);
+        path = track([[0, 560, 330], [3.5, 560, 330], [4.4, TR[0], TR[1]], [10.4, TR[0], TR[1]], [11.2, c[0] + 4, c[1] + 6], [12.0, c[0] + 4, c[1] + 6], [12.6, 600, 390], [15, 560, 330]]);
+      };
+      s.render = t => {
+        s.leg(t < 3.4 ? 0 : t < 6.6 ? 1 : t < 9.6 ? 2 : 3);
+        hk(t); mac(t);
+        const dm = Math.max(fade(t, 1.15, 1.35, 2.5, 2.8), fade(t, 4.75, 4.95, 6.1, 6.4), fade(t, 7.6, 7.8, 9.0, 9.3), fade(t, 14.4, 14.55, 14.85, 15));
+        op(dim, dm);
+        op(menu, fade(t, 10.35, 10.6, 11.75, 11.95)); tf(menu, `translateY(${r2((1 - ex(seg(t, 10.35, 10.6))) * 10)}px)`);
+        cl(d3, 'hov', t >= 11.2 && t < 11.6); cl(d3, 'on', t >= 11.6);
+        op(cnt, fade(t, 12.0, 12.2, 14.2, 14.4));
+        tx(cntN, t < 12.8 ? '3' : t < 13.6 ? '2' : '1');
+        at(ring, 'stroke-dashoffset', r2(320.4 * seg(t, 12.0, 14.4)));
+        tf(cnt, `scale(${r2(0.9 + 0.1 * ex(seg(t, 12.0, 12.3)))})`);
+        if (path) { const [cx, cy] = path(t); cur.at(cx, cy, dm > 0.4 ? 'cross' : ''); rip(t, path); }
+        op(cur.el, dm > 0 || (t >= 3.4 && t < 12.0) ? 1 : 0);
+      };
+    }
+  });
+
+  /* ── 02 region + 8 handles + «Весь екран» ── */
+  chapter('c2', {
+    dur: 13, still: 6.5, label: label(2),
+    cam: {
+      d: [[0, 240, 210, 380], [1.0, 240, 210, 380], [2.4, 330, 270, 540], [2.8, 520, 262, 400], [4.6, 540, 262, 400], [5.0, 400, 340, 420], [6.5, 400, 340, 420], [7.2, 380, 200, 600], [8.4, 380, 200, 600], [9.2, 380, 250, 760], [11.8, 380, 250, 760], [12.6, 240, 210, 380], [13, 240, 210, 380]],
+      p: [[0, 220, 220, 300], [1.0, 220, 220, 300], [2.4, 320, 270, 420], [2.8, 540, 262, 320], [4.6, 560, 262, 320], [5.0, 380, 350, 340], [6.5, 380, 350, 340], [7.2, 380, 170, 460], [8.4, 380, 170, 460], [9.2, 380, 250, 600], [11.8, 380, 250, 600], [12.6, 220, 220, 300], [13, 220, 220, 300]]
+    },
+    setup(s) {
+      const fr = selFrame(g('c2-ov'), 760, 500, 9), size = g('c2-size'), tip = g('c2-tip'), scr = g('c2-scr'), reg = g('c2-reg'), cur = cursor(g('c2-cur'));
+      let path = null;
+      const rip = ripple(g('c2-rip'), [8.3]);
+      s.measure = () => {
+        const c = centre(scr, s.root);
+        path = track([[0, 600, 440], [0.9, 140, 150], [1.0, 140, 150], [2.2, 500, 376], [2.6, 500, 376], [3.3, 500, 263], [3.5, 500, 263], [4.5, 620, 263], [4.8, 620, 263], [5.3, 380, 376], [5.5, 380, 376], [6.3, 380, 406], [6.7, 380, 406], [7.5, c[0] + 5, c[1] + 7], [8.6, c[0] + 5, c[1] + 7], [9.6, 560, 330], [13, 600, 440]]);
+      };
+      s.render = t => {
+        const d1 = io(seg(t, 1.0, 2.2));
+        let x1 = 140, y1 = 150;
+        let x2 = t < 3.5 ? lerp(140, 500, d1) : lerp(500, 620, io(seg(t, 3.5, 4.5)));
+        let y2 = t < 5.5 ? lerp(150, 376, d1) : lerp(376, 406, io(seg(t, 5.5, 6.3)));
+        const fs = io(seg(t, 8.3, 8.8));
+        if (fs > 0) { x1 = lerp(x1, 0, fs); y1 = lerp(y1, 0, fs); x2 = lerp(x2, 760, fs); y2 = lerp(y2, 500, fs); }
+        const live = t >= 1.0 && t < 12.2 && x2 - x1 > 2, fa = 1 - seg(t, 11.8, 12.2);
+        fr(x1, y1, x2, y2, live, i => (fs > 0 ? 1 - fs : pop(seg(t, 2.25 + i * 0.035, 2.55 + i * 0.035))), fa);
+        op(size, live ? (1 - fs) * fa : 0);
+        if (live) { tx(size, `${Math.round((x2 - x1) * 2.5)} × ${Math.round((y2 - y1) * 2.5)}`); tf(size, `translate(${r2(x1)}px,${r2(y1 - 28)}px)`); }
+        op(tip, fade(t, 7.5, 7.7, 8.3, 8.5));
+        const full = t >= 8.3 && t < 12.2;
+        cl(scr, 'on', full); cl(reg, 'on', !full);
+        if (path) {
+          const [cx, cy] = path(t);
+          cur.at(cx, cy, t < 2.5 ? 'cross' : t >= 3.2 && t < 4.7 ? 'ew' : t >= 5.2 && t < 6.6 ? 'ns' : '');
+          rip(t, path);
+        }
+      };
+    }
+  });
+
+  /* ── 03 tools, numbered markers, undo / redo ── */
+  chapter('c3', {
+    dur: 13, still: 7.3, label: label(3),
+    cam: {
+      d: [[0, 330, 130, 420], [0.6, 360, 280, 440], [2.0, 420, 280, 380], [4.2, 400, 320, 400], [6.8, 330, 290, 460], [7.3, 330, 220, 520], [8.8, 330, 220, 520], [9.4, 400, 260, 440], [12.4, 400, 260, 440], [13, 330, 130, 420]],
+      p: [[0, 330, 140, 330], [0.6, 330, 290, 340], [2.0, 470, 280, 300], [4.2, 400, 330, 320], [6.8, 300, 300, 360], [7.3, 330, 220, 400], [8.8, 330, 220, 400], [9.4, 400, 270, 340], [12.4, 400, 270, 340], [13, 330, 140, 330]]
+    },
+    setup(s) {
+      const fly = flyout(g('c3-fly')), cur = cursor(g('c3-cur'));
+      const rect = g('c3-rect'), hl = g('c3-hl'), arw = g('c3-arw'), tag = g('c3-tag'), tagR = $('rect', tag), tagT = $('text', tag);
+      const m1 = g('c3-m1'), m2 = g('c3-m2'), m3 = g('c3-m3'), undo = g('c3-undo'), redo = g('c3-redo');
+      const LABEL = 'має бути 2 750 ₴', R = [68, 296, 572, 332], A = [456, 378, 512, 336];
+      let widths = {}, path = null;
+      const rip = ripple(g('c3-rip'), [2.1, 3.9, 4.4, 6.9, 7.6, 8.4]);
+      s.measure = () => {
+        const u = centre(undo, s.root), r = centre(redo, s.root);
+        widths = {};
+        path = track([[0, 330, 230], [0.5, R[0], R[1]], [0.6, R[0], R[1]], [1.8, R[2], R[3]], [1.9, R[2], R[3]], [2.05, 590, 296], [2.3, 590, 296], [2.55, 78, 229], [2.6, 78, 229], [3.6, 562, 229], [3.65, 562, 229], [3.85, 590, 229], [4.0, 590, 229], [4.35, 302, 386], [5.5, 302, 386], [5.75, A[0], A[1]], [5.8, A[0], A[1]], [6.5, A[2], A[3]], [6.6, A[2], A[3]], [6.85, 246, 350], [7.1, 246, 350], [7.5, u[0] + 5, u[1] + 7], [7.9, u[0] + 5, u[1] + 7], [8.25, r[0] + 5, r[1] + 7], [8.7, r[0] + 5, r[1] + 7], [9.6, 430, 250], [13, 330, 230]]);
+      };
+      const tw = n => { if (widths[n] === undefined) { tx(tagT, LABEL.slice(0, n)); widths[n] = n ? tagT.getComputedTextLength() : 0; } return widths[n]; };
+      s.render = t => {
+        fly.on(t < 0.5 ? 'pen' : t < 2.0 ? 'rect' : t < 2.5 ? 'num' : t < 3.75 ? 'hl' : t < 4.2 ? 'num' : t < 5.6 ? 'text' : t < 6.7 ? 'arrow' : 'num');
+        const out = 1 - seg(t, 11.6, 12.2);
+        const rp = io(seg(t, 0.6, 1.8));
+        at(rect, 'width', r2((R[2] - R[0]) * rp)); at(rect, 'height', r2((R[3] - R[1]) * rp)); op(rect, t >= 0.6 ? out : 0);
+        const p1 = seg(t, 2.1, 2.45); op(m1, p1 > 0 ? out : 0); tf(m1, `scale(${r2(pop(p1))})`);
+        at(hl, 'd', `M78 229H${r2(lerp(78, 562, io(seg(t, 2.6, 3.6))))}`); op(hl, t >= 2.6 ? out : 0);
+        const p2 = seg(t, 3.9, 4.25); op(m2, p2 > 0 ? out : 0); tf(m2, `scale(${r2(pop(p2))})`);
+        const n = Math.floor(LABEL.length * seg(t, 4.5, 5.4)), w = tw(n);
+        tx(tagT, LABEL.slice(0, n)); at(tagR, 'width', r2(w + 24)); op(tag, t >= 4.4 ? out : 0);
+        const ap = io(seg(t, 5.8, 6.5));
+        if (t >= 5.8) {
+          const ex2 = lerp(A[0], A[2], ap), ey = lerp(A[1], A[3], ap), ang = Math.atan2(ey - A[1], ex2 - A[0]), L = 12 * clamp(ap * 4);
+          at(arw, 'd', `M${A[0]} ${A[1]}L${r2(ex2)} ${r2(ey)}M${r2(ex2)} ${r2(ey)}L${r2(ex2 - L * Math.cos(ang - 0.5))} ${r2(ey - L * Math.sin(ang - 0.5))}M${r2(ex2)} ${r2(ey)}L${r2(ex2 - L * Math.cos(ang + 0.5))} ${r2(ey - L * Math.sin(ang + 0.5))}`);
+        } else at(arw, 'd', '');
+        op(arw, out);
+        const undone = t >= 7.7 && t < 8.5;
+        const m3s = undone ? 0 : t >= 8.5 ? pop(seg(t, 8.5, 8.8)) : pop(seg(t, 6.9, 7.25));
+        op(m3, m3s > 0 ? out : 0); tf(m3, `scale(${r2(m3s)})`);
+        cl(undo, 'down', t >= 7.6 && t < 7.8); cl(redo, 'down', t >= 8.4 && t < 8.6);
+        if (path) { const [cx, cy] = path(t); cur.at(cx, cy, t >= 0.4 && t < 7.1 ? 'cross' : ''); rip(t, path); }
+      };
+    }
+  });
+
+  /* ── 04 «Приховати» (B): e-mail and phone turn into pixel blocks ── */
+  chapter('c4', {
+    dur: 11, still: 5.6, label: label(4),
+    cam: {
+      d: [[0, 330, 120, 440], [0.9, 330, 120, 440], [1.4, 200, 250, 330], [2.8, 170, 268, 300], [4.8, 165, 280, 270], [9.2, 165, 280, 270], [10.2, 330, 120, 440], [11, 330, 120, 440]],
+      p: [[0, 360, 150, 340], [0.9, 360, 150, 340], [1.4, 190, 260, 270], [2.8, 170, 270, 250], [4.8, 160, 282, 230], [9.2, 160, 282, 230], [10.2, 360, 150, 340], [11, 360, 150, 340]]
+    },
+    setup(s) {
+      const fly = flyout(g('c4-fly')), tip = g('c4-tip'), drag = g('c4-drag'), cur = cursor(g('c4-cur'));
+      const capB = capAnim(g('c4-b'), 0.3, 0.5, 1.5, 1.8, 0.7, 0.95);
+      const R1 = [76, 227, 256, 263], R2 = [76, 303, 220, 339];
+      const px1 = pixels(g('c4-px1'), 15, 3, 12, 7), px2 = pixels(g('c4-px2'), 12, 3, 12, 91);
+      const path = track([[0, 430, 210], [1.1, R1[0], R1[1]], [1.4, R1[0], R1[1]], [2.6, R1[2], R1[3]], [2.9, R1[2], R1[3]], [3.15, R2[0], R2[1]], [3.3, R2[0], R2[1]], [4.3, R2[2], R2[3]], [4.6, R2[2], R2[3]], [5.6, 440, 230], [11, 430, 210]]);
+      s.measure = () => { const c = centre(fly.btns.hide, s.root); tip.style.left = r2(c[0]) + 'px'; };
+      const reveal = (cells, R, p, a) => { const x2 = (R[2] - R[0]) * p, y2 = (R[3] - R[1]) * p; cells.forEach(c => op(c.el, p > 0 && c.x <= x2 + 6 && c.y <= y2 + 6 ? a : 0)); };
+      s.render = t => {
+        fly.on(t >= 0.75 ? 'hide' : 'pen');
+        op(tip, fade(t, 0.8, 1.0, 2.0, 2.3)); capB(t);
+        const p1 = io(seg(t, 1.4, 2.6)), p2 = io(seg(t, 3.3, 4.3)), out = 1 - seg(t, 9.4, 10.0);
+        reveal(px1, R1, p1, out); reveal(px2, R2, p2, out);
+        const d = t >= 1.4 && t < 2.75 ? [R1, p1] : t >= 3.3 && t < 4.45 ? [R2, p2] : null;
+        if (d) { const [R, p] = d; at(drag, 'x', R[0]); at(drag, 'y', R[1]); at(drag, 'width', r2((R[2] - R[0]) * p)); at(drag, 'height', r2((R[3] - R[1]) * p)); op(drag, 1); } else op(drag, 0);
+        const [cx, cy] = path(t); cur.at(cx, cy, t >= 1.0 && t < 4.5 ? 'cross' : '');
+      };
+    }
+  });
+
+  /* ── 05 voice: hold Space, words appear; Ukrainian, then English; the lens follows the caret ── */
+  chapter('c5', {
+    dur: 16, still: 4.6, legend: 'c5', label: label(5),
+    setup(s) {
+      const TAKES = [SHORT, 'The discount is not applied to the total'];
+      const tb = toolbar(g('c5-tb'), TAKES[0]), pl = pill(g('c5-pill')), sp = g('c5-sp');
+      let fx = 136, full = 0, cx = 230;
+      s.measure = () => { const keep = tb._w; tb._w = null; tb.setWords(keep); fx = -206 + tb.field.offsetLeft; };
+      s.cam = (t, phone) => [cx, 178, phone ? 250 : 340];
+      s.render = t => {
+        const take = t < 8 ? 0 : 1, u = t - take * 8;
+        tb.setWords(TAKES[take]);
+        s.leg(take);
+        const dn = u >= 0.4 && u < 4.8;
+        cl(sp, 'down', dn); tf(sp, dn ? 'translateY(3px)' : 'none');
+        tb.rec(u >= 0.5 && u < 4.8 ? u - 0.5 : -1);
+        const n = tb.words.length, W0 = 0.9, W1 = 4.2;
+        const k = u < 7.7 ? (u - W0) / ((W1 - W0) / (n - 1)) + 1 : 0;
+        tb.text(clamp(k, 0, n), u >= 0.5 && u < 7.2 ? u - 0.5 : -1);
+        op(tb.txt, 1 - seg(u, 7.2, 7.7));
+        op(pl.el, fade(u, 0.5, 0.75, 5.4, 5.7));
+        if (u < 4.8) pl.set('rec', 'Говоріть… відпустіть Пробіл, коли закінчите', u); else pl.set('busy', 'Розпізнаю…', u);
+        const w = smallMQ.matches ? 250 : 340, base = 60 + w / 2;
+        if (u < 7.2) full = tb.caretX;
+        cx = lerp(Math.max(base, fx + full - 0.25 * w), base, io(seg(u, 7.2, 7.95)));
+      };
+    }
+  });
+
+  /* ── 06 Enter → clipboard → paste into an AI assistant ── */
+  chapter('c6', {
+    dur: 14, still: 3.5, legend: 'c6', label: label(6),
+    cam: {
+      d: [[0, 540, 110, 420], [1.4, 540, 110, 420], [1.9, 500, 290, 440], [2.7, 400, 330, 480], [4.4, 430, 340, 480], [4.9, 450, 250, 520], [12.4, 450, 250, 520], [13.4, 540, 110, 420], [14, 540, 110, 420]],
+      p: [[0, 560, 130, 330], [1.4, 560, 130, 330], [1.9, 520, 300, 390], [2.7, 360, 340, 380], [4.4, 450, 360, 400], [4.9, 470, 260, 420], [12.4, 470, 260, 420], [13.4, 560, 130, 330], [14, 560, 130, 330]]
+    },
+    setup(s) {
+      const tb = toolbar(g('c6-tb'), COMMENT), dim = g('c6-dim'), toast = g('c6-toast'), tline = $('.tl', toast);
+      const ent = capAnim(g('c6-ent'), 0.4, 0.6, 1.3, 1.5, 1.0, 1.2);
+      const cv = keyOverlay(g('c6-cv'), 2.7, 2.9, 3.5, 3.75, 3.0), en = keyOverlay(g('c6-en'), 4.0, 4.2, 4.8, 5.0, 4.3);
+      const comp = g('c6-comp'), ph = g('c6-ph'), att = g('c6-att'), ctx = g('c6-ctx'), send = g('c6-send'), sent = g('c6-sent'), dots = g('c6-dots'), dd = $$('i', dots), reply = g('c6-reply');
+      s.measure = () => tb.measure();
+      s.render = t => {
+        s.leg(t < 1.6 ? 0 : t < 2.7 ? 1 : 2);
+        const ovA = t < 12.6 ? 1 - seg(t, 1.2, 1.45) : seg(t, 12.6, 13.2);
+        op(dim, ovA); op(tb.el, ovA);
+        tb.text(tb.words.length, -1);
+        const pr = t >= 1.0 && t < 1.14; cl(tb.save, 'down', pr); tf(tb.save, pr ? 'scale(.92)' : 'none');
+        ent(t); cv(t); en(t);
+        op(toast, fade(t, 1.6, 2.0, 4.4, 4.7)); tf(toast, `translateY(${r2((1 - ex(seg(t, 1.6, 2.0))) * 14)}px)`);
+        tf(tline, `scaleX(${r2(1 - seg(t, 2.0, 4.4))})`);
+        const a = seg(t, 3.25, 3.5) * (1 - seg(t, 4.45, 4.6));
+        set(comp, 'height', Math.round(lerp(56, 118, a)) + 'px');
+        op(ph, 1 - a); op(att, a); op(ctx, a);
+        tf(send, t >= 4.3 && t < 4.45 ? 'scale(.9)' : 'none');
+        const back = 1 - seg(t, 12.6, 13.0), sp = seg(t, 4.6, 4.95);
+        op(sent, sp * back); tf(sent, `translateY(${r2((1 - ex(sp)) * 24)}px)`);
+        op(dots, fade(t, 5.3, 5.5, 6.4, 6.5)); dd.forEach((d, i) => tf(d, `translateY(${r2(-3 * Math.max(0, Math.sin(t * 9 - i * 0.9)))}px)`));
+        op(reply, seg(t, 6.5, 7.0) * back);
+      };
+    }
+  });
+
+  /* ── 07 the comment lives inside the PNG: the file opens into layers, then travels ── */
+  chapter('c7', {
+    dur: 13, still: 2.8, label: label(7),
+    cam: {
+      d: [[0, 180, 190, 360], [0.9, 200, 195, 340], [4.8, 200, 195, 340], [5.2, 260, 230, 480], [6.6, 540, 300, 420], [7.4, 566, 318, 360], [11.6, 566, 318, 360], [12.6, 180, 190, 360], [13, 180, 190, 360]],
+      p: [[0, 170, 190, 300], [0.9, 200, 200, 290], [4.8, 200, 200, 290], [5.2, 280, 240, 380], [6.6, 560, 300, 330], [7.4, 566, 318, 300], [11.6, 566, 318, 300], [12.6, 170, 190, 300], [13, 170, 190, 300]]
+    },
+    setup(s) {
+      const png = g('c7-png'), pimg = g('c7-pimg'), tile = g('c7-t1'), ghost = g('c7-ghost'), att = g('c7-att'), cap = g('c7-cap'), drop = g('c7-drop'), cur = cursor(g('c7-cur'));
+      const path = track([[0, 300, 330], [0.6, 120, 140], [0.8, 120, 140], [5.0, 120, 140], [6.6, 566, 318], [7.4, 566, 318], [8.4, 640, 420], [13, 640, 420]]);
+      const rip = ripple(g('c7-rip'), [0.7, 5.0]);
+      s.render = t => {
+        cl(tile, 'sel', t >= 0.7 && t < 12.2);
+        const E = io(seg(t, 1.0, 2.2)) * (1 - io(seg(t, 3.9, 4.8)));
+        if (E > 0.001) {
+          // flat: the picture slides up and aside, uncovering the comment written inside the file
+          tf(png, `translate(${r2(78 * E)}px,${r2(46 * E)}px) scale(${r2(1 + 0.4 * E)})`);
+          tf(pimg, `translate(${r2(-26 * E)}px,${r2(-60 * E)}px)`);
+          op(png, 1);
+        } else { tf(png, 'none'); tf(pimg, 'none'); cl(png, 'flat', true); op(png, t >= 5.0 && t < 12.3 ? 0.3 : 1); }
+        const [cx, cy] = path(t);
+        op(ghost, fade(t, 5.0, 5.15, 6.7, 6.9) * 0.94);
+        tf(ghost, `translate(${r2(cx - 46)}px,${r2(cy - 26)}px)`);
+        cl(drop, 'over', t >= 6.1 && t < 6.8);
+        const back = 1 - seg(t, 11.8, 12.3), ap = seg(t, 6.8, 7.2);
+        op(att, ap * back); tf(att, `scale(${r2(0.96 + 0.04 * ex(ap))})`);
+        op(cap, seg(t, 7.2, 7.7));
+        cur.at(cx, cy, ''); op(cur.el, t > 0.05 && t < 12.2 ? 1 : 0); rip(t, path);
+      };
+    }
+  });
+
+  /* ── 08 gallery: search, select two, one link ── */
+  chapter('c8', {
+    dur: 14, still: 7.4, label: label(8),
+    cam: {
+      d: [[0, 380, 150, 500], [1.0, 380, 140, 460], [2.4, 380, 230, 640], [4.4, 380, 230, 640], [4.9, 260, 200, 440], [6.9, 260, 200, 440], [7.5, 380, 420, 520], [11.2, 380, 420, 520], [11.8, 420, 300, 600], [14, 380, 150, 500]],
+      p: [[0, 380, 150, 360], [1.0, 370, 150, 340], [2.4, 260, 300, 400], [4.4, 260, 300, 400], [4.9, 250, 220, 330], [6.9, 250, 220, 330], [7.5, 380, 440, 400], [11.2, 380, 440, 400], [11.8, 430, 300, 420], [14, 380, 150, 360]]
+    },
+    setup(s) {
+      const box = g('c8-cards');
+      const T = {
+        form: '<svg viewBox="0 0 480 262" preserveAspectRatio="xMidYMid slice"><use href="#shot-form"/></svg>',
+        cart: '<svg viewBox="0 0 480 262" preserveAspectRatio="xMidYMid slice"><use href="#shot-cart"/></svg>',
+        page: '<svg viewBox="0 0 212 114"><rect width="212" height="114" fill="#fff"/><rect width="212" height="16" fill="#e8ebf0"/><rect x="14" y="28" width="130" height="13" rx="3" fill="#a3a9b3"/><rect x="14" y="50" width="184" height="6" rx="3" fill="#e5e7eb"/><rect x="14" y="62" width="160" height="6" rx="3" fill="#e5e7eb"/><rect x="14" y="78" width="184" height="26" rx="5" fill="#eef2f7"/><rect x="8" y="22" width="144" height="25" rx="5" fill="none" stroke="#ef4444" stroke-width="2"/></svg>',
+        spin: '<svg viewBox="0 0 212 114"><rect width="212" height="114" fill="#fff"/><rect width="212" height="16" fill="#e8ebf0"/><circle cx="106" cy="62" r="16" fill="none" stroke="#e5e7eb" stroke-width="4"/><path d="M106 46a16 16 0 0 1 16 16" fill="none" stroke="#2563eb" stroke-width="4" stroke-linecap="round"/><rect x="66" y="90" width="80" height="6" rx="3" fill="#e5e7eb"/></svg>',
+        menu: '<svg viewBox="0 0 212 114"><rect width="212" height="114" fill="#fff"/><rect width="62" height="114" fill="#f3f4f6"/><rect x="18" y="16" width="34" height="7" rx="3" fill="#cfd3da"/><rect x="18" y="32" width="30" height="7" rx="3" fill="#cfd3da"/><rect x="18" y="48" width="36" height="7" rx="3" fill="#2563eb"/><rect x="18" y="64" width="28" height="7" rx="3" fill="#cfd3da"/><rect x="76" y="16" width="110" height="12" rx="3" fill="#a3a9b3"/><rect x="76" y="38" width="120" height="6" rx="3" fill="#e5e7eb"/><rect x="76" y="50" width="96" height="6" rx="3" fill="#e5e7eb"/><path d="M4 30h10M4 76h10M9 30v46" fill="none" stroke="#ef4444" stroke-width="2"/></svg>',
+        pay: '<svg viewBox="0 0 212 114"><rect width="212" height="114" fill="#e9ebef"/><rect x="74" y="6" width="64" height="104" rx="8" fill="#fff"/><rect x="82" y="18" width="40" height="6" rx="3" fill="#a3a9b3"/><rect x="82" y="32" width="48" height="5" rx="2" fill="#e5e7eb"/><rect x="82" y="44" width="40" height="5" rx="2" fill="#e5e7eb"/><rect x="80" y="66" width="52" height="16" rx="4" fill="#111827"/><circle cx="136" cy="66" r="7" fill="#ef4444" stroke="#fff" stroke-width="1.5"/><text x="136" y="69" text-anchor="middle" font-family="Inter, sans-serif" font-size="8" font-weight="700" fill="#fff">1</text></svg>'
+      };
+      const DATA = [
+        ['Кнопка «Зберегти» не реагує, якщо змінити email', '1920×1080', '11.10.2026 14:32', 'form', true],
+        ['Ціна не оновлюється після знижки', '1720×990', '11.10.2026 13:05', 'cart', false],
+        ['Шрифт у заголовку розмитий на другому моніторі', '1520×900', '10.10.2026 18:41', 'page', false],
+        ['Спінер крутиться безкінечно після помилки мережі', '1320×810', '10.10.2026 16:12', 'spin', false],
+        ['Зайвий відступ зліва в меню', '1120×720', '10.10.2026 11:27', 'menu', false],
+        ['Кнопка «Оплатити» перекриває суму на телефоні', '1080×2340', '09.10.2026 09:50', 'pay', true]
+      ];
+      box.innerHTML = DATA.map((d, i) => `<div class="gc" style="left:${[16, 262, 508][i % 3]}px;top:${i < 3 ? 84 : 318}px"><div class="gi">${T[d[3]]}<span class="gb l">${d[1]}</span><span class="gb r">${d[2]}</span><span class="gx">${icon('check')}</span></div><p class="gt">${d[0]}</p><div class="ga"><span class="gbt">Копіювати</span><span class="gbt">Текст</span><span class="gbt i">${icon('link')}</span><span class="gbt i">${icon('folder')}</span><span class="gbt i del">${icon('trash')}</span></div></div>`).join('');
+      const cards = $$('.gc', box), xs = cards.map(c => $('.gx', c)), copy3 = $('.gbt', cards[2]);
+      const q = g('c8-q'), qp = g('c8-qp'), qt = g('c8-qt'), qc = g('c8-qc'), bar = g('c8-bar'), bt = g('c8-bt'), mk = g('c8-mk'), mkT = $('span', mk), mkU = $('use', mk), un = g('c8-un'), cur = cursor(g('c8-cur'));
+      const Q = 'кнопка';
+      let path = null;
+      const rip = ripple(g('c8-rip'), [1.1, 5.5, 6.5, 8.2, 10.6]);
+      s.measure = () => {
+        const a = centre(xs[0], s.root), b = centre(xs[1], s.root), m = centre(mk, s.root), u = centre(un, s.root), c3 = centre(copy3, s.root);
+        path = track([[0, 420, 300], [0.5, 420, 300], [1.0, 300, 40], [4.6, 300, 40], [5.3, a[0] + 3, a[1] + 5], [5.6, a[0] + 3, a[1] + 5], [6.3, b[0] + 3, b[1] + 5], [6.7, b[0] + 3, b[1] + 5], [7.9, m[0] + 6, m[1] + 8], [8.5, m[0] + 6, m[1] + 8], [10.3, u[0] + 6, u[1] + 8], [10.9, u[0] + 6, u[1] + 8], [11.8, c3[0] + 6, c3[1] + 8], [13.4, c3[0] + 6, c3[1] + 8], [14, 420, 300]]);
+      };
+      s.render = t => {
+        const typed = t >= 4.0 ? '' : Q.slice(0, Math.round(Q.length * seg(t, 1.3, 2.3)));
+        tx(qt, typed); op(qp, typed ? 0 : 1);
+        cl(q, 'focus', t >= 1.1 && t < 4.6);
+        op(qc, t >= 1.1 && t < 4.6 && (t - 1.1) % 1.1 < 0.6 ? 1 : 0);
+        const f = fade(t, 2.4, 2.8, 4.1, 4.5);
+        cards.forEach((c, i) => op(c, 1 - (DATA[i][4] ? 0 : 0.72 * f)));
+        const s1 = t >= 5.5 && t < 10.7, s2 = t >= 6.5 && t < 10.7;
+        cl(cards[0], 'sel', s1); cl(xs[0], 'on', s1); cl(cards[1], 'sel', s2); cl(xs[1], 'on', s2);
+        op(bar, seg(t, 6.6, 7.0) * (1 - seg(t, 10.8, 11.1))); tf(bar, `translateY(${r2((1 - ex(seg(t, 6.6, 7.0))) * 20)}px)`);
+        tx(bt, s2 || t >= 10.7 ? 'Вибрано: 2 знімки' : 'Вибрано: 1 знімок');
+        const made = t >= 8.3 && t < 11.1;
+        cl(mk, 'done', made); tx(mkT, made ? 'Посилання скопійовано' : 'Створити посилання'); at(mkU, 'href', made ? '#i-check' : '#i-link');
+        cl(copy3, 'hov', t >= 12.0 && t < 13.5);
+        if (path) { const [cx, cy] = path(t); cur.at(cx, cy, ''); rip(t, path); }
+      };
+    }
+  });
+
+  /* ── 09 share link: a preview card in a messenger, then the page ── */
+  chapter('c9', {
+    dur: 14, still: 2.4, label: label(9),
+    cam: {
+      d: [[0, 176, 330, 380], [2.6, 176, 330, 380], [3.4, 590, 210, 470], [6.6, 590, 210, 470], [7.4, 590, 290, 470], [12.4, 590, 290, 470], [13.4, 176, 330, 380], [14, 176, 330, 380]],
+      p: [[0, 176, 330, 320], [2.6, 176, 330, 320], [3.4, 590, 230, 440], [6.6, 590, 230, 440], [7.4, 590, 300, 440], [12.4, 590, 300, 440], [13.4, 176, 330, 320], [14, 176, 330, 320]]
+    },
+    setup(s) {
+      const out = g('c9-out'), prev = g('c9-prev'), page = g('c9-page'), ai = g('c9-ai'), aiT = $('span', ai), aiU = $('use', ai), dl = g('c9-dl'), cur = cursor(g('c9-cur'));
+      const SCROLL = 420;
+      let path = null;
+      const rip = ripple(g('c9-rip'), [2.5, 4.6, 8.8]);
+      s.measure = () => {
+        const p = centre(prev, s.root), a = centre(ai, s.root), d = centre(dl, s.root);
+        path = track([[0, 250, 480], [1.8, 250, 480], [2.3, p[0] + 10, p[1] + 20], [2.7, p[0] + 10, p[1] + 20], [3.6, 640, 300], [4.2, a[0] + 6, a[1] + 8], [4.8, a[0] + 6, a[1] + 8], [6.4, 620, 330], [8.2, d[0] + 6, d[1] - SCROLL + 8], [9.6, d[0] + 6, d[1] - SCROLL + 8], [10.6, 700, 380], [14, 250, 480]]);
+      };
+      s.render = t => {
+        const back = 1 - seg(t, 12.8, 13.3);
+        const o1 = seg(t, 0.3, 0.6); op(out, o1 * back); tf(out, `scale(${r2(0.94 + 0.06 * ex(o1))})`);
+        const pv = io(seg(t, 1.0, 1.6)); set(prev, 'clipPath', `inset(0 0 ${r2((1 - pv) * 100)}% 0)`); op(prev, pv);
+        op(page, seg(t, 2.7, 3.1) * (1 - seg(t, 13.3, 13.8)));
+        const done = t >= 4.7 && t < 6.6;
+        cl(ai, 'done', done); tx(aiT, done ? 'Скопійовано' : 'Копіювати для AI'); at(aiU, 'href', done ? '#i-check' : '#i-copy');
+        tf(page, `translateY(${r2(-SCROLL * io(seg(t, 6.8, 8.0)) * (1 - io(seg(t, 12.6, 13.3))))}px)`);
+        cl(dl, 'hov', t >= 8.4 && t < 9.4);
+        if (path) { const [cx, cy] = path(t); cur.at(cx, cy, ''); op(cur.el, t > 1.6 && t < 12.6 ? 1 : 0); rip(t, path); }
+      };
+    }
+  });
+
+  /* ── 10 self-update ── */
+  chapter('c10', {
+    dur: 12, still: 3.6, label: label(10),
+    cam: {
+      d: [[0, 430, 290, 400], [2.0, 470, 290, 380], [5.2, 470, 290, 380], [5.9, 540, 360, 340], [10.6, 540, 360, 340], [11.6, 430, 290, 400], [12, 430, 290, 400]],
+      p: [[0, 430, 290, 360], [2.0, 450, 290, 330], [5.2, 450, 290, 330], [5.9, 540, 350, 280], [10.6, 540, 350, 280], [11.6, 430, 290, 360], [12, 430, 290, 360]]
+    },
+    setup(s) {
+      const toast = g('c10-toast'), t1 = g('c10-t1'), btn = g('c10-btn'), prog = g('c10-prog'), bar = $('i', prog), ico = g('c10-ico'), tip = g('c10-tip'), cur = cursor(g('c10-cur'));
+      let path = null;
+      const rip = ripple(g('c10-rip'), [2.1]);
+      s.measure = () => {
+        const b = centre(btn, s.root);
+        path = track([[0, 330, 170], [1.2, 330, 170], [1.9, b[0] + 6, b[1] + 8], [2.4, b[0] + 6, b[1] + 8], [3.4, 470, 250], [6.6, 470, 250], [7.3, 548, 398], [10.4, 548, 398], [11.4, 330, 170], [12, 330, 170]]);
+      };
+      s.render = t => {
+        op(toast, fade(t, 0.4, 0.8, 5.5, 5.8)); tf(toast, `translateY(${r2((1 - ex(seg(t, 0.4, 0.8))) * 14)}px)`);
+        const p = seg(t, 2.3, 5.0);
+        tx(t1, t < 2.25 ? 'Доступна версія 1.12.0' : `Завантажую версію 1.12.0… ${Math.round(p * 100)}%`);
+        cl(btn, 'down', t >= 2.1 && t < 2.25);
+        op(btn, t < 2.25 ? 1 : 0);
+        op(prog, t >= 2.25 ? 1 : 0); tf(bar, `scaleX(${r2(p)})`);
+        op(ico, 1 - fade(t, 5.7, 5.9, 6.8, 7.1));
+        op(tip, fade(t, 7.6, 7.9, 10.2, 10.5));
+        if (path) { const [cx, cy] = path(t); cur.at(cx, cy, ''); op(cur.el, t > 1.0 && t < 11.0 ? 1 : 0); rip(t, path); }
+      };
+    }
+  });
+
+  /* ── 11 Windows and Mac side by side (stacked on phones, the lens pans) ── */
+  chapter('c11', {
+    dur: 7, still: 3.4, label: label(11),
+    setup(s) {
+      const panes = $$('.os', s.root).map(p => {
+        const toast = $('.toast', p), svg = $('svg.cover', p);
+        return {
+          tb: toolbar($('[data-toolbar]', p), SHORT), fr: selFrame(svg, 440, 460, 8), svg, tbw: $('.ostb', p), toast, tline: $('.tl', toast), wrap: $('.ostoast', p),
+          k1: keyOverlay($('.k1', p), 0.2, 0.4, 1.0, 1.25, 0.5), k2: keyOverlay($('.k2', p), 3.7, 3.9, 4.4, 4.6, 4.0), k3: keyOverlay($('.k3', p), 5.0, 5.2, 5.7, 5.95, 5.25),
+          y0: p.dataset.os === 'mac' ? 120 : 110
+        };
+      });
+      const camD = track3([[0, 450, 225, 700], [7, 450, 225, 700]]);
+      const camP = track3([[0, 220, 240, 440], [6.2, 220, 240, 440], [6.8, 220, 700, 440], [12.5, 220, 700, 440], [13, 220, 240, 440]]);
+      s.cam = (t, phone) => (phone ? camP : camD)(t);
+      s.measure = () => { panes.forEach(P => P.tb.measure()); s.dur = smallMQ.matches ? 13 : 7; s.t %= s.dur; };
+      const pane = (P, u) => {
+        P.k1(u); P.k2(u); P.k3(u);
+        op(P.svg, seg(u, 0.9, 1.1) * (1 - seg(u, 4.3, 4.5)));
+        const dp = io(seg(u, 1.1, 1.7)), x2 = lerp(40, 400, dp), y2 = lerp(P.y0, P.y0 + 220, dp);
+        P.fr(40, P.y0, x2, y2, u >= 1.1 && x2 - 40 > 2, i => pop(seg(u, 1.75 + i * 0.03, 2.0 + i * 0.03)));
+        op(P.tbw, seg(u, 1.6, 1.85) * (1 - seg(u, 4.3, 4.5)));
+        P.tb.rec(u >= 1.9 && u < 3.6 ? u - 1.9 : -1);
+        const n = P.tb.words.length, k = (u - 2.1) / ((3.4 - 2.1) / (n - 1)) + 1;
+        P.tb.text(u < 4.6 ? clamp(k, 0, n) : 0, u >= 1.9 && u < 4.3 ? u - 1.9 : -1);
+        cl(P.tb.save, 'down', u >= 4.0 && u < 4.14);
+        op(P.toast, fade(u, 4.5, 4.8, 5.9, 6.2)); tf(P.wrap, `scale(.66) translateY(${r2((1 - ex(seg(u, 4.5, 4.8))) * 14)}px)`);
+        tf(P.tline, `scaleX(${r2(1 - seg(u, 4.8, 5.9))})`);
+      };
+      s.render = t => { pane(panes[0], t); pane(panes[1], smallMQ.matches ? t - 6.6 : t); };
+    }
+  });
+
+  /* ── the installer, in the final call ── */
+  chapter('c12', {
+    dur: 8, still: 4.8, label: 'Встановлення',
+    cam: { d: [[0, 260, 165, 420], [8, 260, 165, 420]], p: [[0, 260, 165, 400], [8, 260, 165, 400]] },
+    setup(s) {
+      const win = g('c12-win'), txE = g('c12-tx'), bar = g('c12-bar'), go = g('c12-go'), cancel = g('c12-cancel'), cur = cursor(g('c12-cur'));
+      let path = null;
+      const rip = ripple(g('c12-rip'), [1.4, 5.9]);
+      s.measure = () => {
+        const b = centre(go, s.root);
+        path = track([[0, 430, 300], [0.5, 430, 300], [1.2, b[0] + 4, b[1] + 6], [1.6, b[0] + 4, b[1] + 6], [2.4, 340, 300], [5.0, 340, 300], [5.6, b[0] + 4, b[1] + 6], [6.2, b[0] + 4, b[1] + 6], [7.4, 430, 300], [8, 430, 300]]);
+      };
+      s.render = t => {
+        const done = t >= 4.2 && t < 7.4;
+        op(win, 1 - fade(t, 6.1, 6.4, 7.4, 7.8));
+        tx(txE, t < 1.5 || t >= 7.4 ? 'Скриншот із голосовим коментарем. Безкоштовно, без акаунта.' : done ? 'Готово. ScreenVoicer уже працює.' : 'Встановлюю…');
+        tf(bar, `scaleX(${r2(t >= 7.4 ? 0 : seg(t, 1.6, 4.2))})`);
+        tx(go, done ? 'Готово' : 'Встановити');
+        op(cancel, done ? 0 : 1);
+        cl(go, 'down', (t >= 1.4 && t < 1.55) || (t >= 5.9 && t < 6.05));
+        if (path) { const [cx, cy] = path(t); cur.at(cx, cy, ''); rip(t, path); }
+      };
+    }
+  });
+
+  /* ═════════ engine: one rAF loop, only for what is on screen ═════════ */
+  for (const [k, v] of params) {
+    if (v === '' || isNaN(+v)) continue;
+    if (k === 't' && hero) hero.frozen = +v;
+    const s = scenes.find(x => x.id === k);
+    if (s) s.frozen = +v;
+  }
+  const measureScene = s => {
+    s.lw = s.lens.clientWidth || 1; s.lh = s.lens.clientHeight || 1;
+    s.W = s.root.offsetWidth; s.H = s.root.offsetHeight;
+    s.top = s.sec.getBoundingClientRect().top + scrollY;
+    if (s.measure) s.measure();
+  };
+  /* the macro camera: from the whole piece of UI to the close-up, eased by scroll */
+  const drawScene = (s, y) => {
+    const t = s.frozen !== null ? s.frozen : reduced ? s.still : s.t;
+    s.render(t);
+    const phone = smallMQ.matches, vh = innerHeight;
+    let push = 1;
+    if (!reduced && s.frozen === null) { const rel = y - s.top; push = s.pinned ? io(seg(rel, -0.62 * vh, 0.1 * vh)) : io(seg(rel, -0.95 * vh, -0.3 * vh)); }
+    const W = s.W, H = s.H, asp = s.lh / s.lw, wWide = Math.max(W, H / asp);
+    let [cx, cy, w] = s.cam(t, phone);
+    w = Math.exp(lerp(Math.log(wWide), Math.log(w), push));
+    cx = lerp(W / 2, cx, push); cy = lerp(H / 2, cy, push);
+    const h = w * asp;
+    const x = w <= W ? clamp(cx - w / 2, 0, W - w) : (W - w) / 2;
+    const yy = h <= H ? clamp(cy - h / 2, 0, H - h) : (H - h) / 2;
+    const k = s.lw / w;
+    tf(s.root, `translate(${r2(-x * k)}px,${r2(-yy * k)}px) scale(${k.toFixed(5)})`);
+    tx(s.zoom, '×' + (wWide / w).toFixed(1));
+  };
+
+  let raf = 0, last = 0;
+  const loop = now => {
+    raf = 0;
+    const dt = last ? Math.min(0.05, (now - last) / 1000) : 0;
+    last = now;
+    const y = scrollY;
+    let any = false;
+    if (hero && hero.visible) { hero.tick(dt, y); any = true; }
+    for (const s of scenes) {
+      if (!s.visible) continue;
+      if (!reduced && s.frozen === null) s.t = (s.t + dt) % s.dur;
+      drawScene(s, y);
+      any = true;
+    }
+    if (any && !reduced && !D.hidden) raf = requestAnimationFrame(loop); else last = 0;
+  };
+  function kick() { if (!raf && !D.hidden) raf = requestAnimationFrame(loop); }
+
+  const vis = new IntersectionObserver(es => {
+    for (const e of es) {
+      const s = e.target._scene;
+      if (!s) continue;
+      s.visible = e.isIntersecting;
+      if (s.visible && !s.seen) { s.seen = true; if (s !== hero) s.t = 0; }
+    }
+    kick();
+  }, { rootMargin: '60px 0px' });
+  scenes.forEach(s => { s.lens._scene = s; vis.observe(s.lens); });
+  if (hero) { hero.sec._scene = hero; vis.observe(hero.sec); }
+  addEventListener('scroll', kick, { passive: true });
+  D.addEventListener('visibilitychange', () => { last = 0; kick(); });
+
+  const measureAll = () => {
+    if (hero) hero.measure();
+    scenes.forEach(measureScene);
+    const y = scrollY;
+    if (hero) hero.tick(0, y);
+    scenes.forEach(s => drawScene(s, y));
+  };
+  let rz = 0;
+  addEventListener('resize', () => { cancelAnimationFrame(rz); rz = requestAnimationFrame(measureAll); });
+  smallMQ.addEventListener('change', measureAll);
+  reduceMQ.addEventListener('change', e => { reduced = e.matches || params.has('rm'); root.classList.toggle('reduced', reduced); measureAll(); kick(); });
+  measureAll();
+  if (D.fonts && D.fonts.ready) D.fonts.ready.then(measureAll);
+
+  /* the visitor's platform gets the primary button */
+  const ua = navigator.userAgent || '', plat = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '';
+  const isMac = /mac/i.test(plat) && !/iphone|ipad|ipod/i.test(ua) && !(navigator.maxTouchPoints > 1);
+  if (isMac || params.has('mac')) {
+    $$('[data-cta]').forEach(c => {
+      const win = $('[data-os="win"]', c), mac = $('[data-os="mac"]', c);
+      win.classList.replace('btn-primary', 'btn-secondary'); mac.classList.replace('btn-secondary', 'btn-primary');
+      c.insertBefore(mac, win);
+    });
+  }
+
+  /* #dbg: report horizontal overflow */
+  if (params.has('dbg')) {
+    const o = D.createElement('div'); o.id = 'dbgOut'; D.body.appendChild(o);
+    const upd = () => { o.textContent = `vw ${innerWidth} · doc ${root.scrollWidth} · body ${D.body.scrollWidth}` + (root.scrollWidth > innerWidth ? ' OVERFLOW' : ' ok'); };
+    upd(); setTimeout(upd, 1500);
+  }
+})();
+</script>
+</body>
+</html>
