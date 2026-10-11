@@ -315,7 +315,7 @@ struct TrayMenuView: View {
         well {
             ForEach(WhisperModels.all) { info in
                 optionRow(info.title,
-                          detail: "\(info.id) · \(info.sizeMb) МБ" + (info.needsGpu && !model.gpuAvailable ? " · повільно без відеокарти" : ""),
+                          detail: "\(info.sizeMb) МБ" + (info.needsGpu && !model.gpuAvailable ? " · повільно без відеокарти" : ""),
                           checked: info == model.model) {
                     model.host?.selectModel(info)
                     model.refresh()

@@ -24,12 +24,12 @@ enum WhisperModels {
         fileName: "ggml-small-q5_1.bin", url: repo + "q5_1/ggml-small.bin", sizeMb: 181, needsGpu: false)
 
     static let turbo = WhisperModelInfo(
-        id: "turbo", title: "Дуже точна", hint: "large-v3-turbo; потрібна відеокарта",
+        id: "turbo", title: "Дуже точна", hint: "потрібна відеокарта",
         fileName: "ggml-large-v3-turbo-q5_0.bin", url: repo + "q5_0/ggml-large-v3-turbo.bin", sizeMb: 547, needsGpu: true)
 
     static let large = WhisperModelInfo(
         id: "large", title: "Максимальна",
-        hint: "large-v3, найкраще розуміє нечітку вимову; потрібна відеокарта",
+        hint: "найкраще розуміє нечітку вимову; потрібна відеокарта",
         fileName: "ggml-large-v3-q5_0.bin", url: repo + "q5_0/ggml-large-v3.bin", sizeMb: 1031, needsGpu: true)
 
     static let all = [base, small, turbo, large]

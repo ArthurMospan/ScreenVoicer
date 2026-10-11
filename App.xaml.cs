@@ -319,7 +319,7 @@ namespace ScreenVoicer
             if (!WhisperTranscriptionService.IsModelDownloaded(model.Id))
             {
                 _notifications!.ShowToast("Готую розпізнавання голосу",
-                    $"Одноразово завантажую мовну модель «{model.Id}» ({model.SizeMb} МБ). Скриншоти можна робити вже зараз.", ToastKind.Info, 8000);
+                    $"Одноразово завантажую розпізнавання «{model.Title}» ({model.SizeMb} МБ). Скриншоти можна робити вже зараз.", ToastKind.Info, 8000);
             }
 
             // Loading the native runtime maps up to ~900 MB of DLLs (CUDA) while holding the Windows loader lock,
@@ -389,7 +389,7 @@ namespace ScreenVoicer
             _notifications!.Show(new ToastOptions
             {
                 Title = $"Знайдено відеокарту {_transcription.GpuName}",
-                Message = $"Можна увімкнути точнішу модель «{WhisperModels.Small.Id}» ({WhisperModels.Small.SizeMb} МБ) — з відеокартою вона працює так само швидко.",
+                Message = $"Можна увімкнути розпізнавання «{WhisperModels.Small.Title}» ({WhisperModels.Small.SizeMb} МБ): з відеокартою воно так само швидке, а розуміє краще.",
                 Kind = ToastKind.Info,
                 DurationMs = 12000,
                 ActionText = "Увімкнути",
@@ -408,17 +408,17 @@ namespace ScreenVoicer
             _settings.Save();
 
             bool needsDownload = !WhisperTranscriptionService.IsModelDownloaded(model.Id);
-            _notifications!.ShowToast($"Модель «{model.Id}»",
+            _notifications!.ShowToast($"Розпізнавання «{model.Title}»",
                 needsDownload
-                    ? $"Завантажую {model.SizeMb} МБ… Поки що працює попередня модель."
-                    : "Перемикаю модель розпізнавання…",
+                    ? $"Завантажую {model.SizeMb} МБ… Поки що працює попереднє розпізнавання."
+                    : "Перемикаю розпізнавання…",
                 ToastKind.Info, 4000);
 
             bool ok = await _transcription.SwitchModelAsync(model.Id);
             if (ok)
             {
                 string where = _transcription.UseGpu && _transcription.IsGpuRuntimeAvailable ? "на відеокарті" : "на процесорі";
-                _notifications.ShowToast($"Модель «{model.Id}» готова", $"{model.Title}: {model.Hint}. Працює {where}.", ToastKind.Success, 5000);
+                _notifications.ShowToast($"Розпізнавання «{model.Title}» готове", $"{char.ToUpper(model.Hint[0])}{model.Hint[1..]}. Працює {where}.", ToastKind.Success, 5000);
 
                 if (model == WhisperModels.Large && CudaPack.HasNvidiaDriver && _transcription.GpuBackend != "CUDA" && _cudaProgress == null)
                 {
@@ -426,8 +426,8 @@ namespace ScreenVoicer
                     {
                         Title = "Можна вдвічі швидше",
                         Message = CudaPack.IsInstalled
-                            ? "Прискорення NVIDIA CUDA вже завантажене — перезапустіть ScreenVoicer, щоб його увімкнути."
-                            : $"З прискоренням NVIDIA CUDA модель «{model.Id}» відповідає за ~3,5 с замість ~8 с. Завантаження {CudaPack.DownloadMegabytes} МБ, один раз.",
+                            ? "Прискорення NVIDIA вже завантажене — перезапустіть ScreenVoicer, щоб його увімкнути."
+                            : $"З прискоренням NVIDIA розпізнавання «{model.Title}» відповідає за ~3,5 с замість ~8 с. Завантаження {CudaPack.DownloadMegabytes} МБ, один раз.",
                         Kind = ToastKind.Info,
                         DurationMs = 15000,
                         ActionText = CudaPack.IsInstalled ? "Перезапустити" : "Завантажити",
@@ -439,7 +439,7 @@ namespace ScreenVoicer
             {
                 _settings.Model = _transcription.SelectedModel.Id; // the service kept the previous model
                 _settings.Save();
-                _notifications.ShowToast("Не вдалося змінити модель", _transcription.LastError ?? "Невідома помилка.", ToastKind.Error, 8000);
+                _notifications.ShowToast("Не вдалося змінити розпізнавання", _transcription.LastError ?? "Невідома помилка.", ToastKind.Error, 8000);
             }
             UpdateTrayStatus();
         }
@@ -642,15 +642,15 @@ namespace ScreenVoicer
                 return ("Запускаюсь…", TrayStatusKind.Busy);
             }
 
-            string where = t.IsRunningOnGpu ? $"{ShortGpuName(t.GpuName)} ({t.GpuBackend})" : "процесор";
+            string where = t.IsRunningOnGpu ? ShortGpuName(t.GpuName) : "процесор";
             return t.State switch
             {
                 ModelState.Ready when t.DownloadingModel != null =>
-                    ($"Завантажую «{t.DownloadingModel.Id}»: {t.DownloadProgress:P0}", TrayStatusKind.Busy),
-                ModelState.Ready => ($"Голос готовий · {t.ActiveModel?.Id} · {where}", TrayStatusKind.Ready),
-                ModelState.Downloading => ($"Завантажую модель «{t.DownloadingModel?.Id}»: {t.DownloadProgress:P0}", TrayStatusKind.Busy),
+                    ($"Завантажую «{t.DownloadingModel.Title}»: {t.DownloadProgress:P0}", TrayStatusKind.Busy),
+                ModelState.Ready => ($"Голос готовий · {t.ActiveModel?.Title} · {where}", TrayStatusKind.Ready),
+                ModelState.Downloading => ($"Завантажую розпізнавання «{t.DownloadingModel?.Title}»: {t.DownloadProgress:P0}", TrayStatusKind.Busy),
                 ModelState.Failed => ("Голос недоступний — відкрийте «Розпізнавання»", TrayStatusKind.Error),
-                _ => ("Модель розпізнавання запускається…", TrayStatusKind.Busy)
+                _ => ("Розпізнавання запускається…", TrayStatusKind.Busy)
             };
         }
 
@@ -669,7 +669,7 @@ namespace ScreenVoicer
             var t = _transcription;
             string tip = t.State switch
             {
-                ModelState.Downloading => $"ScreenVoicer — модель {t.DownloadProgress:P0}",
+                ModelState.Downloading => $"ScreenVoicer — готую розпізнавання {t.DownloadProgress:P0}",
                 ModelState.Failed => "ScreenVoicer — голос недоступний",
                 _ => $"ScreenVoicer\nКлік або {HotkeyText} — знімок, правий клік — меню"
             };
@@ -703,8 +703,8 @@ namespace ScreenVoicer
 
         string ITrayMenuHost.AboutText =>
             $"ScreenVoicer {Version} — скриншоти з голосовими коментарями для баг-репортів і AI-асистентів.\n" +
-            $"Розпізнавання: «{_transcription?.ActiveModel?.Id ?? "—"}» на " +
-            $"{(_transcription?.IsRunningOnGpu == true ? $"{_transcription.GpuName} ({_transcription.GpuBackend})" : "процесорі")}.\n" +
+            $"Розпізнавання: «{_transcription?.ActiveModel?.Title ?? "—"}», офлайн, на " +
+            $"{(_transcription?.IsRunningOnGpu == true ? _transcription.GpuName : "процесорі")}.\n" +
             $"Скриншоти: {_settings?.OutputDirectory}";
 
         event EventHandler? ITrayMenuHost.MenuStateChanged
@@ -905,11 +905,11 @@ namespace ScreenVoicer
                 "Скриншоти з голосовими коментарями для баг-репортів та AI-асистентів.\n\n" +
                 $"• {HotkeyText} — знімок екрана під курсором (змінити: меню трея)\n" +
                 "• Миша — виділити область, потім малювати поверх\n" +
-                "• P H A R T N E — олівець, маркер, стрілка, рамка, текст, мітки 1-2-3, гумка\n" +
-                "• Затиснути Пробіл — голосовий коментар (офлайн, Whisper)\n" +
+                "• P H A R T N B E — олівець, маркер, стрілка, рамка, текст, мітки 1-2-3, «Приховати», гумка\n" +
+                "• Затиснути Пробіл — голосовий коментар (розпізнається офлайн, на цьому комп'ютері)\n" +
                 "• Enter — зберегти PNG і скопіювати Markdown, Esc — скасувати\n" +
                 "• Ctrl+Z / Ctrl+Y — скасувати / повторити\n\n" +
-                $"Розпізнавання: «{_transcription?.ActiveModel?.Id}» на " +
+                $"Розпізнавання: «{_transcription?.ActiveModel?.Title}», офлайн, на " +
                 $"{(_transcription?.IsRunningOnGpu == true ? _transcription.GpuName : "процесорі")}\n" +
                 $"Скриншоти: {_settings?.OutputDirectory}\n" +
                 $"Журнал: {Log.LogFilePath}",
@@ -1197,7 +1197,7 @@ namespace ScreenVoicer
 
             _cudaProgress = 0;
             UpdateTrayStatus();
-            _notifications!.ShowToast("Прискорення NVIDIA CUDA",
+            _notifications!.ShowToast("Прискорення NVIDIA",
                 $"Завантажую {CudaPack.DownloadMegabytes} МБ (один раз). Тим часом усе працює як звичайно.", ToastKind.Info, 5000);
 
             var progress = new Progress<double>(p =>
@@ -1216,8 +1216,8 @@ namespace ScreenVoicer
                 UpdateTrayStatus();
                 _notifications.Show(new ToastOptions
                 {
-                    Title = "Прискорення CUDA встановлено",
-                    Message = "Перезапустіть ScreenVoicer, щоб розпізнавання перейшло на CUDA.",
+                    Title = "Прискорення NVIDIA встановлено",
+                    Message = "Перезапустіть ScreenVoicer, щоб розпізнавання стало швидшим.",
                     Kind = ToastKind.Success,
                     DurationMs = 20000,
                     ActionText = "Перезапустити",
@@ -1229,7 +1229,7 @@ namespace ScreenVoicer
                 Log.Error("[CUDA] Installation failed", ex);
                 _cudaProgress = null;
                 UpdateTrayStatus();
-                _notifications.ShowToast("Не вдалося встановити CUDA", ex.Message, ToastKind.Error, 8000);
+                _notifications.ShowToast("Не вдалося встановити прискорення NVIDIA", ex.Message, ToastKind.Error, 8000);
             }
         }
 

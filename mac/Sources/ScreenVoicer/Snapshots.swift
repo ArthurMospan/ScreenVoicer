@@ -244,7 +244,7 @@ enum Snapshots {
 private final class SampleMenuHost: MenuHost {
     var captureHotkey = "⌥⇧S"
     var appVersion = "1.11.0"
-    var voiceStatus: (text: String, kind: TrayStatusKind) = ("Голос готовий · small · Apple M2 (Metal)", .ready)
+    var voiceStatus: (text: String, kind: TrayStatusKind) = ("Голос готовий · Точна · Apple M2", .ready)
     var screenshotCount = 23
     func microphones() -> [MicrophoneInfo] {
         [MicrophoneInfo(uid: "", displayName: "Системний за замовчуванням (MacBook Air Microphone)"),
@@ -259,7 +259,7 @@ private final class SampleMenuHost: MenuHost {
     var gpuAvailable = true
     var gpuName: String? = "Apple M2"
     var autostartEnabled = true
-    var aboutText = "ScreenVoicer 1.11.0 — скриншоти з голосовими коментарями для баг-репортів і AI-асистентів.\nРозпізнавання: «small» на Apple M2 (Metal).\nСкриншоти: ~/AI_Screenshots"
+    var aboutText = "ScreenVoicer 1.11.0 — скриншоти з голосовими коментарями для баг-репортів і AI-асистентів.\nРозпізнавання: «Точна», офлайн, на Apple M2.\nСкриншоти: ~/AI_Screenshots"
     var updateVersion: String?
     var updateProgress: Double?
     func capture() {}

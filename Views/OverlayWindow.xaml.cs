@@ -1849,7 +1849,7 @@ namespace ScreenVoicer.Views
             string how = _recordingHandsFree
                 ? "Говоріть… щоб зупинити — натисніть Пробіл або мікрофон"
                 : "Говоріть… відпустіть Пробіл, коли закінчите";
-            ShowStatus(_transcription.IsModelReady ? how : how + " (модель ще готується)", StatusKind.Recording);
+            ShowStatus(_transcription.IsModelReady ? how : how + " (розпізнавання ще готується)", StatusKind.Recording);
         }
 
         /// <summary>Esc while talking: drop this take, keep the rest of the comment.</summary>
@@ -1945,7 +1945,7 @@ namespace ScreenVoicer.Views
 
         private async Task FinishChunkAsync(VoiceChunk chunk, float[] samples)
         {
-            ShowStatus(_transcription.IsModelReady ? "Розпізнаю…" : "Чекаю на модель розпізнавання…", StatusKind.Busy);
+            ShowStatus(_transcription.IsModelReady ? "Розпізнаю…" : "Готую розпізнавання…", StatusKind.Busy);
 
             string text = string.Empty;
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
@@ -2099,19 +2099,19 @@ namespace ScreenVoicer.Views
             switch (_transcription.State)
             {
                 case ModelState.Ready when _transcription.DownloadingModel is { } next:
-                    ShowStatus($"Говоріть або пишіть · модель «{next.Id}»: {_transcription.DownloadProgress:P0}", StatusKind.Idle);
+                    ShowStatus($"Говоріть або пишіть · «{next.Title}»: {_transcription.DownloadProgress:P0}", StatusKind.Idle);
                     break;
                 case ModelState.Ready:
                     ShowStatus("Утримуйте Пробіл і говоріть, або пишіть", StatusKind.Idle);
                     break;
                 case ModelState.Downloading:
-                    ShowStatus($"Завантажую модель розпізнавання… {_transcription.DownloadProgress:P0} — записувати вже можна.", StatusKind.Busy);
+                    ShowStatus($"Готую розпізнавання… {_transcription.DownloadProgress:P0} — записувати вже можна.", StatusKind.Busy);
                     break;
                 case ModelState.Failed:
                     ShowStatus($"Голос недоступний: {_transcription.LastError}", StatusKind.Error);
                     break;
                 default:
-                    ShowStatus("Запускаю модель розпізнавання…", StatusKind.Busy);
+                    ShowStatus("Запускаю розпізнавання…", StatusKind.Busy);
                     break;
             }
         }
@@ -2297,7 +2297,7 @@ namespace ScreenVoicer.Views
                     : "Вставте (Ctrl+V) у чат чи задачу — шлях до PNG і коментар уже в буфері.";
                 if (voiceLost)
                 {
-                    message = "Голосовий коментар не встиг розпізнатися (модель ще готується). " + message;
+                    message = "Голосовий коментар не встиг розпізнатися (розпізнавання ще готується). " + message;
                 }
 
                 _notifications.Show(new ToastOptions

@@ -150,7 +150,7 @@ final class WhisperService {
             return false
         } catch {
             Log.error("[Whisper] Failed to prepare model '\(target.id)'", error)
-            reportFailure("Не вдалося завантажити модель «\(target.id)» (\(error.localizedDescription)). Перевірте інтернет і спробуйте ще раз.")
+            reportFailure("Не вдалося завантажити розпізнавання «\(target.title)» (\(error.localizedDescription)). Перевірте інтернет і спробуйте ще раз.")
             return false
         }
     }

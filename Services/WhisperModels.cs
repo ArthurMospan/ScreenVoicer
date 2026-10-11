@@ -29,7 +29,7 @@ namespace ScreenVoicer.Services
             "ggml-small-q5_1.bin", Repo + "q5_1/ggml-small.bin", 181, NeedsGpu: false);
 
         public static readonly WhisperModelInfo Turbo = new(
-            "turbo", "Дуже точна", "large-v3-turbo; потрібна відеокарта",
+            "turbo", "Дуже точна", "потрібна відеокарта",
             "ggml-large-v3-turbo-q5_0.bin", Repo + "q5_0/ggml-large-v3-turbo.bin", 547, NeedsGpu: true);
 
         /// <summary>
@@ -37,7 +37,7 @@ namespace ScreenVoicer.Services
         /// word. 7.5–8.5 s per phrase via Vulkan on a GTX 1650, 3.5 s with the CUDA pack (see <see cref="CudaPack"/>).
         /// </summary>
         public static readonly WhisperModelInfo Large = new(
-            "large", "Максимальна", "large-v3, найкраще розуміє нечітку вимову; потрібна відеокарта (з NVIDIA CUDA — швидко)",
+            "large", "Максимальна", "найкраще розуміє нечітку вимову; потрібна відеокарта (з прискоренням NVIDIA — швидко)",
             "ggml-large-v3-q5_0.bin", Repo + "q5_0/ggml-large-v3.bin", 1031, NeedsGpu: true);
 
         public static IReadOnlyList<WhisperModelInfo> All { get; } = new[] { Base, Small, Turbo, Large };

@@ -371,7 +371,7 @@ namespace ScreenVoicer.Views
             ModelList.Children.Clear();
             foreach (var model in WhisperModels.All)
             {
-                string detail = $"{model.Id} · {model.SizeMb} МБ" + (model.NeedsGpu && !_host.GpuAvailable ? " · повільно без відеокарти" : string.Empty);
+                string detail = $"{model.SizeMb} МБ" + (model.NeedsGpu && !_host.GpuAvailable ? " · повільно без відеокарти" : string.Empty);
                 var row = OptionRow(model.Title, detail, model == _host.SelectedModel);
                 row.ToolTip = model.Hint;
                 row.Click += (_, _) =>
@@ -398,10 +398,10 @@ namespace ScreenVoicer.Views
             {
                 (string text, string? detail2, bool enabled) = _host.Cuda switch
                 {
-                    CudaOffer.Active => ("Прискорення NVIDIA CUDA увімкнено", (string?)null, false),
-                    CudaOffer.Downloading => ($"Завантажую CUDA… {_host.CudaProgress:P0}", null, false),
-                    CudaOffer.NeedsRestart => ("CUDA готове — перезапустити", "щоб розпізнавання перейшло на CUDA", true),
-                    _ => ("Прискорити через NVIDIA CUDA", $"≈{CudaPack.DownloadMegabytes} МБ один раз · «large» удвічі швидше", true)
+                    CudaOffer.Active => ("Прискорення NVIDIA увімкнено", (string?)null, false),
+                    CudaOffer.Downloading => ($"Завантажую прискорення… {_host.CudaProgress:P0}", null, false),
+                    CudaOffer.NeedsRestart => ("Прискорення готове — перезапустити", "щоб розпізнавання стало швидшим", true),
+                    _ => ("Прискорити для NVIDIA", $"≈{CudaPack.DownloadMegabytes} МБ один раз · «{WhisperModels.Large.Title}» удвічі швидше", true)
                 };
                 var cuda = OptionRow(text, detail2, _host.Cuda == CudaOffer.Active, (Geometry)FindResource("Icon.Spark"), showCheck: _host.Cuda == CudaOffer.Active);
                 cuda.IsEnabled = enabled;

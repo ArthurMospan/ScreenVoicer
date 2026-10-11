@@ -992,7 +992,7 @@ final class OverlayController: NSObject, NSTextFieldDelegate {
         let how = recordingHandsFree
             ? "Говоріть… щоб зупинити — натисніть Пробіл або мікрофон"
             : "Говоріть… відпустіть Пробіл, коли закінчите"
-        showStatus(whisper.isModelReady ? how : how + " (модель ще готується)", .recording)
+        showStatus(whisper.isModelReady ? how : how + " (розпізнавання ще готується)", .recording)
     }
 
     /// Esc while talking: drop this take, keep the rest of the comment.
@@ -1054,7 +1054,7 @@ final class OverlayController: NSObject, NSTextFieldDelegate {
     }
 
     private func finishChunk(_ chunk: VoiceChunk, samples: [Float]) async {
-        showStatus(whisper.isModelReady ? "Розпізнаю…" : "Чекаю на модель розпізнавання…", .busy)
+        showStatus(whisper.isModelReady ? "Розпізнаю…" : "Готую розпізнавання…", .busy)
         let started = Date()
         let analysis = Task.detached(priority: .utility) { AudioAnalysis.highBandShare(samples) }
         let text = await whisper.transcribe(samples)
@@ -1139,16 +1139,16 @@ final class OverlayController: NSObject, NSTextFieldDelegate {
         switch whisper.state {
         case .ready:
             if let next = whisper.downloadingModel {
-                showStatus("Говоріть або пишіть · модель «\(next.id)»: \(Formats.percent(whisper.downloadProgress))", .idle)
+                showStatus("Говоріть або пишіть · «\(next.title)»: \(Formats.percent(whisper.downloadProgress))", .idle)
             } else {
                 showStatus("Утримуйте Пробіл і говоріть, або пишіть", .idle)
             }
         case .downloading:
-            showStatus("Завантажую модель розпізнавання… \(Formats.percent(whisper.downloadProgress)) — записувати вже можна.", .busy)
+            showStatus("Готую розпізнавання… \(Formats.percent(whisper.downloadProgress)) — записувати вже можна.", .busy)
         case .failed:
             showStatus("Голос недоступний: \(whisper.lastError ?? "")", .error)
         default:
-            showStatus("Запускаю модель розпізнавання…", .busy)
+            showStatus("Запускаю розпізнавання…", .busy)
         }
     }
 
@@ -1267,7 +1267,7 @@ final class OverlayController: NSObject, NSTextFieldDelegate {
                 ? "Вставте (⌘V) у чат чи задачу — шлях до PNG і коментар уже в буфері."
                 : "«\(comment)»"
             if voiceLost {
-                message = "Голосовий коментар не встиг розпізнатися (модель ще готується). " + message
+                message = "Голосовий коментар не встиг розпізнатися (розпізнавання ще готується). " + message
             }
 
             let share = shareItem
