@@ -72,13 +72,28 @@ final class DimView: NSView {
     }
 }
 
-/// The selection frame (white line over a soft dark line) and the "W × H" badge.
+/// The selection frame (white line over a soft dark line), the "W × H" badge and the eight resize handles.
 final class FrameView: NSView {
     var selection: CGRect? { didSet { needsDisplay = true } }
     var sizeText = ""
+    var showsHandles = false { didSet { if showsHandles != oldValue { needsDisplay = true } } }
 
     override var isFlipped: Bool { true }
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+    /// 0 top-left, then clockwise: top, top-right, right, bottom-right, bottom, bottom-left, left.
+    static func handlePoint(_ r: CGRect, _ i: Int) -> CGPoint {
+        switch i {
+        case 0: return CGPoint(x: r.minX, y: r.minY)
+        case 1: return CGPoint(x: r.midX, y: r.minY)
+        case 2: return CGPoint(x: r.maxX, y: r.minY)
+        case 3: return CGPoint(x: r.maxX, y: r.midY)
+        case 4: return CGPoint(x: r.maxX, y: r.maxY)
+        case 5: return CGPoint(x: r.midX, y: r.maxY)
+        case 6: return CGPoint(x: r.minX, y: r.maxY)
+        default: return CGPoint(x: r.minX, y: r.midY)
+        }
+    }
 
     override func draw(_ dirtyRect: NSRect) {
         guard let rect = selection, let ctx = NSGraphicsContext.current?.cgContext else { return }
@@ -88,6 +103,21 @@ final class FrameView: NSView {
         ctx.setStrokeColor(NSColor.white.cgColor)
         ctx.setLineWidth(1.25)
         ctx.stroke(rect)
+
+        if showsHandles && rect.width >= 8 && rect.height >= 8 {
+            for i in 0..<8 {
+                let p = Self.handlePoint(rect, i)
+                let square = CGPath(roundedRect: CGRect(x: p.x - 4, y: p.y - 4, width: 8, height: 8),
+                                    cornerWidth: 2, cornerHeight: 2, transform: nil)
+                ctx.setFillColor(NSColor.white.cgColor)
+                ctx.addPath(square)
+                ctx.fillPath()
+                ctx.setStrokeColor(NSColor(white: 0, alpha: 0x8C / 255.0).cgColor)
+                ctx.setLineWidth(1)
+                ctx.addPath(square)
+                ctx.strokePath()
+            }
+        }
 
         let attributes: [NSAttributedString.Key: Any] = [
             .font: NSFont.systemFont(ofSize: 11.5, weight: .semibold),

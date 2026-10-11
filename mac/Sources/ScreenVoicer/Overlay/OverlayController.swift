@@ -51,6 +51,11 @@ final class OverlayController: NSObject, NSTextFieldDelegate {
     private var isSelecting = false
     private var dragStart = CGPoint.zero
 
+    // adjusting the region: eight small squares on the frame, drag one instead of selecting again
+    private var resizeHandle: Int?
+    private var resizeStartRect = CGRect.zero
+    private var resizeStartPoint = CGPoint.zero
+
     // drawing
     private(set) var items: [AnnotationItem] = []
     private var undoStack: [Change] = []
@@ -58,6 +63,8 @@ final class OverlayController: NSObject, NSTextFieldDelegate {
     private var shapeStart: CGPoint?
     private var shapeStroke: StrokeAnnotation?
     private var liveStroke: StrokeAnnotation?
+    private var blurStart: CGPoint?
+    private var blurItem: BlurAnnotation?
     private var erasing = false
 
     // text labels & numbered markers
@@ -151,6 +158,7 @@ final class OverlayController: NSObject, NSTextFieldDelegate {
     }
 
     var panelForTest: NSPanel? { panel }
+    var selectionForTest: CGRect? { selection }
 
     func show() {
         panel.makeKeyAndOrderFront(nil)
@@ -182,10 +190,25 @@ final class OverlayController: NSObject, NSTextFieldDelegate {
     }
 
     func cursor(at point: CGPoint) -> NSCursor {
+        if let handle = resizeHandle ?? hitHandle(point) {
+            return Self.resizeCursor(handle)
+        }
         if model.mode == .rectangleRegion, !(selection.map { $0.width >= 8 && $0.contains(point) } ?? false) {
             return .crosshair
         }
         return model.tool == .text ? .iBeam : .crosshair
+    }
+
+    private static func resizeCursor(_ handle: Int) -> NSCursor {
+        if #available(macOS 15.0, *) {
+            let positions: [NSCursor.FrameResizePosition] = [.topLeft, .top, .topRight, .right, .bottomRight, .bottom, .bottomLeft, .left]
+            return NSCursor.frameResize(position: positions[handle], directions: .all)
+        }
+        switch handle {
+        case 1, 5: return .resizeUpDown
+        case 3, 7: return .resizeLeftRight
+        default: return .crosshair // diagonal resize cursors are public only since macOS 15
+        }
     }
 
     // MARK: - Flyouts
@@ -282,6 +305,7 @@ final class OverlayController: NSObject, NSTextFieldDelegate {
         guard region else {
             dimView.isHidden = true
             frameView.selection = nil
+            frameView.showsHandles = false
             model.hintVisible = false
             canvas.clip = nil
             canvas.needsDisplay = true
@@ -291,16 +315,61 @@ final class OverlayController: NSObject, NSTextFieldDelegate {
         if let s = selection, s.width >= 1, s.height >= 1 {
             dimView.update(hole: s)
             frameView.sizeText = "\(Int((s.width * capture.scale).rounded())) × \(Int((s.height * capture.scale).rounded()))"
+            frameView.showsHandles = !isSelecting
             frameView.selection = s
             model.hintVisible = false
             canvas.clip = s
         } else {
             dimView.update(hole: nil)
+            frameView.showsHandles = false
             frameView.selection = nil
             model.hintVisible = !isSelecting
             canvas.clip = .zero // ink shows only inside a selection (the canvas still takes the clicks that select)
         }
         canvas.needsDisplay = true
+    }
+
+    private func hitHandle(_ p: CGPoint) -> Int? {
+        guard model.mode == .rectangleRegion, !isSelecting, !isSaving, let r = selection, r.width >= 8, r.height >= 8 else { return nil }
+        return (0..<8).first { i in
+            let h = FrameView.handlePoint(r, i)
+            return abs(p.x - h.x) <= 7 && abs(p.y - h.y) <= 7
+        }
+    }
+
+    private func beginResize(_ handle: Int, at point: CGPoint) {
+        commitLabelEdit()
+        leaveTextBox()
+        resizeHandle = handle
+        resizeStartRect = selection ?? .zero
+        resizeStartPoint = point
+        closeFlyout()
+        model.panelsFaded = true
+    }
+
+    private func updateResize(_ point: CGPoint) {
+        guard let handle = resizeHandle else { return }
+        let dx = point.x - resizeStartPoint.x, dy = point.y - resizeStartPoint.y
+        var left = resizeStartRect.minX, top = resizeStartRect.minY, right = resizeStartRect.maxX, bottom = resizeStartRect.maxY
+        if [0, 6, 7].contains(handle) { left += dx }
+        if [0, 1, 2].contains(handle) { top += dy }
+        if [2, 3, 4].contains(handle) { right += dx }
+        if [4, 5, 6].contains(handle) { bottom += dy }
+        // dragging an edge past the opposite one just flips the region
+        let a = clampToRoot(CGPoint(x: left, y: top)), b = clampToRoot(CGPoint(x: right, y: bottom))
+        selection = CGRect(x: min(a.x, b.x), y: min(a.y, b.y), width: abs(b.x - a.x), height: abs(b.y - a.y))
+        updateSelectionVisuals()
+    }
+
+    private func endResize() {
+        guard resizeHandle != nil else { return }
+        resizeHandle = nil
+        if selection.map({ $0.width < 8 || $0.height < 8 }) ?? true {
+            selection = resizeStartRect
+        }
+        model.panelsFaded = false
+        updateSelectionVisuals()
+        repositionPanels()
     }
 
     func toolbarFrameChanged() { repositionPanels() }
@@ -335,6 +404,10 @@ final class OverlayController: NSObject, NSTextFieldDelegate {
 
     func mouseDown(at point: CGPoint, clickCount: Int) {
         if isSaving { return }
+        if let handle = hitHandle(point) {
+            beginResize(handle, at: clampToRoot(point)) // over a handle no tool starts drawing
+            return
+        }
         let insideSelection = selection.map { $0.width >= 8 && $0.height >= 8 && $0.contains(point) } ?? false
         if model.mode == .rectangleRegion && !insideSelection {
             commitLabelEdit()
@@ -360,10 +433,16 @@ final class OverlayController: NSObject, NSTextFieldDelegate {
         case .eraser:
             if let annotation {
                 removeAnnotation(annotation)
+            } else if !items.contains(where: { $0 is StrokeAnnotation && $0.hitTest(point) }),
+                      let blur = items.last(where: { $0 is BlurAnnotation && $0.hitTest(point) }) {
+                removeAnnotation(blur) // a hidden area goes by a click, like tags and markers
             } else {
                 erasing = true
                 erase(at: point)
             }
+        case .blur:
+            blurStart = point
+            blurItem = nil
         case .text, .marker:
             if let annotation {
                 if annotation === editingLabel { return } // the text field places the caret
@@ -394,6 +473,15 @@ final class OverlayController: NSObject, NSTextFieldDelegate {
     }
 
     func mouseDragged(to point: CGPoint, shift: Bool) {
+        if resizeHandle != nil {
+            updateResize(clampToRoot(point))
+            return
+        }
+        if let start = blurStart {
+            updateBlur(CGRect(x: min(start.x, point.x), y: min(start.y, point.y),
+                              width: abs(point.x - start.x), height: abs(point.y - start.y)))
+            return
+        }
         if isSelecting {
             selection = CGRect(x: min(dragStart.x, clampToRoot(point).x), y: min(dragStart.y, clampToRoot(point).y),
                                width: abs(clampToRoot(point).x - dragStart.x), height: abs(clampToRoot(point).y - dragStart.y))
@@ -433,6 +521,16 @@ final class OverlayController: NSObject, NSTextFieldDelegate {
     }
 
     func mouseUp(at point: CGPoint) {
+        if resizeHandle != nil {
+            endResize()
+            return
+        }
+        if blurStart != nil {
+            blurStart = nil
+            if let blur = blurItem { pushHistory(.added([blur])) }
+            blurItem = nil
+            return
+        }
         if isSelecting {
             endSelectionDrag(commit: true)
             return
@@ -456,6 +554,20 @@ final class OverlayController: NSObject, NSTextFieldDelegate {
             liveStroke = nil
             pushHistory(.added([stroke]))
         }
+    }
+
+    /// «Приховати»: rebuilds the hidden area from the screenshot as the rectangle grows.
+    private func updateBlur(_ rect: CGRect) {
+        let r = rect.intersection(root.bounds)
+        guard !r.isNull, r.width >= 4, r.height >= 4 else { return }
+        let block = Thickness.blurBlock[model.thickness]
+        if let blur = blurItem {
+            blur.update(capture: capture.image, scale: capture.scale, rect: r, block: block)
+        } else if let blur = BlurAnnotation.make(capture: capture.image, scale: capture.scale, rect: r, block: block) {
+            blurItem = blur
+            items.append(blur) // the live preview is not an undo step; the finished area is
+        }
+        canvas.needsDisplay = true
     }
 
     private func topMovable(at point: CGPoint) -> AnnotationItem? {
@@ -766,6 +878,7 @@ final class OverlayController: NSObject, NSTextFieldDelegate {
         case kVK_ANSI_R: applyTool(.rectangle)
         case kVK_ANSI_T: applyTool(.text)
         case kVK_ANSI_N: applyTool(.marker)
+        case kVK_ANSI_B: applyTool(.blur)
         case kVK_ANSI_E: applyTool(.eraser)
         case kVK_ANSI_LeftBracket: changeThickness(-1, wrap: false)
         case kVK_ANSI_RightBracket: changeThickness(1, wrap: false)

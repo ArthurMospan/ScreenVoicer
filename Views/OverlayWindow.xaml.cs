@@ -1206,6 +1206,7 @@ namespace ScreenVoicer.Views
             {
                 _blurElement = new Image { Stretch = Stretch.Fill, Tag = new Annotation(IsMarker: false, IsBlur: true) };
                 RenderOptions.SetBitmapScalingMode(_blurElement, BitmapScalingMode.NearestNeighbor);
+                Panel.SetZIndex(_blurElement, -1); // part of the picture: under tags and markers (Mac draws it the same way)
                 InkDrawCanvas.Children.Add(_blurElement);
             }
             _blurElement.Source = tiles;

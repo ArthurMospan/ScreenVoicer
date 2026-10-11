@@ -2,7 +2,7 @@ import AppKit
 import UniformTypeIdentifiers
 
 enum Tool: String, CaseIterable {
-    case pen, highlighter, arrow, rectangle, text, marker, eraser
+    case pen, highlighter, arrow, rectangle, text, marker, blur, eraser
 
     var icon: Icon {
         switch self {
@@ -12,6 +12,7 @@ enum Tool: String, CaseIterable {
         case .rectangle: return .rectangle
         case .text: return .text
         case .marker: return .number
+        case .blur: return .blur
         case .eraser: return .eraser
         }
     }
@@ -24,6 +25,7 @@ enum Tool: String, CaseIterable {
         case .rectangle: return "Рамка (R), Shift — квадрат"
         case .text: return "Текст (T): клацніть, напишіть, Enter. Подвійний клік — редагувати, перетягування — перемістити"
         case .marker: return "Нумерована мітка (N): 1, 2, 3…"
+        case .blur: return "Приховати (B): затерти пароль, пошту чи інше особисте"
         case .eraser: return "Гумка (E)"
         }
     }
@@ -35,6 +37,8 @@ enum Thickness {
     static let highlighter: [CGFloat] = [14, 22, 34]
     static let labelFont: [CGFloat] = [15, 20, 28]
     static let marker: [CGFloat] = [24, 30, 40]
+    /// «Приховати»: side of one flat block, in points.
+    static let blurBlock: [CGFloat] = [8, 12, 18]
     static let dot: [CGFloat] = [5, 8, 12]
     static let names = ["тонка", "середня", "товста"]
 }
@@ -319,16 +323,80 @@ final class MarkerAnnotation: AnnotationItem {
     }
 }
 
-/// Draws a list of annotations in z-order: highlighters under ink (as WPF's InkCanvas does), tags and markers on top.
+/// «Приховати»: the area under the rectangle, rebuilt from the screenshot itself as big flat blocks, so a password,
+/// an e-mail or a face can't be read back. Drawn with nearest-neighbour scaling (sharp blocks). Removed by an eraser
+/// click, never moved: moving it would uncover what it hides.
+final class BlurAnnotation: AnnotationItem {
+    private(set) var rect: CGRect
+    /// One pixel per block.
+    private(set) var tiles: CGImage
+
+    private init(rect: CGRect, tiles: CGImage) {
+        self.rect = rect
+        self.tiles = tiles
+    }
+
+    /// - Parameters:
+    ///   - rect: points, y-down, already inside the screenshot.
+    ///   - scale: pixels per point of `capture`.
+    ///   - block: side of one block in points.
+    static func make(capture: CGImage, scale: CGFloat, rect: CGRect, block: CGFloat) -> BlurAnnotation? {
+        guard let tiles = pixelate(capture: capture, scale: scale, rect: rect, block: block) else { return nil }
+        return BlurAnnotation(rect: rect, tiles: tiles)
+    }
+
+    func update(capture: CGImage, scale: CGFloat, rect: CGRect, block: CGFloat) {
+        guard let tiles = Self.pixelate(capture: capture, scale: scale, rect: rect, block: block) else { return }
+        self.rect = rect
+        self.tiles = tiles
+    }
+
+    private static func pixelate(capture: CGImage, scale: CGFloat, rect: CGRect, block: CGFloat) -> CGImage? {
+        guard rect.width >= 4, rect.height >= 4 else { return nil }
+        let x = min(max(Int((rect.minX * scale).rounded()), 0), capture.width - 1)
+        let y = min(max(Int((rect.minY * scale).rounded()), 0), capture.height - 1)
+        let w = min(max(Int((rect.width * scale).rounded()), 1), capture.width - x)
+        let h = min(max(Int((rect.height * scale).rounded()), 1), capture.height - y)
+        let blockPx = max(2, block * scale)
+        let tilesX = max(1, Int((CGFloat(w) / blockPx).rounded()))
+        let tilesY = max(1, Int((CGFloat(h) / blockPx).rounded()))
+        guard let crop = capture.cropping(to: CGRect(x: x, y: y, width: w, height: h)),
+              let ctx = CGContext(data: nil, width: tilesX, height: tilesY, bitsPerComponent: 8, bytesPerRow: 0,
+                                  space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                                  bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue) else { return nil }
+        ctx.interpolationQuality = .high // each block = the average of what it covers
+        ctx.draw(crop, in: CGRect(x: 0, y: 0, width: tilesX, height: tilesY))
+        return ctx.makeImage()
+    }
+
+    override var bounds: CGRect { rect }
+    override func hitTest(_ p: CGPoint) -> Bool { rect.contains(p) }
+
+    override func draw(in ctx: CGContext) {
+        ctx.saveGState()
+        ctx.interpolationQuality = .none
+        // the context is y-down; CGImage draws y-up
+        ctx.translateBy(x: rect.minX, y: rect.maxY)
+        ctx.scaleBy(x: 1, y: -1)
+        ctx.draw(tiles, in: CGRect(origin: .zero, size: rect.size))
+        ctx.restoreGState()
+    }
+}
+
+/// Draws a list of annotations in z-order: hidden areas at the bottom (they are part of the picture),
+/// highlighters under ink (as WPF's InkCanvas does), tags and markers on top.
 enum AnnotationRenderer {
     static func draw(_ items: [AnnotationItem], in ctx: CGContext) {
+        for item in items where item is BlurAnnotation {
+            item.draw(in: ctx)
+        }
         for item in items {
             if let stroke = item as? StrokeAnnotation, stroke.style == .highlighter { stroke.draw(in: ctx) }
         }
         for item in items {
             if let stroke = item as? StrokeAnnotation, stroke.style != .highlighter { stroke.draw(in: ctx) }
         }
-        for item in items where !(item is StrokeAnnotation) {
+        for item in items where !(item is StrokeAnnotation) && !(item is BlurAnnotation) {
             item.draw(in: ctx)
         }
     }
@@ -444,6 +512,40 @@ enum CompositorSelfTest {
         } catch {
             return (false, "save: \(error)")
         }
+    }
+
+    /// «Приховати»: a 1-pixel checkerboard turns into flat grey blocks inside the rectangle and stays sharp outside.
+    static func runBlur() -> (ok: Bool, detail: String) {
+        let side = 200, scale: CGFloat = 2
+        var bytes = [UInt8](repeating: 255, count: side * side * 4)
+        for y in 0..<side {
+            for x in 0..<side where (x + y) % 2 == 0 {
+                let i = (y * side + x) * 4
+                bytes[i] = 0; bytes[i + 1] = 0; bytes[i + 2] = 0
+            }
+        }
+        guard let provider = CGDataProvider(data: Data(bytes) as CFData),
+              let capture = CGImage(width: side, height: side, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: side * 4,
+                                    space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                                    bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipLast.rawValue),
+                                    provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent)
+        else { return (false, "no capture") }
+
+        // 40 × 40 points at 2× with 8-point blocks = 5 × 5 blocks of 16 pixels
+        guard let blur = BlurAnnotation.make(capture: capture, scale: scale, rect: CGRect(x: 10, y: 10, width: 40, height: 40),
+                                             block: Thickness.blurBlock[0]) else { return (false, "no blur") }
+        guard blur.tiles.width == 5, blur.tiles.height == 5 else { return (false, "tiles \(blur.tiles.width)x\(blur.tiles.height)") }
+        guard let image = ImageCompositor.render(capture: capture, cropPx: nil, scale: scale, items: [blur]) else {
+            return (false, "render failed")
+        }
+        guard let a = pixel(image, x: 30, y: 30), let b = pixel(image, x: 31, y: 30), let c = pixel(image, x: 30, y: 31) else {
+            return (false, "no pixel")
+        }
+        guard a == b, a == c, a.r > 50, a.r < 205 else { return (false, "inside \(a) \(b) \(c)") }
+        guard let d = pixel(image, x: 150, y: 150), let e = pixel(image, x: 151, y: 150), d.r != e.r else {
+            return (false, "outside is not sharp")
+        }
+        return (true, "5×5 blocks, grey \(a.r)")
     }
 
     private static func pixel(_ image: CGImage, x: Int, y: Int) -> (r: UInt8, g: UInt8, b: UInt8)? {

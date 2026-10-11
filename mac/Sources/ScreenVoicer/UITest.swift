@@ -116,6 +116,53 @@ enum UITest {
         key(panel, kVK_ANSI_Z, "z", [.command, .shift])
         check("⇧⌘Z redo", overlay.items.contains { $0 is LabelAnnotation })
 
+        // drag the bottom-right handle: the region grows and the text tool starts no label there
+        let region = overlay.selectionForTest ?? .zero
+        let itemCount = overlay.items.count
+        mouse(panel, .leftMouseDown, CGPoint(x: region.maxX, y: region.maxY))
+        mouse(panel, .leftMouseDragged, CGPoint(x: region.maxX + 30, y: region.maxY + 20))
+        mouse(panel, .leftMouseDragged, CGPoint(x: region.maxX + 60, y: region.maxY + 40))
+        mouse(panel, .leftMouseUp, CGPoint(x: region.maxX + 60, y: region.maxY + 40))
+        let grown = overlay.selectionForTest ?? .zero
+        check("corner handle resizes the region",
+              abs(grown.maxX - region.maxX - 60) < 2 && abs(grown.maxY - region.maxY - 40) < 2 && abs(grown.minX - region.minX) < 1,
+              "\(region) → \(grown)")
+        check("a handle drag draws nothing", overlay.items.count == itemCount, "\(itemCount) → \(overlay.items.count) items")
+
+        // the left handle moves only the left edge
+        mouse(panel, .leftMouseDown, CGPoint(x: grown.minX, y: grown.midY))
+        mouse(panel, .leftMouseDragged, CGPoint(x: grown.minX - 40, y: grown.midY + 15))
+        mouse(panel, .leftMouseUp, CGPoint(x: grown.minX - 40, y: grown.midY + 15))
+        let widened = overlay.selectionForTest ?? .zero
+        check("edge handle moves one edge",
+              abs(widened.minX - (grown.minX - 40)) < 2 && abs(widened.minY - grown.minY) < 1 && abs(widened.maxY - grown.maxY) < 1,
+              "\(grown) → \(widened)")
+
+        // B = «Приховати»: drag a rectangle, the screenshot under it turns into blocks
+        key(panel, kVK_ANSI_B, "b")
+        check("B selects «Приховати»", overlay.model.tool == .blur, "\(overlay.model.tool)")
+        let blurFrom = CGPoint(x: size.width * 0.4, y: size.height * 0.35)
+        let blurTo = CGPoint(x: size.width * 0.55, y: size.height * 0.45)
+        mouse(panel, .leftMouseDown, blurFrom)
+        mouse(panel, .leftMouseDragged, CGPoint(x: size.width * 0.48, y: size.height * 0.4))
+        mouse(panel, .leftMouseDragged, blurTo)
+        mouse(panel, .leftMouseUp, blurTo)
+        let blur = overlay.items.compactMap { $0 as? BlurAnnotation }.first
+        check("area pixelated", blur != nil && overlay.model.canUndo, "\(overlay.items.count) items")
+        if let blur {
+            let expected = Int((blur.rect.width / Thickness.blurBlock[overlay.model.thickness]).rounded())
+            check("blocks of the chosen size", abs(blur.tiles.width - expected) <= 1, "\(blur.tiles.width) blocks, expected \(expected)")
+        }
+
+        // an eraser click takes the hidden area away, ⌘Z brings it back
+        key(panel, kVK_ANSI_E, "e")
+        let blurCenter = CGPoint(x: (blurFrom.x + blurTo.x) / 2, y: (blurFrom.y + blurTo.y) / 2)
+        mouse(panel, .leftMouseDown, blurCenter)
+        mouse(panel, .leftMouseUp, blurCenter)
+        check("eraser click removes the hidden area", !overlay.items.contains { $0 is BlurAnnotation })
+        key(panel, kVK_ANSI_Z, "z", [.command])
+        check("⌘Z restores the hidden area", overlay.items.contains { $0 is BlurAnnotation })
+
         // the toolbar takes clicks (hit-testing through the full-screen chrome): «Весь екран», then «Область»
         let bar = overlay.model.toolbarFrame
         check("toolbar laid out", bar.width > 600, "\(bar)")
