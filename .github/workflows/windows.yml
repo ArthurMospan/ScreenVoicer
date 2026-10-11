@@ -35,17 +35,22 @@ jobs:
 
       - name: Inno Setup 6.7.3 (the dark, branded wizard needs 6.7+)
         shell: pwsh
+        timeout-minutes: 5
         run: |
           Invoke-WebRequest "https://github.com/jrsoftware/issrc/releases/download/is-6_7_3/innosetup-6.7.3.exe" -OutFile innosetup.exe
           $hash = (Get-FileHash innosetup.exe -Algorithm SHA256).Hash
           if ($hash -ne '9C73C3BAE7ED48D44112A0F48E66742C00090BDB5BEF71D9D3C056C66E97B732') { throw "Unexpected Inno Setup download: $hash" }
-          Start-Process innosetup.exe -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-','/ALLUSERS' -Wait
+          # portable mode into a private folder, beside whatever version the runner has; wait for this process only
+          $dir = Join-Path $env:RUNNER_TEMP 'inno'
+          $p = Start-Process innosetup.exe -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-','/CURRENTUSER','/PORTABLE=1',"/DIR=`"$dir`"" -PassThru
+          $p.WaitForExit()
+          if (-not (Test-Path "$dir\ISCC.exe")) { throw "Inno Setup did not install (exit $($p.ExitCode))" }
+          "ISCC=$dir\ISCC.exe" >> $env:GITHUB_ENV
 
       - name: Build installer
         shell: pwsh
         run: |
-          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
-          & $iscc /DMyAppVersion=${{ steps.v.outputs.version }} installer.iss
+          & $env:ISCC /DMyAppVersion=${{ steps.v.outputs.version }} installer.iss
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Collect
