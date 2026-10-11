@@ -38,6 +38,20 @@ jobs:
           chmod +x mac/scripts/build.sh
           mac/scripts/build.sh "${{ inputs.version }}"
 
+      - name: DMG (first installs; the updater keeps the zip)
+        run: |
+          chmod +x mac/scripts/dmg.sh
+          mac/scripts/dmg.sh
+          # what a user sees: the app, the «Applications» shortcut, the background and the window layout
+          hdiutil attach -nobrowse -readonly -mountpoint /tmp/sv-dmg mac/build/ScreenVoicer-macOS.dmg
+          ls -la /tmp/sv-dmg /tmp/sv-dmg/.background
+          test -d /tmp/sv-dmg/ScreenVoicer.app
+          test "$(readlink /tmp/sv-dmg/Applications)" = "/Applications"
+          test -f /tmp/sv-dmg/.DS_Store
+          ls /tmp/sv-dmg/.background | grep -qi tiff
+          codesign --verify --deep --strict /tmp/sv-dmg/ScreenVoicer.app
+          hdiutil detach /tmp/sv-dmg
+
       - name: Same certificate on every build (permissions survive updates)
         if: env.HAS_CERT == 'true'
         run: |
@@ -75,6 +89,16 @@ jobs:
           printf '{"OutputDirectory":"%s","PermissionsGuideShown":true}' "$SV_DATA_DIR/shots" > "$SV_DATA_DIR/settings.json"
           mac/build/ScreenVoicer.app/Contents/MacOS/ScreenVoicer --ui-test snapshots/ui
 
+      - name: DMG window snapshot
+        if: always()
+        continue-on-error: true
+        run: |
+          open mac/build/ScreenVoicer-macOS.dmg
+          sleep 8
+          mkdir -p snapshots/ui
+          screencapture -x snapshots/ui/real-dmg.png
+          hdiutil detach "/Volumes/ScreenVoicer" || true
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -85,5 +109,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: ScreenVoicer-macOS
-          path: mac/build/ScreenVoicer-macOS.zip
+          path: |
+            mac/build/ScreenVoicer-macOS.zip
+            mac/build/ScreenVoicer-macOS.dmg
           if-no-files-found: error
