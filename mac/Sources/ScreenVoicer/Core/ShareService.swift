@@ -1,4 +1,6 @@
 import Foundation
+import ImageIO
+import UniformTypeIdentifiers
 
 struct ShareResult {
     let id: String
@@ -13,6 +15,9 @@ enum ShareService {
     private static let defaultEndpoint = "https://screenvoicer.masspain.workers.dev"
     static let maxImages = 10
     private static let maxImageBytes: Int64 = 8 * 1024 * 1024
+    private static let previewWidth = 1200
+    private static let previewQuality = 0.82
+    private static let maxPreviewBytes = 1024 * 1024
 
     static var endpoint: String {
         let custom = ProcessInfo.processInfo.environment["SV_SHARE_ENDPOINT"] ?? ""
@@ -65,6 +70,11 @@ enum ShareService {
             body.append(try Data(contentsOf: url))
             append("\r\n")
         }
+        if let first = items.first, let preview = makePreview(path: first.imagePath) {
+            append("--\(boundary)\r\nContent-Disposition: form-data; name=\"preview\"; filename=\"preview.jpg\"\r\nContent-Type: image/jpeg\r\n\r\n")
+            body.append(preview)
+            append("\r\n")
+        }
         append("--\(boundary)--\r\n")
 
         var request = URLRequest(url: URL(string: "\(endpoint)/api/shares")!)
@@ -106,6 +116,27 @@ enum ShareService {
             throw ShareError(message: "Не вдалося видалити посилання (\(status): \(describe(String(decoding: data, as: UTF8.self)))).", isNetwork: false)
         }
         Log.info("[Share] \(id) deleted.")
+    }
+
+    /// A small JPEG of the first screenshot for link previews: WhatsApp and some messengers skip big images, so
+    /// without it the link would arrive as bare text. The same size and quality as the Windows app (1200 px wide).
+    static func makePreview(path: String) -> Data? {
+        guard let source = CGImageSourceCreateWithURL(URL(fileURLWithPath: path) as CFURL, nil),
+              let props = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+              let width = props[kCGImagePropertyPixelWidth] as? Int, let height = props[kCGImagePropertyPixelHeight] as? Int,
+              width > 0 else { return nil }
+        let scale = min(1, CGFloat(previewWidth) / CGFloat(width))
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceThumbnailMaxPixelSize: Int((CGFloat(max(width, height)) * scale).rounded()),
+            kCGImageSourceCreateThumbnailWithTransform: true
+        ]
+        guard let thumbnail = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else { return nil }
+        let data = NSMutableData()
+        guard let destination = CGImageDestinationCreateWithData(data, UTType.jpeg.identifier as CFString, 1, nil) else { return nil }
+        CGImageDestinationAddImage(destination, thumbnail, [kCGImageDestinationLossyCompressionQuality: previewQuality] as CFDictionary)
+        guard CGImageDestinationFinalize(destination), data.length <= maxPreviewBytes else { return nil }
+        return data as Data
     }
 
     private static func describe(_ body: String) -> String {

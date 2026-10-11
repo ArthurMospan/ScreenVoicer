@@ -1239,12 +1239,25 @@ final class OverlayController: NSObject, NSTextFieldDelegate {
             let saved = try await Task.detached(priority: .userInitiated) { try ImageCompositor.save(image, settings: settings) }.value
             let (comment, voiceLost) = await collectComment()
 
+            // the comment goes into the PNG too, so it stays with the file wherever it is sent or moved
+            var fileSize = saved.fileSizeBytes
+            if !comment.isEmpty {
+                let path = saved.path
+                do {
+                    fileSize = try await Task.detached(priority: .userInitiated) {
+                        try PngMetadata.writeComment(path: path, comment: comment)
+                    }.value ?? fileSize
+                } catch {
+                    Log.warn("[Overlay] Could not write the comment into the PNG", error)
+                }
+            }
+
             var entry = ScreenshotHistoryItem()
             entry.imagePath = saved.path
             entry.transcribedText = comment
             entry.width = saved.width
             entry.height = saved.height
-            entry.fileSizeBytes = saved.fileSizeBytes
+            entry.fileSizeBytes = fileSize
             entry.createdAt = Date()
             await history.add(entry)
 

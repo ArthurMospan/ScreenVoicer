@@ -196,6 +196,8 @@ enum UITest {
         if let newest = items.first {
             check("saved PNG exists", FileManager.default.fileExists(atPath: newest.imagePath), newest.imagePath)
             check("comment stored", newest.transcribedText == "Кнопка не працює", newest.transcribedText)
+            check("comment inside the PNG", PngMetadata.readComment(path: newest.imagePath) == "Кнопка не працює",
+                  PngMetadata.readComment(path: newest.imagePath) ?? "nil")
             let pasteboard = NSPasteboard.general
             let text = pasteboard.string(forType: .string) ?? ""
             check("clipboard Markdown", text == "[\(newest.imagePath)]\n**Comment:** Кнопка не працює", text)

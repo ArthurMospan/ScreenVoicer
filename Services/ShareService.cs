@@ -8,6 +8,8 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using ScreenVoicer.Models;
 
 namespace ScreenVoicer.Services
@@ -26,6 +28,9 @@ namespace ScreenVoicer.Services
 
         public const int MaxImages = 10;
         private const long MaxImageBytes = 8L * 1024 * 1024;
+        private const int PreviewWidth = 1200;
+        private const int PreviewQuality = 82;
+        private const long MaxPreviewBytes = 1024 * 1024;
 
         public static string Endpoint =>
             (Environment.GetEnvironmentVariable("SV_SHARE_ENDPOINT") is { Length: > 0 } custom ? custom : DefaultEndpoint).TrimEnd('/');
@@ -76,6 +81,15 @@ namespace ScreenVoicer.Services
                 form.Add(image);
             }
 
+            byte[]? preview = await Task.Run(() => MakePreview(items[0].ImagePath), cancellationToken).ConfigureAwait(false);
+            if (preview != null)
+            {
+                var part = new ByteArrayContent(preview);
+                part.Headers.ContentType = new MediaTypeHeaderValue("image/jpeg");
+                part.Headers.ContentDisposition = new ContentDispositionHeaderValue("form-data") { Name = "\"preview\"", FileName = "\"preview.jpg\"" };
+                form.Add(part);
+            }
+
             using var http = CreateClient();
             using var response = await http.PostAsync($"{Endpoint}/api/shares", form, cancellationToken).ConfigureAwait(false);
             string body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
@@ -107,6 +121,35 @@ namespace ScreenVoicer.Services
                 throw new HttpRequestException($"Не вдалося видалити посилання ({(int)response.StatusCode}: {Describe(body)}).");
             }
             Log.Info($"[Share] {id} deleted.");
+        }
+
+        /// <summary>
+        /// A small JPEG of the first screenshot for link previews: WhatsApp and some messengers skip big images,
+        /// so without it the link would arrive as bare text. The same size and quality as the Mac app.
+        /// </summary>
+        public static byte[]? MakePreview(string path)
+        {
+            try
+            {
+                using var stream = File.OpenRead(path);
+                var frame = BitmapFrame.Create(stream, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+                double scale = Math.Min(1.0, PreviewWidth / (double)frame.PixelWidth);
+                BitmapSource source = scale < 1 ? new TransformedBitmap(frame, new ScaleTransform(scale, scale)) : frame;
+                if (source.Format != PixelFormats.Bgr24)
+                {
+                    source = new FormatConvertedBitmap(source, PixelFormats.Bgr24, null, 0); // JPEG has no alpha
+                }
+                var encoder = new JpegBitmapEncoder { QualityLevel = PreviewQuality };
+                encoder.Frames.Add(BitmapFrame.Create(source));
+                using var output = new MemoryStream();
+                encoder.Save(output);
+                return output.Length <= MaxPreviewBytes ? output.ToArray() : null;
+            }
+            catch (Exception ex)
+            {
+                Log.Warn("[Share] Could not make the link preview", ex);
+                return null;
+            }
         }
 
         private static string Describe(string body) => body.Contains("image_too_large") ? "знімок завеликий"

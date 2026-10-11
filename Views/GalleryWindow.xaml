@@ -188,17 +188,10 @@
                                     </Grid>
                                 </Border>
 
-                                <Grid Grid.Row="1" Margin="2,11,2,9" MinHeight="38">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <v:GlyphIcon Grid.Column="0" Data="{StaticResource Icon.Mic}" Width="15" Height="15" VerticalAlignment="Top"
-                                                 Margin="0,2,8,0" Foreground="{Binding CommentBrush}"/>
-                                    <TextBlock Grid.Column="1" Text="{Binding CommentText}" Foreground="{Binding CommentBrush}"
-                                               FontSize="12.5" TextWrapping="Wrap" MaxHeight="54" TextTrimming="CharacterEllipsis"
-                                               LineHeight="18" ToolTip="{Binding CommentText}"/>
-                                </Grid>
+                                <!-- the comment is a caption under the picture: plain text, no icon -->
+                                <TextBlock Grid.Row="1" Margin="2,11,2,9" MinHeight="38" Text="{Binding CommentText}" Foreground="{Binding CommentBrush}"
+                                           FontSize="13" TextWrapping="Wrap" MaxHeight="57" TextTrimming="CharacterEllipsis"
+                                           LineHeight="19" ToolTip="{Binding CommentText}"/>
 
                                 <StackPanel Grid.Row="2" Orientation="Horizontal">
                                     <Button Style="{StaticResource ChipButton}" Click="OnCopyMarkdownClick" ToolTip="Скопіювати Markdown і картинку">

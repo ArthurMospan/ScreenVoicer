@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import ImageIO
 
 /// `ScreenVoicer --selftest [--model base] [--wav file.wav] [--expect word] [--lang en]`
 /// Headless checks for CI (no screen or microphone needed). Prints PASS/FAIL lines, exit code = failures.
@@ -30,6 +31,7 @@ enum SelfTest {
         testSettings(temp)
         await testHistory(temp)
         testClipboard(temp)
+        testPngMetadata(temp)
         await testCompositor(temp)
         await testWhisper(args)
 
@@ -146,6 +148,54 @@ enum SelfTest {
         let image = pb.data(forType: .png)
         check("clipboard holds the text", ok && back == text)
         check("clipboard holds the file and PNG", file == png.absoluteString && (image?.count ?? 0) > 100)
+    }
+
+    /// The comment inside the PNG (same bytes as PngMetadata.cs) and the link preview JPEG.
+    private static func testPngMetadata(_ dir: URL) {
+        check("crc32 IEND", PngMetadata.crc32(Array("IEND".utf8)) == 0xAE42_6082)
+        guard let png = Snapshots.samplePNG(width: 1600, height: 1000, seed: 1) else {
+            check("sample PNG", false)
+            return
+        }
+        let path = dir.appendingPathComponent("screenshot_20261011_090000_000.png").path
+        try? png.write(to: URL(fileURLWithPath: path))
+        let comment = "Кнопка «Надіслати» не реагує <тут> & там\nдругий рядок"
+        let size = try? PngMetadata.writeComment(path: path, comment: comment)
+        let fileSize = (try? FileManager.default.attributesOfItem(atPath: path)[.size] as? NSNumber)?.int64Value
+        check("comment written into the PNG", size != nil && size == fileSize, "\(size ?? -1) bytes")
+        check("comment read back", PngMetadata.readComment(path: path) == comment, PngMetadata.readComment(path: path) ?? "nil")
+
+        // ImageIO (Finder, Preview, Spotlight) still decodes the file and sees the comment
+        if let source = CGImageSourceCreateWithURL(URL(fileURLWithPath: path) as CFURL, nil),
+           let image = CGImageSourceCreateImageAtIndex(source, 0, nil) {
+            let props = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
+            let pngProps = props?[kCGImagePropertyPNGDictionary] as? [CFString: Any]
+            let viaPng = pngProps?[kCGImagePropertyPNGDescription] as? String
+            var viaXmp: String?
+            if let metadata = CGImageSourceCopyMetadataAtIndex(source, 0, nil) {
+                viaXmp = CGImageMetadataCopyStringValueWithPath(metadata, nil, "dc:description" as CFString) as String?
+            }
+            print("INFO  ImageIO PNG Description: \(viaPng ?? "nil") · XMP dc:description: \(viaXmp ?? "nil")")
+            check("still a valid PNG", image.width == 1600 && image.height == 1000, "\(image.width)x\(image.height)")
+            check("ImageIO sees the comment", viaPng == comment || viaXmp == comment)
+        } else {
+            check("still a valid PNG", false)
+        }
+
+        _ = try? PngMetadata.writeComment(path: path, comment: "Новий коментар")
+        let bytes = [UInt8]((try? Data(contentsOf: URL(fileURLWithPath: path))) ?? Data())
+        let marker = Array("iTXt".utf8)
+        let count = bytes.count < 4 ? 0 : (0..<(bytes.count - 4)).filter { Array(bytes[$0..<($0 + 4)]) == marker }.count
+        check("rewrite replaces the chunks", count == 2 && PngMetadata.readComment(path: path) == "Новий коментар", "\(count) iTXt")
+        let stripped = PngMetadata.withComment(Data(bytes), comment: "")
+        check("empty comment strips", stripped.map { PngMetadata.readComment($0) == nil && $0.count < bytes.count } ?? false)
+        check("not a PNG", PngMetadata.withComment(Data(count: 100), comment: "x") == nil)
+
+        let preview = ShareService.makePreview(path: path)
+        let previewImage = preview.flatMap { CGImageSourceCreateWithData($0 as CFData, nil) }.flatMap { CGImageSourceCreateImageAtIndex($0, 0, nil) }
+        check("preview JPEG 1200 wide", preview.map { $0.starts(with: [0xFF, 0xD8]) && $0.count < 300_000 } == true
+              && previewImage?.width == 1200 && previewImage?.height == 750,
+              "\(preview?.count ?? 0) bytes, \(previewImage?.width ?? 0)x\(previewImage?.height ?? 0)")
     }
 
     @MainActor

@@ -398,16 +398,14 @@ private struct GalleryCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             thumbnail
-            HStack(alignment: .top, spacing: 8) {
-                GlyphIcon(icon: .mic, size: 15).padding(.top, 2)
-                Text(item.hasVoiceComment ? item.transcribedText : "Без коментаря")
-                    .font(Theme.font(12.5))
-                    .lineSpacing(3)
-                    .lineLimit(3)
-                    .truncationMode(.tail)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .help(item.hasVoiceComment ? item.transcribedText : "")
-            }
+            // the comment is a caption under the picture: plain text, no icon
+            Text(item.hasVoiceComment ? item.transcribedText : "Без коментаря")
+                .font(Theme.font(13))
+                .lineSpacing(3)
+                .lineLimit(3)
+                .truncationMode(.tail)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .help(item.hasVoiceComment ? item.transcribedText : "")
             .foregroundColor(item.hasVoiceComment ? Color(rgb: 0xE6E6EC) : Color(rgb: 0x6B6B78))
             .frame(minHeight: 38, alignment: .top)
             .padding(.horizontal, 2)

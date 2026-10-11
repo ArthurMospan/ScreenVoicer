@@ -199,6 +199,7 @@ final class HistoryService {
             let attrs = try? FileManager.default.attributesOfItem(atPath: path)
             var item = ScreenshotHistoryItem()
             item.imagePath = path
+            item.transcribedText = PngMetadata.readComment(path: path) ?? "" // since 1.12 the PNG carries it
             item.createdAt = (attrs?[.creationDate] as? Date) ?? Date()
             item.fileSizeBytes = (attrs?[.size] as? NSNumber)?.int64Value ?? 0
             list.append(item)

@@ -190,6 +190,7 @@ namespace ScreenVoicer.Services
                     items.Add(new ScreenshotHistoryItem
                     {
                         ImagePath = file,
+                        TranscribedText = PngMetadata.ReadComment(file) ?? string.Empty, // since 1.12 the PNG carries it
                         CreatedAt = info.CreationTime,
                         FileSizeBytes = info.Length
                     });
