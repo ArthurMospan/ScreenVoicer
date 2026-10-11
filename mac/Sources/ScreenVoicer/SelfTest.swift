@@ -78,7 +78,8 @@ enum SelfTest {
         check("default hotkey parses", g != nil && g!.displayText == "⌥⇧S" && g!.storageText == "Alt+Shift+S")
         check("hotkey needs a modifier", HotkeyGesture.parse("S") == nil && HotkeyGesture.parse("F9") != nil)
         check("reserved hotkey", HotkeyGesture.parse("Shift+Cmd+4")?.isReserved == true)
-        check("Insert works alone (PC keyboards)", HotkeyGesture.parse("Insert")?.displayText == "Insert")
+        check("Insert alone is not a hotkey any more (1.12)", HotkeyGesture.parse("Insert") == nil
+              && HotkeyGesture.parse("Ctrl+Insert") != nil)
     }
 
     private static func testUpdateParsing() {

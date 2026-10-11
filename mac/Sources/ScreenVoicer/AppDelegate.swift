@@ -120,7 +120,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MenuHost {
 
     private func registerHotkey() {
         hotkey.onPressed = { [weak self] in self?.triggerCapture(.hotkey) }
-        let gesture = HotkeyGesture.parse(settings.hotkey) ?? HotkeyGesture.parse(Settings.defaultHotkey)!
+        var parsed = HotkeyGesture.parse(settings.hotkey)
+        if parsed == nil {
+            // also the lone Insert of 1.11 (the owner went back to ⌥⇧S in 1.12)
+            Log.info("[Hotkey] '\(settings.hotkey)' is not a valid shortcut any more, back to \(Settings.defaultHotkey).")
+            parsed = HotkeyGesture.parse(Settings.defaultHotkey)
+            settings.hotkey = Settings.defaultHotkey
+            settings.save()
+        }
+        let gesture = parsed!
         Self.hotkeyText = gesture.displayText
         if !hotkey.register(gesture) {
             var options = ToastOptions(title: "Гаряча клавіша зайнята",

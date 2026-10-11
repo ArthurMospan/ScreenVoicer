@@ -108,7 +108,6 @@ namespace ScreenVoicer
             _ = _history.GetHistoryAsync(); // so the tray menu can show the count right away
             RegisterHotkey(); // usable right away
             InitializeTrayIcon();
-            OfferInsertHotkeyOnce();
             StartupManager.RefreshEntryIfEnabled();
             StartModelLoading();
             StartUpdateChecks();
@@ -230,7 +229,11 @@ namespace ScreenVoicer
             _hotkey!.HotkeyPressed += (_, _) => TriggerCapture(CaptureTrigger.Hotkey);
             if (!HotkeyGesture.TryParse(_settings!.Hotkey, out var gesture))
             {
+                // also the lone Insert of 1.11 (the owner went back to Alt+Shift+S in 1.12)
+                Log.Info($"[Hotkey] '{_settings.Hotkey}' is not a valid shortcut any more, back to {SettingsService.DefaultHotkey}.");
                 HotkeyGesture.TryParse(SettingsService.DefaultHotkey, out gesture);
+                _settings.Hotkey = SettingsService.DefaultHotkey;
+                _settings.Save();
             }
 
             HotkeyText = gesture.ToString();
@@ -246,40 +249,6 @@ namespace ScreenVoicer
                     OnAction = OpenHotkeyWindow
                 });
             }
-        }
-
-        /// <summary>
-        /// Once, a few seconds after start: offer Insert (one key nobody uses) instead of the three-key default.
-        /// Mac keyboards have no Insert key, so the Mac app doesn't offer it.
-        /// </summary>
-        private void OfferInsertHotkeyOnce()
-        {
-            if (_settings == null || _settings.InsertHintShown || HotkeyText != SettingsService.DefaultHotkey)
-            {
-                return;
-            }
-
-            var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(8) };
-            timer.Tick += (_, _) =>
-            {
-                timer.Stop();
-                if (_settings.InsertHintShown || HotkeyText != SettingsService.DefaultHotkey)
-                {
-                    return;
-                }
-                _settings.InsertHintShown = true;
-                _settings.Save();
-                _notifications!.Show(new ToastOptions
-                {
-                    Title = "Знімок однією клавішею?",
-                    Message = $"Клавішею Insert майже ніхто не користується. Можна робити знімок нею замість {HotkeyText}.",
-                    Kind = ToastKind.Info,
-                    DurationMs = 15000,
-                    ActionText = "Обрати Insert",
-                    OnAction = () => ApplyHotkey(HotkeyGesture.Insert)
-                });
-            };
-            timer.Start();
         }
 
         /// <summary>Registers a new capture shortcut and remembers it; on failure the old one stays.</summary>
