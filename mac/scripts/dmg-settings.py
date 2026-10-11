@@ -12,7 +12,7 @@ icon = os.path.join(application, 'Contents', 'Resources', 'AppIcon.icns')  # the
 background = defines['bg']  # noqa: F821
 
 format = 'UDZO'
-window_rect = ((200, 140), (660, 420))
+window_rect = ((200, 140), (660, 448))  # 420 of background + the 28-point title bar
 default_view = 'icon-view'
 show_status_bar = False
 show_tab_view = False
