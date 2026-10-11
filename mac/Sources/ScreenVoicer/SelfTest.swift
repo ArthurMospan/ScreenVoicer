@@ -182,7 +182,7 @@ enum SelfTest {
             check("still a valid PNG", false)
         }
 
-        try? PngMetadata.writeComment(path: path, comment: "Новий коментар")
+        _ = try? PngMetadata.writeComment(path: path, comment: "Новий коментар")
         let bytes = [UInt8]((try? Data(contentsOf: URL(fileURLWithPath: path))) ?? Data())
         let marker = Array("iTXt".utf8)
         let count = bytes.count < 4 ? 0 : (0..<(bytes.count - 4)).filter { Array(bytes[$0..<($0 + 4)]) == marker }.count
