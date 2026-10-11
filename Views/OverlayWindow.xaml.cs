@@ -20,7 +20,7 @@ namespace ScreenVoicer.Views
 {
     public partial class OverlayWindow : Window
     {
-        private enum Tool { Pen, Highlighter, Arrow, Rectangle, Text, Marker, Eraser }
+        private enum Tool { Pen, Highlighter, Arrow, Rectangle, Text, Marker, Blur, Eraser }
 
         private enum StatusKind { Idle, Recording, Busy, Success, Warning, Error }
 
@@ -32,7 +32,7 @@ namespace ScreenVoicer.Views
         private sealed record LabelEdit(Border Label, string From, string To) : Change;
 
         /// <summary>Marks InkCanvas children that are annotations (label or numbered marker).</summary>
-        private sealed record Annotation(bool IsMarker, int Number = 0);
+        private sealed record Annotation(bool IsMarker, int Number = 0, bool IsBlur = false);
 
         /// <summary>One push-to-talk fragment; consecutive fragments are appended to the comment in order.</summary>
         private sealed class VoiceChunk
@@ -45,6 +45,7 @@ namespace ScreenVoicer.Views
         private static readonly double[] HighlighterWidths = { 14, 22, 34 };
         private static readonly double[] LabelFontSizes = { 15, 20, 28 };
         private static readonly double[] MarkerSizes = { 24, 30, 40 };
+        private static readonly double[] BlurBlocks = { 8, 12, 18 };
         private static readonly double[] ThicknessDotSizes = { 5, 8, 12 };
         private static readonly string[] ThicknessNames = { "тонка", "середня", "товста" };
         private static readonly TimeSpan MaxTake = TimeSpan.FromMinutes(3);
@@ -95,6 +96,7 @@ namespace ScreenVoicer.Views
         private readonly Stack<Change> _redo = new();
         private bool _suppressHistory;
         private Point? _shapeStart;
+        private Image? _blurElement;
         private Stroke? _shapeStroke;
 
         // Text labels & numbered markers
@@ -163,6 +165,7 @@ namespace ScreenVoicer.Views
             ImgScreenshot.Source = capture.Source;
             SetupGlass();
             SetupFlyouts();
+            CreateHandles();
 
             InkDrawCanvas.Strokes.StrokesChanged += OnStrokesChanged;
             _audio.AudioLevelChanged += OnAudioLevelChanged;
@@ -489,9 +492,17 @@ namespace ScreenVoicer.Views
                 return;
             }
 
+            var point = ClampToRoot(e.GetPosition(RootGrid));
+            if (HitHandle(point) is int handle and >= 0)
+            {
+                BeginResize(handle, point, SelectionCanvas);
+                e.Handled = true;
+                return;
+            }
+
             _isSelecting = true;
             _selectionBeforeDrag = _selection;
-            _dragStart = ClampToRoot(e.GetPosition(RootGrid));
+            _dragStart = point;
             _selection = new Rect(_dragStart, _dragStart);
             SelectionCanvas.CaptureMouse();
             SetPanelsFaded(true);
@@ -501,8 +512,14 @@ namespace ScreenVoicer.Views
 
         private void OnSelectionMouseMove(object sender, MouseEventArgs e)
         {
+            if (_resizeHandle >= 0)
+            {
+                UpdateResize(ClampToRoot(e.GetPosition(RootGrid)));
+                return;
+            }
             if (!_isSelecting)
             {
+                SelectionCanvas.Cursor = HandleCursor(HitHandle(e.GetPosition(RootGrid))) ?? Cursors.Cross;
                 return;
             }
 
@@ -512,7 +529,11 @@ namespace ScreenVoicer.Views
 
         private void OnSelectionMouseUp(object sender, MouseButtonEventArgs e)
         {
-            if (_isSelecting)
+            if (_resizeHandle >= 0)
+            {
+                EndResize();
+            }
+            else if (_isSelecting)
             {
                 EndSelectionDrag(commit: true);
             }
@@ -520,7 +541,11 @@ namespace ScreenVoicer.Views
 
         private void OnSelectionLostCapture(object sender, MouseEventArgs e)
         {
-            if (_isSelecting)
+            if (_resizeHandle >= 0)
+            {
+                EndResize();
+            }
+            else if (_isSelecting)
             {
                 EndSelectionDrag(commit: true);
             }
@@ -548,6 +573,162 @@ namespace ScreenVoicer.Views
         private Point ClampToRoot(Point p) =>
             new(Math.Clamp(p.X, 0, RootGrid.ActualWidth), Math.Clamp(p.Y, 0, RootGrid.ActualHeight));
 
+        // ── Adjusting the region: eight small squares on the frame, drag one instead of selecting again ──
+
+        private readonly System.Windows.Shapes.Rectangle[] _handles = new System.Windows.Shapes.Rectangle[8];
+        private int _resizeHandle = -1;
+        private Rect _resizeStartRect;
+        private Point _resizeStartPoint;
+        private UIElement? _resizeCaptureElement;
+        private bool _handleHover;
+
+        private void CreateHandles()
+        {
+            var layer = (Canvas)FrameLine.Parent;
+            for (int i = 0; i < _handles.Length; i++)
+            {
+                _handles[i] = new System.Windows.Shapes.Rectangle
+                {
+                    Width = 8,
+                    Height = 8,
+                    RadiusX = 2,
+                    RadiusY = 2,
+                    Fill = Brushes.White,
+                    Stroke = FrozenArgb(0x8C, 0, 0, 0),
+                    StrokeThickness = 1,
+                    Visibility = Visibility.Collapsed,
+                    IsHitTestVisible = false
+                };
+                layer.Children.Add(_handles[i]);
+            }
+        }
+
+        /// <summary>0 top-left, then clockwise: top, top-right, right, bottom-right, bottom, bottom-left, left.</summary>
+        private static Point HandlePoint(Rect r, int i) => i switch
+        {
+            0 => r.TopLeft,
+            1 => new Point(r.X + r.Width / 2, r.Y),
+            2 => r.TopRight,
+            3 => new Point(r.Right, r.Y + r.Height / 2),
+            4 => r.BottomRight,
+            5 => new Point(r.X + r.Width / 2, r.Bottom),
+            6 => r.BottomLeft,
+            _ => new Point(r.X, r.Y + r.Height / 2)
+        };
+
+        private int HitHandle(Point p)
+        {
+            if (_mode != CaptureMode.RectangleRegion || _isSelecting || _isSaving || _selection is not Rect r || r.Width < 8 || r.Height < 8)
+            {
+                return -1;
+            }
+            for (int i = 0; i < _handles.Length; i++)
+            {
+                var h = HandlePoint(r, i);
+                if (Math.Abs(p.X - h.X) <= 7 && Math.Abs(p.Y - h.Y) <= 7)
+                {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+        private static Cursor? HandleCursor(int handle) => handle switch
+        {
+            0 or 4 => Cursors.SizeNWSE,
+            2 or 6 => Cursors.SizeNESW,
+            1 or 5 => Cursors.SizeNS,
+            3 or 7 => Cursors.SizeWE,
+            _ => null
+        };
+
+        private void PlaceHandles(Rect r)
+        {
+            bool show = !_isSelecting && r.Width >= 8 && r.Height >= 8;
+            for (int i = 0; i < _handles.Length; i++)
+            {
+                var p = HandlePoint(r, i);
+                Canvas.SetLeft(_handles[i], p.X - 4);
+                Canvas.SetTop(_handles[i], p.Y - 4);
+                _handles[i].Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+            }
+        }
+
+        private void HideHandles()
+        {
+            foreach (var handle in _handles)
+            {
+                if (handle != null)
+                {
+                    handle.Visibility = Visibility.Collapsed;
+                }
+            }
+        }
+
+        private void BeginResize(int handle, Point point, UIElement captureElement)
+        {
+            CommitLabelEdit();
+            _resizeHandle = handle;
+            _resizeStartRect = _selection!.Value;
+            _resizeStartPoint = point;
+            _resizeCaptureElement = captureElement;
+            captureElement.CaptureMouse();
+            SetPanelsFaded(true);
+        }
+
+        private void UpdateResize(Point point)
+        {
+            double dx = point.X - _resizeStartPoint.X, dy = point.Y - _resizeStartPoint.Y;
+            double left = _resizeStartRect.Left, top = _resizeStartRect.Top, right = _resizeStartRect.Right, bottom = _resizeStartRect.Bottom;
+            if (_resizeHandle is 0 or 6 or 7) left += dx;
+            if (_resizeHandle is 0 or 1 or 2) top += dy;
+            if (_resizeHandle is 2 or 3 or 4) right += dx;
+            if (_resizeHandle is 4 or 5 or 6) bottom += dy;
+            // Rect(Point, Point) normalizes, so dragging an edge past the opposite one just flips the region
+            _selection = new Rect(ClampToRoot(new Point(left, top)), ClampToRoot(new Point(right, bottom)));
+            UpdateSelectionVisuals();
+        }
+
+        private void EndResize()
+        {
+            if (_resizeHandle < 0)
+            {
+                return;
+            }
+            _resizeHandle = -1;
+            var element = _resizeCaptureElement;
+            _resizeCaptureElement = null;
+            if (element?.IsMouseCaptured == true)
+            {
+                element.ReleaseMouseCapture();
+            }
+            if (_selection is not Rect r || r.Width < 8 || r.Height < 8)
+            {
+                _selection = _resizeStartRect;
+            }
+            SetPanelsFaded(false);
+            UpdateSelectionVisuals();
+            RepositionPanels();
+        }
+
+        /// <summary>Over a handle the ink layer must not start a stroke: switch it off and show a resize cursor.</summary>
+        private void UpdateHandleHover(Point p)
+        {
+            int handle = HitHandle(p);
+            if (handle >= 0)
+            {
+                _handleHover = true;
+                InkDrawCanvas.EditingMode = InkCanvasEditingMode.None;
+                InkDrawCanvas.UseCustomCursor = true;
+                InkDrawCanvas.Cursor = HandleCursor(handle);
+            }
+            else if (_handleHover)
+            {
+                _handleHover = false;
+                ApplyEditingMode();
+            }
+        }
+
         private void UpdateSelectionVisuals()
         {
             bool region = _mode == CaptureMode.RectangleRegion;
@@ -560,6 +741,7 @@ namespace ScreenVoicer.Views
                 HintBadge.Visibility = Visibility.Collapsed;
                 InkDrawCanvas.Clip = null;
                 InkDrawCanvas.Visibility = Visibility.Visible;
+                HideHandles();
                 return;
             }
 
@@ -569,12 +751,14 @@ namespace ScreenVoicer.Views
                 FrameLine.Visibility = FrameShadow.Visibility = SizeBadge.Visibility = Visibility.Collapsed;
                 HintBadge.Visibility = _isSelecting ? Visibility.Collapsed : Visibility.Visible;
                 InkDrawCanvas.Visibility = Visibility.Collapsed;
+                HideHandles();
                 return;
             }
 
             var r = _selection!.Value;
             DimHole.Rect = r;
             HintBadge.Visibility = Visibility.Collapsed;
+            PlaceHandles(r);
 
             foreach (var frame in new[] { FrameShadow, FrameLine })
             {
@@ -690,16 +874,11 @@ namespace ScreenVoicer.Views
             BtnRectangle.Style = tool == Tool.Rectangle ? active : normal;
             BtnText.Style = tool == Tool.Text ? active : normal;
             BtnMarker.Style = tool == Tool.Marker ? active : normal;
+            BtnBlur.Style = tool == Tool.Blur ? active : normal;
             BtnEraser.Style = tool == Tool.Eraser ? active : normal;
 
-            InkDrawCanvas.EditingMode = tool switch
-            {
-                Tool.Pen or Tool.Highlighter => InkCanvasEditingMode.Ink,
-                Tool.Eraser => InkCanvasEditingMode.EraseByStroke,
-                _ => InkCanvasEditingMode.None
-            };
-            InkDrawCanvas.UseCustomCursor = tool != Tool.Eraser;
-            InkDrawCanvas.Cursor = tool == Tool.Text ? Cursors.IBeam : Cursors.Cross;
+            _handleHover = false;
+            ApplyEditingMode();
             InkDrawCanvas.DefaultDrawingAttributes = CreateAttributes(tool);
 
             // The compact toolbar shows only the current tool; the rest live in the flyout.
@@ -711,10 +890,23 @@ namespace ScreenVoicer.Views
                 Tool.Rectangle => BtnRectangle,
                 Tool.Text => BtnText,
                 Tool.Marker => BtnMarker,
+                Tool.Blur => BtnBlur,
                 _ => BtnEraser
             };
             ToolIconHost.Content = new GlyphIcon { Data = (source.Content as GlyphIcon)?.Data };
             BtnTool.ToolTip = $"{source.ToolTip} — наведіть, щоб обрати інший інструмент";
+        }
+
+        private void ApplyEditingMode()
+        {
+            InkDrawCanvas.EditingMode = _tool switch
+            {
+                Tool.Pen or Tool.Highlighter => InkCanvasEditingMode.Ink,
+                Tool.Eraser => InkCanvasEditingMode.EraseByStroke,
+                _ => InkCanvasEditingMode.None
+            };
+            InkDrawCanvas.UseCustomCursor = _tool != Tool.Eraser;
+            InkDrawCanvas.Cursor = _tool == Tool.Text ? Cursors.IBeam : Cursors.Cross;
         }
 
         private DrawingAttributes CreateAttributes(Tool tool)
@@ -797,6 +989,14 @@ namespace ScreenVoicer.Views
                 return;
             }
 
+            var rootPoint = e.GetPosition(RootGrid);
+            if (HitHandle(rootPoint) is int handle and >= 0)
+            {
+                BeginResize(handle, ClampToRoot(rootPoint), InkDrawCanvas);
+                e.Handled = true;
+                return;
+            }
+
             var annotation = FindAnnotation(e.OriginalSource as DependencyObject);
             if (_editingLabel != null && annotation != _editingLabel)
             {
@@ -815,7 +1015,7 @@ namespace ScreenVoicer.Views
                     e.Handled = true;
                     return;
 
-                case Tool.Text or Tool.Marker when annotation != null:
+                case Tool.Text or Tool.Marker when annotation is { Tag: Annotation { IsBlur: false } }:
                     if (annotation == _editingLabel)
                     {
                         return; // let the text box place the caret
@@ -847,11 +1047,28 @@ namespace ScreenVoicer.Views
                     InkDrawCanvas.CaptureMouse();
                     e.Handled = true;
                     return;
+
+                case Tool.Blur:
+                    _shapeStart = point;
+                    _blurElement = null;
+                    InkDrawCanvas.CaptureMouse();
+                    e.Handled = true;
+                    return;
             }
         }
 
         private void OnInkMouseMove(object sender, MouseEventArgs e)
         {
+            if (_resizeHandle >= 0)
+            {
+                UpdateResize(ClampToRoot(e.GetPosition(RootGrid)));
+                return;
+            }
+            if (e.LeftButton != MouseButtonState.Pressed)
+            {
+                UpdateHandleHover(e.GetPosition(RootGrid));
+            }
+
             if (_dragElement != null)
             {
                 var delta = e.GetPosition(InkDrawCanvas) - _dragElementStart;
@@ -861,6 +1078,15 @@ namespace ScreenVoicer.Views
                 }
                 _dragElementMoved = true;
                 SetPosition(_dragElement, _dragElementOrigin + delta);
+                return;
+            }
+
+            if (_tool == Tool.Blur)
+            {
+                if (_shapeStart is Point blurStart && InkDrawCanvas.IsMouseCaptured)
+                {
+                    UpdateBlur(new Rect(blurStart, e.GetPosition(InkDrawCanvas)));
+                }
                 return;
             }
 
@@ -903,6 +1129,26 @@ namespace ScreenVoicer.Views
 
         private void OnInkMouseUp(object sender, MouseButtonEventArgs e)
         {
+            if (_resizeHandle >= 0)
+            {
+                EndResize();
+                e.Handled = true;
+                return;
+            }
+
+            if (_tool == Tool.Blur && _shapeStart != null)
+            {
+                _shapeStart = null;
+                InkDrawCanvas.ReleaseMouseCapture();
+                if (_blurElement != null)
+                {
+                    PushHistory(new ElementChange(_blurElement, Added: true));
+                }
+                _blurElement = null;
+                e.Handled = true;
+                return;
+            }
+
             if (_dragElement != null)
             {
                 var element = _dragElement;
@@ -929,6 +1175,43 @@ namespace ScreenVoicer.Views
                 _shapeStroke = null;
             }
             e.Handled = true;
+        }
+
+        /// <summary>
+        /// «Приховати»: the area under the rectangle, rebuilt from the screenshot itself as big flat blocks, so a
+        /// password, an e-mail or a face can't be read back. Shown with nearest-neighbour scaling (sharp blocks).
+        /// </summary>
+        private void UpdateBlur(Rect rect)
+        {
+            rect.Intersect(new Rect(0, 0, RootGrid.ActualWidth, RootGrid.ActualHeight));
+            if (rect.IsEmpty || rect.Width < 4 || rect.Height < 4)
+            {
+                return;
+            }
+
+            var source = _capture.Source;
+            int x = Math.Clamp((int)Math.Round(rect.X * ScaleX), 0, source.PixelWidth - 1);
+            int y = Math.Clamp((int)Math.Round(rect.Y * ScaleY), 0, source.PixelHeight - 1);
+            int w = Math.Clamp((int)Math.Round(rect.Width * ScaleX), 1, source.PixelWidth - x);
+            int h = Math.Clamp((int)Math.Round(rect.Height * ScaleY), 1, source.PixelHeight - y);
+            double block = Math.Max(2, BlurBlocks[_thickness] * ScaleX);
+            int tilesX = Math.Max(1, (int)Math.Round(w / block));
+            int tilesY = Math.Max(1, (int)Math.Round(h / block));
+
+            var crop = new System.Windows.Media.Imaging.CroppedBitmap(source, new Int32Rect(x, y, w, h));
+            var tiles = new System.Windows.Media.Imaging.TransformedBitmap(crop, new ScaleTransform((double)tilesX / w, (double)tilesY / h));
+            tiles.Freeze();
+
+            if (_blurElement == null)
+            {
+                _blurElement = new Image { Stretch = Stretch.Fill, Tag = new Annotation(IsMarker: false, IsBlur: true) };
+                RenderOptions.SetBitmapScalingMode(_blurElement, BitmapScalingMode.NearestNeighbor);
+                InkDrawCanvas.Children.Add(_blurElement);
+            }
+            _blurElement.Source = tiles;
+            _blurElement.Width = rect.Width;
+            _blurElement.Height = rect.Height;
+            SetPosition(_blurElement, rect.TopLeft);
         }
 
         private Point Constrain(Point start, Point end)
@@ -1407,6 +1690,7 @@ namespace ScreenVoicer.Views
                 case Key.R: ApplyTool(Tool.Rectangle); break;
                 case Key.T: ApplyTool(Tool.Text); break;
                 case Key.N: ApplyTool(Tool.Marker); break;
+                case Key.B: ApplyTool(Tool.Blur); break;
                 case Key.E: ApplyTool(Tool.Eraser); break;
                 case Key.OemOpenBrackets: ChangeThickness(-1, wrap: false); break;
                 case Key.OemCloseBrackets: ChangeThickness(+1, wrap: false); break;
