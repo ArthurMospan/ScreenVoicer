@@ -3,7 +3,7 @@ import SwiftUI
 
 /// The 24-unit line icons of App.xaml (Icon.*), path data copied verbatim. Drawn with round caps and joins.
 enum Icon: String, CaseIterable {
-    case region, screen, pen, highlighter, arrow, rectangle, text, number, eraser, undo, redo, mic, chevron, check
+    case region, screen, pen, highlighter, arrow, rectangle, text, number, blur, eraser, undo, redo, mic, chevron, check
     case close, play, copy, folder, trash, search, camera, open, alert, spark, keyboard, timer, gallery, globe
     case chip, power, info, exit, chevronRight, gpu, link
 
@@ -17,6 +17,7 @@ enum Icon: String, CaseIterable {
         case .rectangle: return "M6.5 5H17.5A2.5 2.5 0 0 1 20 7.5V16.5A2.5 2.5 0 0 1 17.5 19H6.5A2.5 2.5 0 0 1 4 16.5V7.5A2.5 2.5 0 0 1 6.5 5Z"
         case .text: return "M5 7.5V5H19V7.5M12 5V19M9 19H15"
         case .number: return "M12 3.5A8.5 8.5 0 1 1 11.99 3.5ZM10.5 9.5L12.5 8V16.5"
+        case .blur: return "M6.5 4.5H17.5A2 2 0 0 1 19.5 6.5V17.5A2 2 0 0 1 17.5 19.5H6.5A2 2 0 0 1 4.5 17.5V6.5A2 2 0 0 1 6.5 4.5ZM4.5 9.5H19.5M4.5 14.5H19.5M9.5 4.5V19.5M14.5 4.5V19.5"
         case .eraser: return "M9 20H20M5.7 14.3L14.3 5.7A2 2 0 0 1 17.1 5.7L19.3 7.9A2 2 0 0 1 19.3 10.7L11 19H8.4ZM9.5 10.5L14.5 15.5"
         case .undo: return "M9 14L4.5 9.5L9 5M4.5 9.5H14A5.5 5.5 0 0 1 14 20.5H11"
         case .redo: return "M15 14L19.5 9.5L15 5M19.5 9.5H10A5.5 5.5 0 0 0 10 20.5H13"

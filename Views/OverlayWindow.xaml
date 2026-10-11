@@ -348,6 +348,10 @@
                                 ToolTip="Нумерована мітка (N): 1, 2, 3…">
                             <v:GlyphIcon Data="{StaticResource Icon.Number}"/>
                         </Button>
+                        <Button x:Name="BtnBlur" Style="{StaticResource PillButton}" Click="OnToolClick" Tag="Blur"
+                                ToolTip="Приховати (B): затерти пароль, пошту чи інше особисте">
+                            <v:GlyphIcon Data="{StaticResource Icon.Blur}"/>
+                        </Button>
                         <Button x:Name="BtnEraser" Style="{StaticResource PillButton}" Click="OnToolClick" Tag="Eraser" ToolTip="Гумка (E)">
                             <v:GlyphIcon Data="{StaticResource Icon.Eraser}"/>
                         </Button>

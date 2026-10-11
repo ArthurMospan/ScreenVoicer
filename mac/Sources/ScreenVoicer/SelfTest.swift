@@ -152,6 +152,8 @@ enum SelfTest {
     private static func testCompositor(_ dir: URL) async {
         let result = CompositorSelfTest.run(outputDirectory: dir.appendingPathComponent("out"))
         check("compositor", result.ok, result.detail)
+        let blur = CompositorSelfTest.runBlur()
+        check("«Приховати» pixelates", blur.ok, blur.detail)
     }
 
     private static func testWhisper(_ args: [String]) async {

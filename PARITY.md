@@ -4,7 +4,7 @@ Both apps must look and behave the same (see `CLAUDE.md`). This file lists what 
 
 ## Pending
 
-- Nothing. The macOS app (`mac/`, since 1.11.0) does everything the Windows app does up to 1.10.0, share links included.
+- Nothing. Both apps have the same features, «Приховати» (B) and the region's resize handles included (1.12.0).
 
 ## Allowed differences (forced by the OS)
 
@@ -15,6 +15,7 @@ Both apps must look and behave the same (see `CLAUDE.md`). This file lists what 
 - **Permissions**: macOS needs Screen Recording and Microphone consent, so the Mac app has a «Дозволи для ScreenVoicer» window (first run, or when access is missing). Windows needs nothing.
 - **Install and Gatekeeper**: Windows has an installer; Mac has a zip with the app, a one-time «Все одно відкрити» in System Settings, and an offer to move itself into «Програми».
 - **GPU**: Windows uses Vulkan and the optional NVIDIA CUDA pack; Mac uses Metal, so the CUDA menu row and toasts don't exist there. The «GPU crashed last time» safety switch is Windows-only (driver crashes).
+- **Resize cursors**: macOS 14 has no public diagonal resize cursor, so the region's corner handles show the crosshair there; macOS 15+ and Windows show diagonal arrows. Edge handles show ↔ / ↕ everywhere.
 - **Fonts**: the system UI font of each OS (Segoe UI Variable / SF Pro) at the same sizes and weights.
 - **Data locations**: `~/AI_Screenshots` (Windows `C:\AI_Screenshots`), `~/Library/Application Support/ScreenVoicer` (Windows `%APPDATA%\ScreenVoicer`), logs in `~/Library/Logs/ScreenVoicer`.
 

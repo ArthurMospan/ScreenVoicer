@@ -187,7 +187,12 @@ enum Snapshots {
         let size = CGSize(width: 1440, height: 900)
         guard let screen = sampleImage(width: 2880, height: 1800, seed: 0) else { return nil }
         let selection = CGRect(x: 360, y: 260, width: 760, height: 470)
-        let items: [AnnotationItem] = [
+        var items: [AnnotationItem] = []
+        if let blur = BlurAnnotation.make(capture: screen, scale: 2, rect: CGRect(x: 780, y: 300, width: 300, height: 90),
+                                          block: Thickness.blurBlock[1]) {
+            items.append(blur)
+        }
+        items += [
             StrokeAnnotation(points: [CGPoint(x: 420, y: 330), CGPoint(x: 600, y: 330)], color: NSColor(rgb: 0xFACC15), width: 22, style: .highlighter),
             StrokeAnnotation(points: [CGPoint(x: 700, y: 520), CGPoint(x: 1040, y: 640), CGPoint(x: 1010, y: 610), CGPoint(x: 1040, y: 640), CGPoint(x: 1000, y: 650)],
                              color: NSColor(rgb: 0xEF4444), width: 4, style: .shape),
@@ -216,6 +221,13 @@ enum Snapshots {
             }
             Rectangle().stroke(Color.white, lineWidth: 1.25).frame(width: selection.width, height: selection.height)
                 .offset(x: selection.minX, y: selection.minY)
+            ForEach(0..<8, id: \.self) { i in
+                let p = FrameView.handlePoint(selection, i)
+                RoundedRectangle(cornerRadius: 2).fill(Color.white)
+                    .overlay(RoundedRectangle(cornerRadius: 2).stroke(Color.black.opacity(0x8C / 255.0), lineWidth: 1))
+                    .frame(width: 8, height: 8)
+                    .offset(x: p.x - 4, y: p.y - 4)
+            }
             OverlayChrome(model: model)
         }
         .frame(width: size.width, height: size.height)
