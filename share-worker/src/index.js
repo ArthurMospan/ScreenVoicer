@@ -1,15 +1,21 @@
 // ScreenVoicer share links: a Cloudflare Worker + KV (both on the free plan).
 //
-//   POST   /api/shares            multipart: meta (JSON) + image × N  → { id, url, deleteToken, expiresAt }
+//   POST   /api/shares            multipart: meta (JSON) + image × N (+ optional preview JPEG)
+//                                 → { id, url, deleteToken, expiresAt }
 //   GET    /s/:id                 the page people open (screenshots + comments, link previews for messengers)
-//   GET    /i/:id/:n.png          one image
+//   GET    /s/:id.md              the same as Markdown: image links + comments, for AI assistants and agents
+//   GET    /s/:id.json            the same as JSON
+//   GET    /i/:id/:n.png          one image; /i/:id/p.jpg is the small preview messengers show
 //   DELETE /api/shares/:id        Authorization: Bearer <deleteToken>
 //
 // Everything expires by itself after TTL_DAYS (KV expirationTtl), so storage never grows without bound.
+// The page is plain HTML + a little JS: copying (image + comment), downloading (the comment written into the PNG)
+// and the ZIP of all screenshots happen in the viewer's browser, so the Worker stays within the free CPU limit.
 
 const TTL_DAYS = 30;
 const MAX_IMAGES = 10;
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // a 4K PNG is ~3–6 MB; KV allows 25 MB per value
+const MAX_PREVIEW_BYTES = 1024 * 1024;
 const MAX_COMMENT = 4000;
 const ID_LENGTH = 10;
 const ALPHABET = '23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'; // no look-alikes (0/O, 1/l/I)
@@ -23,8 +29,8 @@ export default {
       let m;
       if (request.method === 'POST' && path === '/api/shares') return await createShare(request, env, url);
       if (request.method === 'DELETE' && (m = path.match(/^\/api\/shares\/([A-Za-z0-9]{10})$/))) return await deleteShare(request, env, m[1]);
-      if (request.method === 'GET' && (m = path.match(/^\/i\/([A-Za-z0-9]{10})\/(\d{1,2})\.(png|jpg)$/))) return await getImage(env, m[1], Number(m[2]));
-      if (request.method === 'GET' && (m = path.match(/^\/s\/([A-Za-z0-9]{10})$/))) return await sharePage(env, url, m[1]);
+      if (request.method === 'GET' && (m = path.match(/^\/i\/([A-Za-z0-9]{10})\/(\d{1,2}|p)\.(png|jpg)$/))) return await getImage(env, m[1], m[2]);
+      if (request.method === 'GET' && (m = path.match(/^\/s\/([A-Za-z0-9]{10})(\.md|\.json)?$/))) return await sharePage(env, url, m[1], m[2]);
       if (request.method === 'GET' && path === '/api/health') return json({ ok: true, ttlDays: TTL_DAYS, maxImages: MAX_IMAGES });
       if (request.method === 'GET' && path === '/') return Response.redirect(LANDING, 302);
       return page(404, 'Сторінку не знайдено', notFoundBody());
@@ -72,6 +78,16 @@ async function createShare(request, env, url) {
     images.push({ bytes, type: kind.type });
   }
 
+  // A small JPEG of the first screenshot for link previews: WhatsApp and some messengers skip big og:images.
+  // Apps before 1.12 don't send it; the page then falls back to the first screenshot.
+  let preview = null;
+  const previewFile = form.get('preview');
+  if (previewFile && typeof previewFile !== 'string' && previewFile.size <= MAX_PREVIEW_BYTES) {
+    const bytes = new Uint8Array(await previewFile.arrayBuffer());
+    const kind = sniff(bytes);
+    if (kind) preview = { bytes, ...kind };
+  }
+
   const id = randomString(ID_LENGTH);
   const deleteToken = randomString(28);
   const ttl = TTL_DAYS * 86400;
@@ -79,6 +95,7 @@ async function createShare(request, env, url) {
 
   await Promise.all(images.map((image, n) =>
     env.SHARES.put(`img:${id}:${n}`, image.bytes, { expirationTtl: ttl, metadata: { type: image.type } })));
+  if (preview) await env.SHARES.put(`img:${id}:p`, preview.bytes, { expirationTtl: ttl, metadata: { type: preview.type } });
   await env.SHARES.put(`share:${id}`, JSON.stringify({
     id,
     createdAt: new Date().toISOString(),
@@ -86,6 +103,7 @@ async function createShare(request, env, url) {
     deleteHash: await sha256(deleteToken),
     title: String(meta.title || '').slice(0, 200),
     app: String(meta.app || '').slice(0, 40),
+    preview: preview ? { ext: preview.ext } : null,
     items
   }), { expirationTtl: ttl });
 
@@ -99,6 +117,7 @@ async function deleteShare(request, env, id) {
   if (!token || (await sha256(token)) !== share.deleteHash) return json({ error: 'forbidden' }, 403);
   await Promise.all([
     env.SHARES.delete(`share:${id}`),
+    env.SHARES.delete(`img:${id}:p`),
     ...share.items.map((_, n) => env.SHARES.delete(`img:${id}:${n}`))
   ]);
   return json({ ok: true });
@@ -111,6 +130,7 @@ async function getImage(env, id, n) {
     headers: {
       'content-type': (metadata && metadata.type) || 'image/png',
       'cache-control': 'public, max-age=86400, immutable',
+      'access-control-allow-origin': '*',
       'x-content-type-options': 'nosniff'
     }
   });
@@ -118,104 +138,476 @@ async function getImage(env, id, n) {
 
 // ───────────────────────────── page ─────────────────────────────
 
-async function sharePage(env, url, id) {
+async function sharePage(env, url, id, format) {
   const share = await env.SHARES.get(`share:${id}`, { type: 'json', cacheTtl: 300 });
-  if (!share) return page(404, 'Посилання більше не діє', expiredBody());
+  if (!share) {
+    if (format) return json({ error: 'expired' }, 404);
+    return page(404, 'Посилання більше не діє', expiredBody());
+  }
 
   const count = share.items.length;
-  const first = share.items[0];
-  const firstComment = share.items.map(i => i.comment).find(c => c) || '';
-  const title = share.title || (count > 1 ? `${count} скриншоти з коментарями` : 'Скриншот із коментарем');
+  const link = `${url.origin}/s/${id}`;
   const imageUrl = n => `${url.origin}/i/${id}/${n}.${share.items[n].ext}`;
+  const expiresText = new Date(share.expiresAt).toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Kyiv' });
+  const items = share.items.map((item, n) => ({
+    src: imageUrl(n),
+    ext: item.ext,
+    comment: (item.comment || '').trim(),
+    width: item.width || null,
+    height: item.height || null
+  }));
 
-  const og = `
+  if (format === '.json') {
+    return json({ id, url: link, expiresAt: share.expiresAt, items: items.map((item, n) => ({ n: n + 1, ...item })) }, 200, true);
+  }
+  const markdown = toMarkdown(items, link, expiresText);
+  if (format === '.md') {
+    return new Response(markdown, {
+      headers: {
+        'content-type': 'text/markdown; charset=utf-8',
+        'cache-control': 'public, max-age=300',
+        'access-control-allow-origin': '*',
+        'x-robots-tag': 'noindex'
+      }
+    });
+  }
+
+  const shots = count === 1 ? 'Знімок екрана' : `${count} ${plural(count, 'знімок', 'знімки', 'знімків')} екрана`;
+  const first = items.map(i => i.comment).find(Boolean) || '';
+  // Messengers show the site name, the title, the description and the picture: the comment is the useful part.
+  const ogTitle = first ? (count === 1 ? truncate(oneLine(first), 90) : `${shots}: ${truncate(oneLine(first), 70)}`) : shots;
+  const ogDescription = count === 1
+    ? (oneLine(first).length > 90 ? truncate(oneLine(first), 300) : 'Знімок екрана з коментарем у ScreenVoicer')
+    : truncate(items.map((i, n) => i.comment ? `${n + 1}. ${oneLine(i.comment)}` : '').filter(Boolean).join('  ') || 'Знімки екрана в ScreenVoicer', 300);
+  const ogImage = share.preview ? `${url.origin}/i/${id}/p.${share.preview.ext}` : imageUrl(0);
+
+  const head = `
+<meta name="description" content="${esc(ogDescription)}">
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="ScreenVoicer">
-<meta property="og:title" content="${esc(title)}">
-<meta property="og:description" content="${esc(truncate(firstComment || 'Відкрийте, щоб подивитися', 200))}">
-<meta property="og:image" content="${imageUrl(0)}">
-${first.width ? `<meta property="og:image:width" content="${first.width}"><meta property="og:image:height" content="${first.height}">` : ''}
+<meta property="og:title" content="${esc(ogTitle)}">
+<meta property="og:description" content="${esc(ogDescription)}">
+<meta property="og:url" content="${link}">
+<meta property="og:image" content="${ogImage}">
+<meta property="og:image:alt" content="${esc(truncate(first || shots, 200))}">
+${!share.preview && items[0].width ? `<meta property="og:image:width" content="${items[0].width}"><meta property="og:image:height" content="${items[0].height}">` : ''}
 <meta name="twitter:card" content="summary_large_image">
-<meta name="robots" content="noindex">`;
+<meta name="robots" content="noindex">
+<link rel="alternate" type="text/markdown" href="${link}.md" title="Markdown для AI">
+<link rel="alternate" type="application/json" href="${link}.json">`;
 
-  const items = share.items.map((item, n) => `
-  <figure class="shot">
-    ${count > 1 ? `<div class="num">${n + 1}<span>/${count}</span></div>` : ''}
-    <a class="img" href="${imageUrl(n)}" target="_blank" rel="noopener">
-      <img src="${imageUrl(n)}" ${item.width ? `width="${item.width}" height="${item.height}"` : ''} alt="Скриншот ${n + 1}" loading="${n === 0 ? 'eager' : 'lazy'}">
-    </a>
-    ${item.comment ? `<figcaption><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5a3 3 0 0 1 3 3V12a3 3 0 0 1-6 0V6.5a3 3 0 0 1 3-3zM5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v2.5"/></svg><p>${esc(item.comment)}</p></figcaption>` : ''}
-  </figure>`).join('');
+  const figures = items.map((item, n) => `
+  <article class="shot" id="${n + 1}">
+    <button class="frame" type="button" data-zoom="${n}" aria-label="Відкрити знімок ${n + 1} на весь екран">
+      <img src="${item.src}" ${item.width ? `width="${item.width}" height="${item.height}"` : ''} alt="${esc(item.comment ? truncate(oneLine(item.comment), 160) : `Знімок ${n + 1}`)}" loading="${n === 0 ? 'eager' : 'lazy'}" decoding="async">
+    </button>
+    <div class="cap${count > 1 ? ' step' : ''}">
+      ${count > 1 ? `<span class="marker" aria-label="Крок ${n + 1}">${n + 1}</span>` : ''}
+      ${item.comment ? `<p class="comment">${keepNumbers(esc(item.comment))}</p>` : '<p class="comment none">Без коментаря</p>'}
+    </div>
+    <div class="acts">
+      <button class="chip" type="button" data-copy="${n}" title="${item.comment ? 'Знімок і коментар разом' : 'Знімок у буфер обміну'}">${ICON.copy}<span>Копіювати</span></button>
+      <button class="chip" type="button" data-download="${n}" title="PNG${item.comment ? ' з коментарем усередині файлу' : ''}">${ICON.download}<span>Завантажити</span></button>
+    </div>
+  </article>`).join('');
 
-  const expires = new Date(share.expiresAt).toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', year: 'numeric' });
+  const data = { id, link, markdown, items: items.map(i => ({ src: i.src, ext: i.ext, comment: i.comment })) };
   const body = `
-<header class="top">
-  <a class="brand" href="${LANDING}">${LOGO}<span>Screen<b>Voicer</b></span></a>
-  <button class="copy" id="copy" type="button">Копіювати посилання</button>
-</header>
+<header class="bar"><div class="bar-in">
+  <a class="brand" href="${LANDING}" aria-label="ScreenVoicer: сайт програми">${LOGO}<span>ScreenVoicer</span></a>
+  <button class="primary" id="copyLink" type="button" aria-label="Копіювати посилання">${ICON.link}<span>Копіювати посилання</span></button>
+</div></header>
 <main>
-  <h1>${esc(title)}</h1>
-  ${items}
+  <div class="intro">
+    <h1>${esc(shots)}</h1>
+    <p class="until">Посилання діє до ${esc(expiresText)}</p>
+    <div class="tools">
+      <button class="chip" id="copyAi" type="button" title="Markdown із посиланнями на знімки й коментарями: вставте в ChatGPT, Claude чи Cursor">${ICON.spark}<span>Копіювати для AI</span></button>
+      ${count > 1 ? `<button class="chip" id="zip" type="button" title="Усі знімки одним ZIP-архівом, коментарі всередині">${ICON.download}<span>Завантажити все</span></button>` : ''}
+    </div>
+  </div>
+  ${figures}
 </main>
-<footer>Посилання діє до ${esc(expires)} · <a href="${LANDING}">Зроблено в ScreenVoicer</a> — скриншот із голосовим коментарем за 10 секунд</footer>
-<script>
-  document.getElementById('copy').addEventListener('click', async e => {
-    try { await navigator.clipboard.writeText(location.href); e.target.textContent = 'Скопійовано'; }
-    catch { prompt('Скопіюйте посилання:', location.href); }
+<footer>
+  <p>Автор може видалити посилання раніше. Коментар записаний і в сам файл знімка, тож не загубиться після завантаження.</p>
+  <p><a href="${LANDING}">Зроблено в ScreenVoicer</a>: знімок екрана з коментарем голосом за 10 секунд, для Windows і Mac.</p>
+</footer>
+<dialog id="lb" aria-label="Знімок на весь екран">
+  <div class="lb-top"><span id="lbCount"></span><button type="button" class="lb-x" data-close aria-label="Закрити">${ICON.close}</button></div>
+  <div class="lb-view" id="lbView"><img id="lbImg" alt=""></div>
+  <div class="lb-bottom">
+    <button type="button" class="lb-nav" data-step="-1" aria-label="Попередній">${ICON.left}</button>
+    <p id="lbCap"></p>
+    <button type="button" class="lb-nav" data-step="1" aria-label="Наступний">${ICON.right}</button>
+  </div>
+</dialog>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>const SHARE = ${safeJson(data)};</script>
+<script>${CLIENT}</script>`;
+  return page(200, ogTitle, body, head);
+}
+
+function toMarkdown(items, link, expiresText) {
+  const count = items.length;
+  const lines = [`# ${count === 1 ? 'Знімок екрана з коментарем' : `${count} ${plural(count, 'знімок', 'знімки', 'знімків')} екрана з коментарями`}`, '',
+    `Посилання: ${link} (діє до ${expiresText}).`, ''];
+  items.forEach((item, n) => {
+    if (count > 1) lines.push(`## ${n + 1}`, '');
+    lines.push(`![Знімок ${n + 1}](${item.src})`, '');
+    lines.push(item.comment ? `**Коментар:** ${item.comment}` : '_Без коментаря._', '');
   });
-</script>`;
-  return page(200, title, body, og);
+  return lines.join('\n');
 }
 
 function expiredBody() {
-  return `<div class="empty">${LOGO}<h1>Посилання більше не діє</h1><p>Посилання ScreenVoicer живуть 30 днів або доки автор їх не видалить.</p><a class="btn" href="${LANDING}">Що таке ScreenVoicer</a></div>`;
+  return `<div class="empty">${LOGO}<h1>Посилання більше не діє</h1><p>Посилання ScreenVoicer живуть 30 днів. Автор міг видалити його раніше.</p><a class="primary" href="${LANDING}"><span>Що таке ScreenVoicer</span></a></div>`;
 }
 
 function notFoundBody() {
-  return `<div class="empty">${LOGO}<h1>Тут нічого немає</h1><a class="btn" href="${LANDING}">На сайт ScreenVoicer</a></div>`;
+  return `<div class="empty">${LOGO}<h1>Тут нічого немає</h1><p>Перевірте, чи посилання скопійоване повністю.</p><a class="primary" href="${LANDING}"><span>На сайт ScreenVoicer</span></a></div>`;
 }
 
-const LOGO = `<svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="t" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffa468"/><stop offset="1" stop-color="#f06a2c"/></linearGradient></defs><rect x="2" y="2" width="60" height="60" rx="16" fill="url(#t)"/><path d="M13 25v-6a6 6 0 0 1 6-6h6M39 13h6a6 6 0 0 1 6 6v6M51 39v6a6 6 0 0 1-6 6h-6M25 51h-6a6 6 0 0 1-6-6v-6" fill="none" stroke="#2a1608" stroke-width="5.5" stroke-linecap="round"/><rect x="24" y="19" width="16" height="26" rx="8" fill="#fff8f2"/></svg>`;
+// The logo «Без плитки»: solid orange viewfinder corners and three bars (branding/logo.svg).
+const LOGO = `<svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="#ff8a4c" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22v-8a8 8 0 0 1 8-8h8M42 6h8a8 8 0 0 1 8 8v8M58 42v8a8 8 0 0 1-8 8h-8M22 58h-8a8 8 0 0 1-8-8v-8"/><path d="M22 28v8M32 20v24M42 28v8"/></g></svg>`;
+
+// The apps' 24-unit line icons (App.xaml Icon.*), same path data.
+const icon = d => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"/></svg>`;
+const ICON = {
+  copy: icon('M10 8.5H18A1.5 1.5 0 0 1 19.5 10V18A1.5 1.5 0 0 1 18 19.5H10A1.5 1.5 0 0 1 8.5 18V10A1.5 1.5 0 0 1 10 8.5ZM15.5 8.5V6A1.5 1.5 0 0 0 14 4.5H6A1.5 1.5 0 0 0 4.5 6V14A1.5 1.5 0 0 0 6 15.5H8.5'),
+  download: icon('M12 4.5V15M7.5 10.5L12 15L16.5 10.5M5 19.5H19'),
+  link: icon('M10 14A4 4 0 0 0 15.66 14L18.66 11A4 4 0 0 0 13 5.34L11.5 6.84M14 10A4 4 0 0 0 8.34 10L5.34 13A4 4 0 0 0 11 18.66L12.5 17.16'),
+  spark: icon('M12 4V7M12 17V20M4 12H7M17 12H20M6.3 6.3L8.4 8.4M15.6 15.6L17.7 17.7M6.3 17.7L8.4 15.6M15.6 8.4L17.7 6.3'),
+  close: icon('M6.5 6.5L17.5 17.5M17.5 6.5L6.5 17.5'),
+  left: icon('M14.5 6.5L9 12L14.5 17.5'),
+  right: icon('M9.5 6.5L15 12L9.5 17.5')
+};
+
+// Runs in the viewer's browser. Plain concatenation only: this is a template literal, so no dollar-brace here.
+const CLIENT = String.raw`
+(() => {
+  const $ = id => document.getElementById(id);
+  const toastEl = $('toast');
+  let toastTimer;
+  function toast(text) {
+    toastEl.textContent = text;
+    toastEl.classList.add('on');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove('on'), 2600);
+  }
+
+  async function writeText(text) {
+    try { await navigator.clipboard.writeText(text); return true; }
+    catch {
+      const area = document.createElement('textarea');
+      area.value = text;
+      area.setAttribute('readonly', '');
+      area.style.position = 'fixed'; area.style.opacity = '0';
+      document.body.appendChild(area);
+      area.select();
+      let ok = false;
+      try { ok = document.execCommand('copy'); } catch {}
+      area.remove();
+      return ok;
+    }
+  }
+
+  $('copyLink').addEventListener('click', async () => {
+    toast(await writeText(SHARE.link) ? 'Посилання скопійовано' : 'Не вдалося скопіювати. Скопіюйте адресу з рядка браузера');
+  });
+  $('copyAi').addEventListener('click', async () => {
+    toast(await writeText(SHARE.markdown) ? 'Скопійовано для AI: посилання на знімки й коментарі' : 'Не вдалося скопіювати');
+  });
+
+  // ── PNG: the comment goes into the file itself (iTXt «Description» + XMP dc:description), like the apps do ──
+  const CRC = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; CRC[n] = c >>> 0; }
+  function crc32(parts) {
+    let c = 0xFFFFFFFF;
+    for (const bytes of parts) for (let i = 0; i < bytes.length; i++) c = CRC[(c ^ bytes[i]) & 255] ^ (c >>> 8);
+    return (c ^ 0xFFFFFFFF) >>> 0;
+  }
+  const utf8 = s => new TextEncoder().encode(s);
+  const xmlEsc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  function chunk(type, data) {
+    const out = new Uint8Array(12 + data.length);
+    const view = new DataView(out.buffer);
+    view.setUint32(0, data.length);
+    out.set(utf8(type), 4);
+    out.set(data, 8);
+    view.setUint32(8 + data.length, crc32([utf8(type), data]));
+    return out;
+  }
+  function iTXt(keyword, text) {
+    const k = utf8(keyword), t = utf8(text);
+    const data = new Uint8Array(k.length + 5 + t.length); // keyword, 0, flag 0, method 0, language "" 0, translated "" 0, text
+    data.set(k, 0);
+    data.set(t, k.length + 5);
+    return chunk('iTXt', data);
+  }
+  function xmp(comment) {
+    return '<?xpacket begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"?><x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description rdf:about="" xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:description><rdf:Alt><rdf:li xml:lang="x-default">' + xmlEsc(comment) + '</rdf:li></rdf:Alt></dc:description></rdf:Description></rdf:RDF></x:xmpmeta><?xpacket end="r"?>';
+  }
+  function withComment(png, comment) {
+    const sig = [137, 80, 78, 71, 13, 10, 26, 10];
+    if (!comment || png.length < 33 || sig.some((b, i) => png[i] !== b)) return png;
+    const view = new DataView(png.buffer, png.byteOffset, png.byteLength);
+    const parts = [png.subarray(0, 8)];
+    let pos = 8;
+    while (pos + 12 <= png.length) {
+      const length = view.getUint32(pos);
+      const end = pos + 12 + length;
+      if (end > png.length) return png;
+      const type = String.fromCharCode(...png.subarray(pos + 4, pos + 8));
+      let keep = true;
+      if (type === 'iTXt' || type === 'tEXt' || type === 'zTXt') {
+        const data = png.subarray(pos + 8, pos + 8 + length);
+        const zero = data.indexOf(0);
+        const keyword = String.fromCharCode(...data.subarray(0, zero < 0 ? Math.min(data.length, 80) : zero));
+        keep = keyword !== 'Description' && keyword !== 'XML:com.adobe.xmp';
+      }
+      if (keep) parts.push(png.subarray(pos, end));
+      if (type === 'IHDR') parts.push(iTXt('Description', comment), iTXt('XML:com.adobe.xmp', xmp(comment)));
+      pos = end;
+    }
+    const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
+    let at = 0;
+    for (const p of parts) { out.set(p, at); at += p.length; }
+    return out;
+  }
+
+  async function fileBytes(n) {
+    const item = SHARE.items[n];
+    const bytes = new Uint8Array(await (await fetch(item.src)).arrayBuffer());
+    return item.ext === 'png' ? withComment(bytes, item.comment) : bytes;
+  }
+  const fileName = n => 'ScreenVoicer-' + SHARE.id + (SHARE.items.length > 1 ? '-' + (n + 1) : '') + '.' + SHARE.items[n].ext;
+  function save(blob, name) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+  }
+
+  async function download(n) {
+    try {
+      save(new Blob([await fileBytes(n)], { type: SHARE.items[n].ext === 'png' ? 'image/png' : 'image/jpeg' }), fileName(n));
+      toast(SHARE.items[n].comment ? 'Завантажено, коментар записано у файл' : 'Завантажено');
+    } catch { toast('Не вдалося завантажити. Перевірте інтернет'); }
+  }
+
+  async function toPng(blob) {
+    const bitmap = await createImageBitmap(blob);
+    const canvas = document.createElement('canvas');
+    canvas.width = bitmap.width; canvas.height = bitmap.height;
+    canvas.getContext('2d').drawImage(bitmap, 0, 0);
+    return new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+  }
+
+  // The image and the comment in one go: editors (Docs, Gmail, Notion, Jira) take both, chats take the image.
+  async function copyShot(n) {
+    const item = SHARE.items[n];
+    try {
+      if (!window.ClipboardItem || !navigator.clipboard || !navigator.clipboard.write) throw new Error('no clipboard');
+      const image = fetch(item.src).then(r => r.blob()).then(b => b.type === 'image/png' ? b : toPng(b));
+      const data = { 'image/png': image };
+      if (item.comment) {
+        const html = '<img src="' + item.src + '" alt=""><p>' + xmlEsc(item.comment).replace(/\n/g, '<br>') + '</p>';
+        data['text/plain'] = new Blob([item.comment], { type: 'text/plain' });
+        data['text/html'] = new Blob([html], { type: 'text/html' });
+      }
+      await navigator.clipboard.write([new ClipboardItem(data)]);
+      toast(item.comment ? 'Скопійовано знімок і коментар' : 'Знімок скопійовано');
+    } catch {
+      if (item.comment && await writeText(item.comment)) toast('Браузер не дав скопіювати картинку, тож скопійовано коментар');
+      else toast('Браузер не дав скопіювати картинку. Натисніть «Завантажити»');
+    }
+  }
+
+  // ── ZIP of all screenshots (stored: PNG is compressed already) + comments.md ──
+  function zip(files) {
+    const now = new Date();
+    const time = (now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1);
+    const date = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+    const chunks = [], central = [];
+    let offset = 0;
+    for (const f of files) {
+      const name = utf8(f.name), crc = crc32([f.data]), size = f.data.length;
+      const local = new DataView(new ArrayBuffer(30));
+      local.setUint32(0, 0x04034b50, true); local.setUint16(4, 20, true); local.setUint16(6, 0x0800, true);
+      local.setUint16(10, time, true); local.setUint16(12, date, true); local.setUint32(14, crc, true);
+      local.setUint32(18, size, true); local.setUint32(22, size, true); local.setUint16(26, name.length, true);
+      chunks.push(new Uint8Array(local.buffer), name, f.data);
+      const entry = new DataView(new ArrayBuffer(46));
+      entry.setUint32(0, 0x02014b50, true); entry.setUint16(4, 20, true); entry.setUint16(6, 20, true); entry.setUint16(8, 0x0800, true);
+      entry.setUint16(12, time, true); entry.setUint16(14, date, true); entry.setUint32(16, crc, true);
+      entry.setUint32(20, size, true); entry.setUint32(24, size, true); entry.setUint16(28, name.length, true);
+      entry.setUint32(42, offset, true);
+      central.push(new Uint8Array(entry.buffer), name);
+      offset += 30 + name.length + size;
+    }
+    const centralSize = central.reduce((n, c) => n + c.length, 0);
+    const end = new DataView(new ArrayBuffer(22));
+    end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
+    end.setUint32(12, centralSize, true); end.setUint32(16, offset, true);
+    return new Blob([...chunks, ...central, new Uint8Array(end.buffer)], { type: 'application/zip' });
+  }
+
+  const zipButton = $('zip');
+  if (zipButton) zipButton.addEventListener('click', async () => {
+    zipButton.disabled = true;
+    toast('Збираю архів…');
+    try {
+      const files = [];
+      for (let n = 0; n < SHARE.items.length; n++) files.push({ name: fileName(n), data: await fileBytes(n) });
+      files.push({ name: 'comments.md', data: utf8(SHARE.markdown) });
+      save(zip(files), 'ScreenVoicer-' + SHARE.id + '.zip');
+      toast('Архів завантажено');
+    } catch { toast('Не вдалося зібрати архів. Перевірте інтернет'); }
+    zipButton.disabled = false;
+  });
+
+  document.addEventListener('click', e => {
+    const copy = e.target.closest('[data-copy]');
+    if (copy) return copyShot(Number(copy.dataset.copy));
+    const dl = e.target.closest('[data-download]');
+    if (dl) return download(Number(dl.dataset.download));
+    const zoom = e.target.closest('[data-zoom]');
+    if (zoom) return openLightbox(Number(zoom.dataset.zoom));
+  });
+
+  // ── Full screen view: fit to the screen, a click shows real pixels, arrows go between screenshots ──
+  const lb = $('lb'), lbImg = $('lbImg'), lbView = $('lbView');
+  let current = 0;
+  function show(n) {
+    current = (n + SHARE.items.length) % SHARE.items.length;
+    const item = SHARE.items[current];
+    lbView.classList.remove('actual');
+    lbImg.src = item.src;
+    lbImg.alt = item.comment || 'Знімок ' + (current + 1);
+    $('lbCap').textContent = item.comment;
+    $('lbCount').textContent = SHARE.items.length > 1 ? (current + 1) + ' з ' + SHARE.items.length : '';
+  }
+  function openLightbox(n) {
+    lb.classList.toggle('single', SHARE.items.length === 1);
+    show(n);
+    lb.showModal();
+  }
+  lbImg.addEventListener('click', e => { e.stopPropagation(); lbView.classList.toggle('actual'); });
+  lbView.addEventListener('click', () => lb.close());
+  lb.addEventListener('click', e => {
+    if (e.target.closest('[data-close]')) lb.close();
+    const step = e.target.closest('[data-step]');
+    if (step) show(current + Number(step.dataset.step));
+  });
+  lb.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight') show(current + 1);
+    if (e.key === 'ArrowLeft') show(current - 1);
+  });
+})();
+`;
 
 function page(status, title, body, head = '') {
   const html = `<!doctype html>
 <html lang="uk">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0F0F13">
 <title>${esc(title)} · ScreenVoicer</title>
 ${head}
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&display=swap">
+<link rel="icon" href="data:image/svg+xml,${encodeURIComponent(LOGO.replace('class="logo" ', 'xmlns="http://www.w3.org/2000/svg" '))}">
 <style>
-:root { --ink:#0e0d10; --fg:#f4f2f0; --muted:#a39f9b; --line:rgba(255,255,255,.09); --accent:#ff8a4c; --accent2:#ffc68a; color-scheme: dark; }
+:root {
+  --bg: #0F0F13; --surface: #17171D; --glass: rgba(255,255,255,.06); --glass-hover: rgba(255,255,255,.11);
+  --edge: rgba(255,255,255,.18); --line: rgba(255,255,255,.08); --text: #F4F4F7; --soft: #CFCFD6; --muted: #AAAAB6;
+  --accent: #FF8A4C; --ink: #1D1D22; --primary: rgba(255,255,255,.92);
+  color-scheme: dark;
+}
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--ink) radial-gradient(60% 40% at 80% 0%, rgba(255,138,76,.14), transparent 70%) no-repeat; color: var(--fg);
-  font: 16px/1.6 "Onest", "Segoe UI", -apple-system, system-ui, sans-serif; padding: 0 18px 40px; min-height: 100vh; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--text); min-height: 100vh;
+  font: 16px/1.55 "Segoe UI Variable Text", "Segoe UI", -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased; }
 a { color: inherit; }
-.top { max-width: 1100px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 0; }
-.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 600; font-size: 17px; letter-spacing: -.01em; }
-.brand b { color: var(--accent); font-weight: 600; }
-.logo { width: 34px; height: 34px; flex: none; }
-.copy, .btn { font-family: inherit; font-weight: 600; font-size: 14px; line-height: 1; color: var(--fg); border: 0; cursor: pointer; padding: 11px 16px; border-radius: 12px; text-decoration: none;
-  background: linear-gradient(180deg, rgba(255,255,255,.13), rgba(255,255,255,.04)); box-shadow: inset 0 1px 0 rgba(255,255,255,.28), inset 0 0 0 1px rgba(255,255,255,.1); }
-.copy:hover, .btn:hover { background: linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.06)); }
-main { max-width: 1100px; margin: 0 auto; display: grid; gap: 28px; }
-h1 { font-size: clamp(22px, 3vw, 30px); line-height: 1.2; font-weight: 600; letter-spacing: -.02em; margin: 14px 0 0; text-wrap: balance; }
-.shot { margin: 0; display: grid; gap: 14px; position: relative; }
-.img { display: block; border-radius: 16px; overflow: hidden; border: 1px solid var(--line); background: #17161b; box-shadow: 0 30px 80px rgba(0,0,0,.45); }
-.img img { display: block; width: 100%; height: auto; }
-.num { position: absolute; top: 12px; left: 12px; z-index: 1; font-weight: 600; font-size: 15px; padding: 5px 11px; border-radius: 10px; color: #fff;
-  background: linear-gradient(180deg, #ffa066, rgba(232,100,42,.85)); box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 0 18px rgba(255,138,76,.4); }
-.num span { opacity: .75; font-weight: 500; }
-figcaption { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: start; padding: 16px 18px; border-radius: 16px;
-  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02)); box-shadow: inset 0 1px 0 rgba(255,255,255,.12), inset 0 0 0 1px var(--line); }
-figcaption svg { width: 20px; height: 20px; margin-top: 3px; fill: none; stroke: var(--accent2); stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
-figcaption p { margin: 0; font-size: 17px; white-space: pre-wrap; overflow-wrap: anywhere; }
-footer { max-width: 1100px; margin: 36px auto 0; color: var(--muted); font-size: 13.5px; border-top: 1px solid var(--line); padding-top: 18px; }
-.empty { min-height: 80vh; display: grid; place-content: center; justify-items: center; text-align: center; gap: 14px; }
-.empty .logo { width: 72px; height: 72px; }
-.empty p { color: var(--muted); max-width: 46ch; margin: 0; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.i { width: 17px; height: 17px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+
+.bar { position: sticky; top: 0; z-index: 5;
+  padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 12px max(16px, env(safe-area-inset-left));
+  background: rgba(15,15,19,.78); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); border-bottom: 1px solid var(--line); }
+.bar-in { max-width: 1088px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 600; font-size: 16px; letter-spacing: -.01em; }
+.logo { width: 28px; height: 28px; flex: none; }
+.primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 38px; padding: 0 16px; border: 0; border-radius: 11px; cursor: pointer;
+  background: var(--primary); color: var(--ink); font-weight: 600; font-size: 14.5px; text-decoration: none; white-space: nowrap; }
+.primary .i { color: var(--accent); stroke-width: 2.2; }
+.primary:hover { background: #fff; }
+.chip { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 14px; border-radius: 10px; cursor: pointer;
+  background: var(--glass); border: 1px solid var(--edge); color: var(--soft); font-weight: 600; font-size: 14px; white-space: nowrap; }
+.chip:hover { background: var(--glass-hover); color: var(--text); }
+.chip:disabled { opacity: .55; cursor: progress; }
+
+main { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
+.intro { padding: 34px 0 6px; }
+h1 { margin: 0; font-size: clamp(26px, 4vw, 34px); line-height: 1.15; font-weight: 650; letter-spacing: -.025em; }
+.until { margin: 6px 0 0; color: var(--muted); font-size: 15px; }
+.tools { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+
+.shot { margin: 30px 0 0; scroll-margin-top: 80px; }
+.frame { display: block; width: 100%; padding: 0; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: var(--surface); cursor: zoom-in; }
+.frame img { display: block; width: 100%; height: auto; }
+.cap { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; margin: 18px 0 0; padding-left: 16px; border-left: 3px solid var(--accent); }
+.cap.step { grid-template-columns: auto minmax(0, 1fr); padding-left: 0; border-left: 0; align-items: start; }
+.marker { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--accent); color: #fff;
+  font-weight: 700; font-size: 16px; box-shadow: 0 0 0 2.5px #fff, 0 2px 8px rgba(0,0,0,.4); margin: 2px 2px 0; }
+.comment { margin: 0; font-size: clamp(18px, 2.1vw, 21px); line-height: 1.5; font-weight: 500; letter-spacing: -.005em; white-space: pre-wrap; overflow-wrap: anywhere; max-width: 62ch; }
+.cap.step .comment { padding-top: 3px; }
+.comment.none { color: var(--muted); font-weight: 400; font-size: 16px; }
+.acts { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 0; }
+.cap:not(.step) + .acts { padding-left: 19px; }
+.cap.step + .acts { padding-left: 50px; }
+
+footer { max-width: 1120px; margin: 56px auto 0; padding: 22px 16px max(36px, env(safe-area-inset-bottom)); border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }
+footer p { margin: 0 0 6px; max-width: 70ch; }
+
+.toast { position: fixed; left: 50%; bottom: max(22px, env(safe-area-inset-bottom)); transform: translate(-50%, 16px); opacity: 0; pointer-events: none; z-index: 20;
+  width: max-content; max-width: calc(100vw - 32px); padding: 11px 16px; border-radius: 12px; background: rgba(28,28,35,.96); border: 1px solid var(--edge);
+  color: var(--text); font-size: 14.5px; font-weight: 500; box-shadow: 0 12px 40px rgba(0,0,0,.5); transition: opacity .18s, transform .18s; }
+.toast.on { opacity: 1; transform: translate(-50%, 0); }
+
+dialog { width: 100vw; height: 100vh; height: 100dvh; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; background: #08080A; color: var(--text); }
+dialog[open] { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; }
+dialog::backdrop { background: transparent; }
+html:has(dialog[open]) { overflow: hidden; }
+.lb-top, .lb-bottom { display: flex; align-items: center; gap: 12px; padding: 10px 14px; }
+.lb-top { justify-content: space-between; padding-top: max(10px, env(safe-area-inset-top)); color: var(--muted); font-size: 14px; }
+.lb-bottom { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+.lb-bottom p { flex: 1; margin: 0; text-align: center; font-size: 16px; line-height: 1.45; max-height: 4.4em; overflow: auto; white-space: pre-wrap; }
+.lb-x, .lb-nav { display: grid; place-items: center; width: 40px; height: 40px; flex: none; border-radius: 12px; border: 1px solid var(--edge); background: var(--glass); cursor: pointer; }
+.lb-x:hover, .lb-nav:hover { background: var(--glass-hover); }
+dialog.single .lb-nav { visibility: hidden; }
+.lb-view { position: relative; min-height: 0; overflow: auto; cursor: zoom-out; }
+.lb-view img { position: absolute; inset: 0; margin: auto; max-width: calc(100% - 24px); max-height: 100%; cursor: zoom-in; border-radius: 6px; }
+.lb-view.actual img { position: static; max-width: none; max-height: none; margin: 0 12px; border-radius: 0; cursor: zoom-out; }
+
+.empty { min-height: 88vh; display: grid; place-content: center; justify-items: center; text-align: center; gap: 12px; padding: 24px 16px; }
+.empty .logo { width: 64px; height: 64px; margin-bottom: 8px; }
+.empty h1 { font-size: 28px; }
+.empty p { color: var(--muted); max-width: 42ch; margin: 0 0 10px; }
+
+@media (max-width: 560px) {
+  .bar .primary span { display: none; }
+  .bar .primary { width: 40px; padding: 0; }
+  .intro { padding-top: 24px; }
+  .shot { margin-top: 26px; }
+  .frame { border-radius: 10px; }
+  .cap:not(.step) + .acts, .cap.step + .acts { padding-left: 0; }
+  .lb-nav { width: 36px; height: 36px; }
+}
+@media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
 </style>
 </head>
 <body>${body}</body>
@@ -227,7 +619,7 @@ footer { max-width: 1100px; margin: 36px auto 0; color: var(--muted); font-size:
       'cache-control': status === 200 ? 'public, max-age=300' : 'no-store',
       'x-content-type-options': 'nosniff',
       'referrer-policy': 'no-referrer',
-      'content-security-policy': "default-src 'none'; img-src 'self'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"
+      'content-security-policy': "default-src 'none'; img-src 'self' data: blob:; connect-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"
     }
   });
 }
@@ -257,17 +649,48 @@ function clampInt(value, min, max) {
   return Number.isFinite(n) && n >= min && n <= max ? n : null;
 }
 
+function plural(n, one, few, many) {
+  const d = n % 10, h = n % 100;
+  if (d === 1 && h !== 11) return one;
+  if (d >= 2 && d <= 4 && (h < 12 || h > 14)) return few;
+  return many;
+}
+
+/** «2 750 ₴» stays on one line. */
+function keepNumbers(html) {
+  return html.replace(/(\d) (?=\d{3}\b|₴|\$|€|грн|%)/g, '$1&nbsp;');
+}
+
+function oneLine(text) {
+  return String(text).replace(/\s+/g, ' ').trim();
+}
+
+/** Cuts at a word boundary when one is close enough. */
 function truncate(text, max) {
-  return text.length > max ? text.slice(0, max - 1) + '…' : text;
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max - 1);
+  const space = cut.lastIndexOf(' ');
+  return (space > max * 0.6 ? cut.slice(0, space) : cut).replace(/[\s,.;:–—-]+$/, '') + '…';
 }
 
 function esc(text) {
   return String(text).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
-function json(data, status = 200) {
-  return new Response(JSON.stringify(data), {
+/** JSON that is safe inside a <script> element. */
+function safeJson(data) {
+  const backslash = String.fromCharCode(92);
+  return JSON.stringify(data).replace(/</g, backslash + 'u003c').replace(LINE_SEPARATORS, c => backslash + 'u' + c.charCodeAt(0).toString(16));
+}
+const LINE_SEPARATORS = new RegExp('[' + String.fromCharCode(0x2028, 0x2029) + ']', 'g'); // old browsers end a string at these
+
+function json(data, status = 200, open = false) {
+  return new Response(JSON.stringify(data, null, open ? 2 : 0), {
     status,
-    headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' }
+    headers: {
+      'content-type': 'application/json; charset=utf-8',
+      'cache-control': 'no-store',
+      ...(open ? { 'access-control-allow-origin': '*' } : {})
+    }
   });
 }

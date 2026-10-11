@@ -2257,13 +2257,27 @@ namespace ScreenVoicer.Views
                 var saved = await saveTask;
                 (string comment, bool voiceLost) = await CollectCommentAsync();
 
+                // the comment goes into the PNG too, so it stays with the file wherever it is sent or moved
+                long fileSize = saved.FileSizeBytes;
+                if (comment.Length > 0)
+                {
+                    try
+                    {
+                        fileSize = await Task.Run(() => PngMetadata.WriteComment(saved.Path, comment)) ?? fileSize;
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Warn("[Overlay] Could not write the comment into the PNG", ex);
+                    }
+                }
+
                 var entry = new ScreenshotHistoryItem
                 {
                     ImagePath = saved.Path,
                     TranscribedText = comment,
                     Width = saved.Width,
                     Height = saved.Height,
-                    FileSizeBytes = saved.FileSizeBytes,
+                    FileSizeBytes = fileSize,
                     CreatedAt = DateTime.Now
                 };
                 try
