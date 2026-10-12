@@ -998,7 +998,7 @@ final class OverlayController: NSObject, NSTextFieldDelegate {
         let how = recordingHandsFree
             ? "Говоріть… щоб зупинити — натисніть Пробіл або мікрофон"
             : "Говоріть… відпустіть Пробіл, коли закінчите"
-        showStatus(whisper.isModelReady ? how : how + " (розпізнавання ще готується)", .recording)
+        showStatus(how, .recording) // recognized online, so no waiting for the model on this Mac
     }
 
     /// Esc while talking: drop this take, keep the rest of the comment.
@@ -1060,7 +1060,7 @@ final class OverlayController: NSObject, NSTextFieldDelegate {
     }
 
     private func finishChunk(_ chunk: VoiceChunk, samples: [Float]) async {
-        showStatus(whisper.isModelReady ? "Розпізнаю…" : "Готую розпізнавання…", .busy)
+        showStatus("Розпізнаю…", .busy)
         let started = Date()
         let analysis = Task.detached(priority: .utility) { AudioAnalysis.highBandShare(samples) }
         let text = await whisper.transcribe(samples)
@@ -1080,7 +1080,7 @@ final class OverlayController: NSObject, NSTextFieldDelegate {
         } else if !text.isEmpty {
             showStatus("Готово! Enter — зберегти і скопіювати, Пробіл — додати ще.", .success)
         } else if !whisper.isModelReady {
-            showStatus(whisper.lastError ?? "Модель розпізнавання недоступна.", .error)
+            showStatus("Не вдалося розпізнати голос: перевірте інтернет і спробуйте ще раз.", .error)
         } else if AudioAnalysis.isDigitalSilence(samples) {
             showStatus("«\(microphoneName)» передає повну тишу — оберіть інший мікрофон (▾ біля мікрофона).", .warning)
         } else if !AudioAnalysis.hasSpeech(samples) {
@@ -1142,20 +1142,8 @@ final class OverlayController: NSObject, NSTextFieldDelegate {
 
     private func updateIdleStatus() {
         if closed || isRecording || isSaving || !chunks.isEmpty || !pendingTranscriptions.isEmpty { return }
-        switch whisper.state {
-        case .ready:
-            if let next = whisper.downloadingModel {
-                showStatus("Говоріть або пишіть · «\(next.title)»: \(Formats.percent(whisper.downloadProgress))", .idle)
-            } else {
-                showStatus("Утримуйте Пробіл і говоріть, або пишіть", .idle)
-            }
-        case .downloading:
-            showStatus("Готую розпізнавання… \(Formats.percent(whisper.downloadProgress)) — записувати вже можна.", .busy)
-        case .failed:
-            showStatus("Голос недоступний: \(whisper.lastError ?? "")", .error)
-        default:
-            showStatus("Запускаю розпізнавання…", .busy)
-        }
+        // Voice is recognized online, so it is ready whatever the model on this Mac is doing
+        showStatus("Утримуйте Пробіл і говоріть, або пишіть", .idle)
     }
 
     /// Idle hints live in the comment placeholder; anything else gets the small status line.
@@ -1273,7 +1261,7 @@ final class OverlayController: NSObject, NSTextFieldDelegate {
                 ? "Вставте (⌘V) у чат чи задачу — шлях до PNG і коментар уже в буфері."
                 : "«\(comment)»"
             if voiceLost {
-                message = "Голосовий коментар не встиг розпізнатися (розпізнавання ще готується). " + message
+                message = "Голосовий коментар не встиг розпізнатися. " + message
             }
 
             let share = shareItem

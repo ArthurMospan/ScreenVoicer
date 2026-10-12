@@ -167,28 +167,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MenuHost {
     private func modelStateChanged() {
         updateStatusItem()
         overlay?.modelStateChanged()
-        offerAccurateModelOnce()
 
+        // Voice is recognized online; the model on this Mac only stands in without internet, so its download and
+        // loading stay quiet (the log keeps the details).
         let state = whisper.state
         if state == lastReportedState { return }
         lastReportedState = state
-        switch state {
-        case .downloading:
-            modelWasDownloading = true
-        case .ready where modelWasDownloading:
-            modelWasDownloading = false
-            ToastCenter.shared.showToast("Розпізнавання голосу готове", "Затисніть Пробіл у вікні знімка, щоб надиктувати коментар.", .success, 5000)
-        case .failed:
-            var options = ToastOptions(title: "Розпізнавання голосу недоступне", message: whisper.lastError ?? "Невідома помилка.",
-                                       kind: .error, durationMs: 9000)
-            options.actionText = "Повторити"
-            options.onAction = { [weak self] in
-                self?.lastReportedState = .notLoaded
-                Task { await self?.whisper.ensureModelLoaded() }
-            }
-            ToastCenter.shared.show(options)
-        default:
-            break
+        if state == .failed {
+            Log.warn("[Model] Not available on this Mac: \(whisper.lastError ?? "")")
         }
     }
 
@@ -328,14 +314,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MenuHost {
     }
 
     private func updateStatusItem() {
-        guard let statusItem, let whisper else { return }
-        let tip: String
-        switch whisper.state {
-        case .downloading: tip = "ScreenVoicer — готую розпізнавання \(Formats.percent(whisper.downloadProgress))"
-        case .failed: tip = "ScreenVoicer — голос недоступний"
-        default: tip = "ScreenVoicer\nКлік або \(Self.hotkeyText) — знімок, правий клік — меню"
-        }
-        statusItem.button?.toolTip = tip
+        guard let statusItem else { return }
+        statusItem.button?.toolTip = "ScreenVoicer\nКлік або \(Self.hotkeyText) — знімок, правий клік — меню"
         menuStateChanged()
     }
 
@@ -357,28 +337,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MenuHost {
     var updateProgress: Double? { updateProgressValue }
 
     var voiceStatus: (text: String, kind: TrayStatusKind) {
-        guard let t = whisper else { return ("Запускаюсь…", .busy) }
-        let place = t.isRunningOnGpu ? (t.gpuName ?? "відеокарта") : "процесор"
-        switch t.state {
-        case .ready:
-            if let next = t.downloadingModel {
-                return ("Завантажую «\(next.title)»: \(Formats.percent(t.downloadProgress))", .busy)
-            }
-            return ("Голос готовий · \(t.activeModel?.title ?? "") · \(place)", .ready)
-        case .downloading:
-            return ("Завантажую розпізнавання «\(t.downloadingModel?.title ?? "")»: \(Formats.percent(t.downloadProgress))", .busy)
-        case .failed:
-            return ("Голос недоступний — відкрийте «Розпізнавання»", .error)
-        default:
-            return ("Розпізнавання запускається…", .busy)
-        }
+        // Voice is recognized online (the model on this Mac only stands in without internet), so it is ready
+        whisper == nil ? ("Запускаюсь…", .busy) : ("Голос готовий", .ready)
     }
 
     var aboutText: String {
-        let model = whisper?.activeModel?.title ?? "—"
-        let place = whisper?.isRunningOnGpu == true ? (whisper?.gpuName ?? "відеокарті") : "процесорі"
-        return "ScreenVoicer \(AppInfo.version) — скриншоти з голосовими коментарями для баг-репортів і AI-асистентів.\n"
-            + "Розпізнавання: «\(model)», офлайн, на \(place).\n"
+        "ScreenVoicer \(AppInfo.version) — скриншоти з голосовими коментарями для баг-репортів і AI-асистентів.\n"
             + "Скриншоти: \(Paths.pretty(settings?.outputDirectory ?? ""))"
     }
 

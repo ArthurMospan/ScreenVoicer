@@ -28,6 +28,7 @@ export default {
     try {
       let m;
       if (request.method === 'POST' && path === '/api/shares') return await createShare(request, env, url);
+      if (request.method === 'POST' && path === '/api/transcribe') return await transcribe(request, env);
       if (request.method === 'DELETE' && (m = path.match(/^\/api\/shares\/([A-Za-z0-9]{10})$/))) return await deleteShare(request, env, m[1]);
       if (request.method === 'GET' && (m = path.match(/^\/i\/([A-Za-z0-9]{10})\/(\d{1,2}|p)\.(png|jpg)$/))) return await getImage(env, m[1], m[2]);
       if (request.method === 'GET' && (m = path.match(/^\/s\/([A-Za-z0-9]{10})(\.md|\.json)?$/))) return await sharePage(env, url, m[1], m[2]);
@@ -42,6 +43,42 @@ export default {
 };
 
 // ───────────────────────────── API ─────────────────────────────
+
+// Voice comments from the apps (from 1.12.7): Workers AI speech recognition on the free plan (10 000 neurons a day,
+// about 3.5 hours of speech for everyone together; past that the call fails and the apps recognize on the computer).
+const TRANSCRIBE_MODEL = '@cf/openai/whisper-large-v3-turbo';
+const MAX_AUDIO_BASE64 = 3 * 1024 * 1024; // ~70 s of 16 kHz mono 16-bit WAV
+const UKRAINIAN_PROMPT = 'Коментар до знімка екрана: що не працює і що треба виправити.';
+
+async function transcribe(request, env) {
+  if (!env.AI) return json({ error: 'unavailable' }, 503);
+  if (!(request.headers.get('user-agent') || '').startsWith('ScreenVoicer/')) return json({ error: 'forbidden' }, 403);
+  if (Number(request.headers.get('content-length') || 0) > MAX_AUDIO_BASE64 + 4096) return json({ error: 'audio_too_long' }, 413);
+  let body;
+  try { body = await request.json(); } catch { return json({ error: 'bad_request' }, 400); }
+  const audio = typeof body?.audio === 'string' ? body.audio : '';
+  if (!audio || audio.length > MAX_AUDIO_BASE64) return json({ error: 'bad_audio' }, 400);
+
+  const run = language => env.AI.run(TRANSCRIBE_MODEL, {
+    audio,
+    vad_filter: true,
+    condition_on_previous_text: false,
+    ...(language ? { language, initial_prompt: UKRAINIAN_PROMPT } : {})
+  });
+  try {
+    let result = await run(null);
+    let language = String(result?.transcription_info?.language || '');
+    // Whisper now and then hears Ukrainian as Russian; the people using ScreenVoicer speak Ukrainian, so that one is redone
+    if (language === 'ru') {
+      result = await run('uk');
+      language = 'uk';
+    }
+    return json({ text: String(result?.text || '').trim(), language });
+  } catch (error) {
+    console.log('transcription failed', String(error));
+    return json({ error: 'unavailable' }, 503);
+  }
+}
 
 async function createShare(request, env, url) {
   const type = request.headers.get('content-type') || '';

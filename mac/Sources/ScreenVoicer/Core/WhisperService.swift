@@ -209,6 +209,9 @@ final class WhisperService {
     /// Full-quality transcription of 16 kHz mono samples. Waits for the model if it is still loading.
     func transcribe(_ samples: [Float]) async -> String {
         if samples.isEmpty || !AudioAnalysis.hasSpeech(samples) { return "" }
+        // Online first: accurate and fast on any Mac; without internet (or when the server is out of its daily
+        // allowance) the model on this Mac does it, as before.
+        if let online = await CloudTranscriber.transcribe(samples) { return online }
         guard await ensureModelLoaded() else { return "" }
         return await withCheckedContinuation { continuation in
             inference.async { [self] in continuation.resume(returning: runSync(samples, preview: false)) }

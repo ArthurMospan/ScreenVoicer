@@ -104,7 +104,7 @@ final class TrayMenuModel: ObservableObject {
 }
 
 enum TrayDropdown: Hashable {
-    case mic, language, model
+    case mic
 }
 
 /// Where each dropdown row sits, so its list can open right under it.
@@ -153,7 +153,7 @@ private struct DropdownLayer<Content: View>: View {
     }
 }
 
-/// The glass menu under the menu-bar icon. Microphone, language and recognition open as dropdowns over it.
+/// The glass menu under the menu-bar icon. The microphone list opens as a dropdown over it.
 struct TrayMenuView: View {
     @ObservedObject var model: TrayMenuModel
 
@@ -169,8 +169,6 @@ struct TrayMenuView: View {
             row(.folder, "Папка зі скриншотами") { model.run { $0.openScreenshotsFolder() } }
             separator
             dropdownRow(.mic, .mic, "Мікрофон", value: model.microphoneSummary)
-            dropdownRow(.language, .globe, "Мова голосу", value: Self.languageName(model.language))
-            dropdownRow(.model, .chip, "Розпізнавання", value: model.model.title)
             row(.keyboard, "Гаряча клавіша", value: model.hotkey) { model.run { $0.openHotkeySettings() } }
             Button {
                 model.host?.setAutostart(!model.autostart)
@@ -336,32 +334,6 @@ struct TrayMenuView: View {
             }
             .disabled(!model.canPlayLast)
             .help("Так звучить ваш голос для розпізнавання. Якщо глухо чи тихо — справа в мікрофоні або його підключенні.")
-        case .language:
-            ForEach(Self.languages, id: \.code) { language in
-                optionRow(language.name, detail: language.detail, checked: model.language == language.code) {
-                    model.host?.setVoiceLanguage(language.code)
-                    model.dropdown = nil
-                    model.refresh()
-                }
-            }
-        case .model:
-            ForEach(WhisperModels.all) { info in
-                optionRow(info.title,
-                          detail: "\(info.sizeMb) МБ" + (info.needsGpu && !model.gpuAvailable ? " · повільно без відеокарти" : ""),
-                          checked: info == model.model) {
-                    model.host?.selectModel(info)
-                    model.dropdown = nil
-                    model.refresh()
-                }
-                .help(info.hint)
-            }
-            Rectangle().fill(Color(argb: 0x17FFFFFF)).frame(height: 1).padding(.horizontal, 6).padding(.vertical, 4)
-            optionRow(model.gpuName.map { "Відеокарта · \($0)" } ?? "Використовувати відеокарту",
-                      checked: model.useGpu, icon: .gpu, showCheck: true) {
-                model.host?.setUseGpu(!model.useGpu)
-                model.refresh()
-            }
-            .disabled(!(model.gpuAvailable || model.useGpu))
         }
     }
 
@@ -391,22 +363,6 @@ struct TrayMenuView: View {
             }
         }
         .buttonStyle(MenuRowStyle())
-    }
-
-    private struct VoiceLanguage {
-        let code: String
-        let name: String
-        let detail: String?
-    }
-
-    private static let languages = [
-        VoiceLanguage(code: "uk", name: "Українська", detail: nil),
-        VoiceLanguage(code: "en", name: "English", detail: nil),
-        VoiceLanguage(code: "auto", name: "Автовизначення", detail: "повільніше: спершу вгадує мову")
-    ]
-
-    private static func languageName(_ code: String) -> String {
-        languages.first { $0.code == code }?.name ?? "Українська"
     }
 
     private func toggle(_ on: Bool) -> some View {
@@ -450,7 +406,6 @@ struct TrayMenuView: View {
             HStack(spacing: 6) {
                 Button("Перевірити оновлення") { model.host?.checkForUpdates() }.buttonStyle(MenuChipStyle())
                 Button("Журнал") { model.run { $0.openLog() } }.buttonStyle(MenuChipStyle())
-                Button("Моделі") { model.run { $0.openModelsFolder() } }.buttonStyle(MenuChipStyle())
             }
         }
         .padding(.horizontal, 12)
