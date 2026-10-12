@@ -226,11 +226,24 @@ final class WhisperService {
         }
     }
 
+    static func prompt(for language: String) -> String? {
+        switch language {
+        case "uk": return "Коментар до знімка екрана: що не працює і що треба виправити."
+        case "en": return "A comment on a screenshot: what is broken and what needs fixing."
+        default: return nil
+        }
+    }
+
     /// Runs on the inference queue only.
     private func runSync(_ samples: [Float], preview: Bool) -> String {
         guard let model = active else { return "" }
         let input = AudioAnalysis.padForWhisper(AudioAnalysis.normalizeLevel(samples))
-        var params = whisper_full_default_params(WHISPER_SAMPLING_GREEDY)
+        // The final text weighs several candidates instead of taking the first word every time: noticeably fewer wrong
+        // words, at about twice the time; on the CPU a narrower beam keeps it bearable. Same as the Windows app.
+        var params = whisper_full_default_params(preview ? WHISPER_SAMPLING_GREEDY : WHISPER_SAMPLING_BEAM_SEARCH)
+        if !preview {
+            params.beam_search.beam_size = isRunningOnGpu ? 5 : 3
+        }
         params.n_threads = Int32(preview ? previewThreads : threads)
         params.print_progress = false
         params.print_realtime = false
@@ -251,10 +264,16 @@ final class WhisperService {
         }
 
         let lang = language.isEmpty ? "auto" : language
+        // A short sentence in the spoken language steers spelling and punctuation (and keeps Ukrainian from drifting
+        // into Russian words). Same text as the Windows app.
+        let prompt = Self.prompt(for: lang)
         let result: Int32 = lang.withCString { cLanguage in
-            params.language = cLanguage
-            return input.withUnsafeBufferPointer { buffer in
-                whisper_full(model.ctx, params, buffer.baseAddress, Int32(buffer.count))
+            (prompt ?? "").withCString { cPrompt in
+                params.language = cLanguage
+                if prompt != nil { params.initial_prompt = cPrompt }
+                return input.withUnsafeBufferPointer { buffer in
+                    whisper_full(model.ctx, params, buffer.baseAddress, Int32(buffer.count))
+                }
             }
         }
         guard result == 0 else {

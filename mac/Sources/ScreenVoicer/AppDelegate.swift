@@ -74,7 +74,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MenuHost {
                 showPermissions()
             }
         }
-        if WhisperService.isModelDownloaded(whisper.selectedModel.id) {
+        // After an update the new version says so: otherwise nothing shows that it was installed.
+        let version = AppInfo.version
+        let updated = settings.lastRunVersion.map { $0 != version } ?? false
+        if settings.lastRunVersion != version {
+            settings.lastRunVersion = version
+            settings.save()
+        }
+        if updated {
+            ToastCenter.shared.showToast("ScreenVoicer оновлено до версії " + version,
+                                         "Готово, можна працювати: " + Self.hotkeyText + " — знімок екрана.", .success, 6000)
+        } else if WhisperService.isModelDownloaded(whisper.selectedModel.id) {
             ToastCenter.shared.showToast("ScreenVoicer працює в рядку меню",
                                          "\(Self.hotkeyText) — знімок екрана, затисніть Пробіл — голосовий коментар.", .info, 4000)
         }

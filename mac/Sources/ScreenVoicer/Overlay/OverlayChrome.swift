@@ -131,8 +131,6 @@ struct OverlayChrome: View {
                 .frame(width: geo.size.width, height: geo.size.height)
                 .padding(.top, model.toolbarAtBottom ? 0 : 16 + model.topInset)
                 .padding(.bottom, model.toolbarAtBottom ? 24 : 0)
-                .opacity(model.panelsFaded ? 0.12 : 1)
-                .animation(.easeOut(duration: model.panelsFaded ? 0.12 : 0.18), value: model.panelsFaded)
 
                 if let flyout = model.openFlyout, let anchor = anchors[flyout] {
                     flyoutView(flyout)

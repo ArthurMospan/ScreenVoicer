@@ -30,6 +30,9 @@ namespace ScreenVoicer.Services
         /// <summary>Last version the "update available" toast was shown for (it shows once per version).</summary>
         string? UpdateNotifiedVersion { get; set; }
 
+        /// <summary>The version that ran last time: a newer one now means an update just finished.</summary>
+        string? LastRunVersion { get; set; }
+
         /// <summary>The tray icon was moved out of the Windows 11 «^» overflow once (later the user's choice wins).</summary>
         bool TrayIconPromoted { get; set; }
 

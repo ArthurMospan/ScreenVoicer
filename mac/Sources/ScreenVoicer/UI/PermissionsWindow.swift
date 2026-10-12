@@ -54,7 +54,7 @@ struct PermissionsView: View {
             .padding(.bottom, 18)
 
             permissionRow(icon: .screen, title: "Запис екрана",
-                          detail: "Щоб зробити знімок. Системні параметри → Приватність і безпека → Запис екрана й системного аудіо → увімкніть ScreenVoicer.",
+                          detail: "Щоб зробити знімок. Натисніть «Дозволити»: відкриються налаштування — увімкніть там перемикач біля ScreenVoicer. Apple не дає програмам вмикати його самим, а ScreenVoicer помітить це сам.",
                           granted: model.screen, action: "Дозволити", perform: model.allowScreen)
             permissionRow(icon: .mic, title: "Мікрофон",
                           detail: "Для голосового коментаря. Звук розпізнається тільки на цьому Mac і нікуди не надсилається.",
