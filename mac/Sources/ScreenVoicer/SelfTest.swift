@@ -197,6 +197,34 @@ enum SelfTest {
         check("preview JPEG 1200 wide", preview.map { $0.starts(with: [0xFF, 0xD8]) && $0.count < 300_000 } == true
               && previewImage?.width == 1200 && previewImage?.height == 750,
               "\(preview?.count ?? 0) bytes, \(previewImage?.width ?? 0)x\(previewImage?.height ?? 0)")
+
+        // The comment under the screenshot: one line = 40 + 52 + 44 px band, long ones stop at three lines,
+        // «Ще N знімки» adds 14 + 36 px; an orange bar at x 56 marks the comment.
+        func card(_ caption: String, _ more: Int) -> CGImage? {
+            ShareService.makePreview(path: path, caption: caption, moreShots: more)
+                .flatMap { CGImageSourceCreateWithData($0 as CFData, nil) }.flatMap { CGImageSourceCreateImageAtIndex($0, 0, nil) }
+        }
+        let long = String(repeating: "Сума в кошику не перераховується після зміни кількості товарів. ", count: 6)
+        let short = card("Кнопка не реагує", 0), capped = card(long, 0), several = card(long, 2)
+        check("preview card heights", short?.height == 886 && capped?.height == 990 && several?.height == 1040,
+              "\(short?.height ?? 0) / \(capped?.height ?? 0) / \(several?.height ?? 0)")
+        let bar = short.flatMap { pixel($0, x: 58, y: 750 + 40 + 20) }
+        let gap = short.flatMap { pixel($0, x: 30, y: 750 + 40 + 20) }
+        check("preview card has the orange bar", bar.map { $0.r > 200 && $0.g > 100 && $0.g < 170 && $0.b < 120 } == true
+              && gap.map { $0.r < 40 && $0.g < 40 && $0.b < 40 } == true, "bar \(String(describing: bar)), gap \(String(describing: gap))")
+    }
+
+    /// Pixel (x, y), top-left origin.
+    private static func pixel(_ image: CGImage, x: Int, y: Int) -> (r: Int, g: Int, b: Int)? {
+        var data = [UInt8](repeating: 0, count: 4)
+        let drawn: Bool = data.withUnsafeMutableBytes { buffer in
+            guard let ctx = CGContext(data: buffer.baseAddress, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4,
+                                      space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                                      bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return false }
+            ctx.draw(image, in: CGRect(x: -x, y: -(image.height - 1 - y), width: image.width, height: image.height))
+            return true
+        }
+        return drawn ? (Int(data[0]), Int(data[1]), Int(data[2])) : nil
     }
 
     @MainActor

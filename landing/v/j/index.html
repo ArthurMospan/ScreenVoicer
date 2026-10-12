@@ -427,6 +427,15 @@ footer { padding: 0 0 48px; font-size: 13px; color: var(--faint); text-align: ce
   .meta span + span::before { content: none; }
 }
 #dbgOut { position: fixed; z-index: 99; left: 8px; bottom: 8px; padding: 6px 10px; border-radius: 8px; background: #000; color: #0f0; font: 12px/1.3 var(--mono); }
+/* link preview: the picture the apps make — the screenshot, the comment under it on a dark band */
+.ogi { margin-top: 7px; border-radius: 8px; overflow: hidden; background: #0f0f13; }
+.ogi svg { display: block; margin: 0 !important; border-radius: 0 !important; }
+.ogc { padding: 7px 10px 8px; background: #0f0f13; text-align: left; }
+.ogt { padding-left: 9px; box-shadow: inset 2px 0 0 #ff8a4c; color: #f4f4f7; font-size: 11px; line-height: 14px; font-weight: 600; }
+.ogm { padding-left: 9px; margin-top: 3px; color: #aaaab6; font-size: 9.5px; line-height: 12px; font-weight: 400; }
+.msg .pv .pvi { border-radius: 8px 8px 0 0; }
+.msg .pv .ogc { border-radius: 0 0 8px 8px; }
+.msg .pv .ogt { font-size: 12px; line-height: 16px; }
 </style>
 </head>
 <body>
@@ -674,8 +683,9 @@ footer { padding: 0 0 48px; font-size: 13px; color: var(--faint); text-align: ce
                   <span class="lnk">…/s/k7Qm2</span> — ось, гляньте
                   <div class="pv" id="p-pv">
                     <div class="pvs">ScreenVoicer</div>
-                    <div class="pvt" id="p-pvt">Сума не враховує чохол — має бути 2&nbsp;750&nbsp;₴</div>
+                    <div class="pvt" id="p-pvt">Знімок екрана з коментарем</div>
                     <div class="slot pvi" id="p-s1"><svg viewBox="240 190 800 426.667" preserveAspectRatio="xMidYMid slice"><use href="#scrg"/><use href="#ann"/></svg></div>
+                    <div class="ogc"><div class="ogt">Сума не враховує чохол — має бути 2&nbsp;750&nbsp;₴</div></div>
                   </div>
                   <div class="mt">14:33 ✓✓</div>
                 </div>

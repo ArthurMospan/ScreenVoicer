@@ -103,7 +103,8 @@ async function createShare(request, env, url) {
     deleteHash: await sha256(deleteToken),
     title: String(meta.title || '').slice(0, 200),
     app: String(meta.app || '').slice(0, 40),
-    preview: preview ? { ext: preview.ext } : null,
+    // caption: the app wrote the comment under the screenshot in the preview picture (apps from 1.12.1)
+    preview: preview ? { ext: preview.ext, caption: meta.previewCaption === true } : null,
     items
   }), { expirationTtl: ttl });
 
@@ -174,19 +175,23 @@ async function sharePage(env, url, id, format) {
 
   const shots = count === 1 ? 'Знімок екрана' : `${count} ${plural(count, 'знімок', 'знімки', 'знімків')} екрана`;
   const first = items.map(i => i.comment).find(Boolean) || '';
-  // Messengers show the site name, the title, the description and the picture: the comment is the useful part.
-  const ogTitle = first ? (count === 1 ? truncate(oneLine(first), 90) : `${shots}: ${truncate(oneLine(first), 70)}`) : shots;
-  const ogDescription = count === 1
-    ? (oneLine(first).length > 90 ? truncate(oneLine(first), 300) : 'Знімок екрана з коментарем у ScreenVoicer')
-    : truncate(items.map((i, n) => i.comment ? `${n + 1}. ${oneLine(i.comment)}` : '').filter(Boolean).join('  ') || 'Знімки екрана в ScreenVoicer', 300);
+  // Messengers show the site name, a bold title, the description, then the picture, always in that order. The comment
+  // goes in exactly once: as the description, or (apps from 1.12.1) written under the screenshot in the preview picture
+  // itself, which reads picture first, comment below; then there is no description at all.
+  const card = !!(share.preview && share.preview.caption);
+  const ogTitle = first ? (count === 1 ? 'Знімок екрана з коментарем' : `${shots} з коментарями`) : shots;
+  const ogDescription = card || !first ? ''
+    : count === 1 ? truncate(oneLine(first), 300)
+    : truncate(items.map((i, n) => i.comment ? `${n + 1}. ${oneLine(i.comment)}` : '').filter(Boolean).join('  '), 300);
   const ogImage = share.preview ? `${url.origin}/i/${id}/p.${share.preview.ext}` : imageUrl(0);
+  const tabTitle = first ? truncate(oneLine(first), 70) : shots;
 
   const head = `
-<meta name="description" content="${esc(ogDescription)}">
+${ogDescription ? `<meta name="description" content="${esc(ogDescription)}">` : ''}
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="ScreenVoicer">
 <meta property="og:title" content="${esc(ogTitle)}">
-<meta property="og:description" content="${esc(ogDescription)}">
+${ogDescription ? `<meta property="og:description" content="${esc(ogDescription)}">` : ''}
 <meta property="og:url" content="${link}">
 <meta property="og:image" content="${ogImage}">
 <meta property="og:image:alt" content="${esc(truncate(first || shots, 200))}">
@@ -244,7 +249,7 @@ ${!share.preview && items[0].width ? `<meta property="og:image:width" content="$
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script>const SHARE = ${safeJson(data)};</script>
 <script>${CLIENT}</script>`;
-  return page(200, ogTitle, body, head);
+  return page(200, tabTitle, body, head);
 }
 
 function toMarkdown(items, link, expiresText) {

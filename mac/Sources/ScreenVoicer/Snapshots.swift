@@ -130,6 +130,19 @@ enum Snapshots {
         await empty.load()
         save("gallery-empty", GalleryView(model: empty).frame(width: 900, height: 560), background: Theme.window)
 
+        // The picture messengers show for a shared link
+        for (name, comment, more) in [("share-card", comments[0], 0), ("share-card-more", comments[2] + ". " + comments[0] + ". " + comments[2], 2),
+                                      ("share-card-plain", "", 0)] {
+            if let jpeg = ShareService.makePreview(path: (settings.outputDirectory as NSString)
+                .appendingPathComponent("screenshot_20261010_120000_000.png"), caption: comment, moreShots: more) {
+                try? jpeg.write(to: directory.appendingPathComponent("\(name).jpg"))
+                print("OK    snapshot \(name)")
+            } else {
+                print("FAIL  snapshot \(name)")
+                failures += 1
+            }
+        }
+
         // Dialogs
         let hotkey = HotkeyModel(current: HotkeyGesture.parse("Alt+Shift+S")!)
         save("hotkey", HotkeyView(model: hotkey))

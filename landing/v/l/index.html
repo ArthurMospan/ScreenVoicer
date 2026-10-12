@@ -453,6 +453,13 @@ footer { position: relative; z-index: 3; background: var(--bg); padding: 0 0 44p
 .reduced .pin { position: relative; }
 .reduced .story { margin-top: 0; }
 .reduced .ch-in { transform: none; }
+/* link preview: the picture the apps make — the screenshot, the comment under it on a dark band */
+.ogi { margin-top: 7px; border-radius: 8px; overflow: hidden; background: #0f0f13; }
+.ogi svg { display: block; margin: 0 !important; border-radius: 0 !important; }
+.ogc { padding: 7px 10px 8px; background: #0f0f13; text-align: left; }
+.ogt { padding-left: 9px; box-shadow: inset 2px 0 0 #ff8a4c; color: #f4f4f7; font-size: 11px; line-height: 14px; font-weight: 600; }
+.ogm { padding-left: 9px; margin-top: 3px; color: #aaaab6; font-size: 9.5px; line-height: 12px; font-weight: 400; }
+.pv .ogi { width: 203px; }
 </style>
 </head>
 <body>
@@ -1097,8 +1104,8 @@ footer { position: relative; z-index: 3; background: var(--bg); padding: 0 0 44p
       `<div class="mh">${icon('back')}<div class="cav">КМ</div><div><b>Команда магазину</b><span>Олена, Андрій та ще 3</span></div></div>` +
       `<div class="mlist"><div class="ml"><div class="bin" style="top:12px"><b>Олена</b>${img('shot-c', 'im')}${COMMENT}<small>14:33</small></div>` +
       '<div class="bout" style="top:290px">Скинеш, як було до цього? Покажу розробникам.<small>14:38</small></div>' +
-      `<div class="bin" style="top:362px"><b>Олена</b>Ось три кроки: <span class="lnk">https://…/s/7fK2qa</span><div class="pv"><strong>ScreenVoicer</strong><span>3 знімки · ${N('Разом 2~400~₴, а має бути 2~750~₴…')}</span>${img('shot-c')}</div><small>14:41</small></div>` +
-      '<div class="bout" style="top:650px">Дякую, відкриваю<small>14:41</small></div></div></div><div class="mcomp">Повідомлення</div></div></div>' + H.ripple() + H.cursor();
+      `<div class="bin" style="top:362px"><b>Олена</b>Ось три кроки: <span class="lnk">https://…/s/7fK2qa</span><div class="pv"><strong>ScreenVoicer</strong><span>3 знімки екрана з коментарями</span><div class="ogi">${img('shot-c')}<div class="ogc"><div class="ogt">${N('Разом 2~400~₴, а має бути 2~750~₴')}</div><div class="ogm">Ще 2 знімки за посиланням</div></div></div></div><small>14:41</small></div>` +
+      '<div class="bout" style="top:700px">Дякую, відкриваю<small>14:41</small></div></div></div><div class="mcomp">Повідомлення</div></div></div>' + H.ripple() + H.cursor();
     const q = c => $(c, s.root);
     const gcards = $$('.gcard', s.root), cks = gcards.map(c => $('.ck', c)), bar = q('.gbar'), gn = q('.gn'), bbtn = q('.gbar .pri'), gt = q('.gtoast');
     const ml = q('.ml'), bubbles = $$('.ml > div', s.root), cur = cursor(q('.cursor'));
@@ -1123,7 +1130,7 @@ footer { position: relative; z-index: 3; background: var(--bg); padding: 0 0 44p
       op(bubbles[1], b1); tf(bubbles[1], `scale(${r2(0.9 + 0.1 * ex(b1))})`);
       op(bubbles[2], b2 * back); tf(bubbles[2], `scale(${r2(0.9 + 0.1 * ex(b2))})`);
       op(bubbles[3], b3 * back); tf(bubbles[3], `scale(${r2(0.9 + 0.1 * ex(b3))})`);
-      tf(ml, `translateY(${r2(-(io(seg(t, 0.6, 0.9)) * 0 + io(b2) * 136 + io(b3) * 56) * back)}px)`);
+      tf(ml, `translateY(${r2(-(io(seg(t, 0.6, 0.9)) * 0 + io(b2) * 136 + io(b3) * 106) * back)}px)`);
       const [x, y] = path(t);
       cur.at(x, y); op(cur.el, t > 2.2 && t < 6.6 ? 1 : 0);
       rip(t, path);
