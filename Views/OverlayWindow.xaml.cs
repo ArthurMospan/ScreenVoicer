@@ -1894,23 +1894,8 @@ namespace ScreenVoicer.Views
                     _ = EndRecordingAsync(); // a forgotten hands-free take
                     return;
                 }
-                if (!_transcription.IsModelReady)
-                {
-                    continue;
-                }
-
-                float[] samples = _audio.GetSamplesSnapshot();
-                if (samples.Length < AudioAnalysis.SampleRate / 2)
-                {
-                    continue;
-                }
-
-                string? text = await _transcription.TryTranscribePreviewAsync(samples);
-                if (text != null && !chunk.IsFinal && !_closed && _chunks.Contains(chunk) && text.Length > 0)
-                {
-                    chunk.Text = text;
-                    RefreshCommentText();
-                }
+                // No live text while talking: the model on this computer guessed too often (even other alphabets),
+                // and the accurate text arrives from the server a moment after the take ends.
             }
         }
 

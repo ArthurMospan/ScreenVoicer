@@ -1016,7 +1016,9 @@ final class OverlayController: NSObject, NSTextFieldDelegate {
         if chunks.isEmpty { updateIdleStatus() }
     }
 
-    /// Re-transcribes the growing recording with the fast preview settings for live feedback.
+    /// Watches the take while it runs (a forgotten hands-free take stops by itself). No live text while talking: the
+    /// model on this Mac guessed too often (even other alphabets), and the accurate text arrives from the server a
+    /// moment after the take ends. Same as the Windows app.
     private func runLivePreview(generation: Int, chunk: VoiceChunk) async {
         let started = Date()
         while true {
@@ -1025,14 +1027,6 @@ final class OverlayController: NSObject, NSTextFieldDelegate {
             if Date().timeIntervalSince(started) > Self.maxTake {
                 await endRecording() // a forgotten hands-free take
                 return
-            }
-            if !whisper.isModelReady { continue }
-            let samples = audio.snapshot()
-            if samples.count < AudioAnalysis.sampleRate / 2 { continue }
-            let text = await whisper.tryTranscribePreview(samples)
-            if let text, !chunk.isFinal, !closed, chunks.contains(where: { $0 === chunk }), !text.isEmpty {
-                chunk.text = text
-                refreshCommentText()
             }
         }
     }

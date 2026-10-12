@@ -125,7 +125,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MenuHost {
         if settings.model == nil {
             settings.model = WhisperModels.base.id // fresh install: small download first, a better model is offered once a GPU shows up
         }
-        whisper = WhisperService(language: settings.language, modelId: settings.model, useGpu: settings.useGpu)
+        // The local model only stands in without internet; with no language choice left it listens for Ukrainian
+        // (English if that was picked before): «auto» on short takes guessed other alphabets.
+        whisper = WhisperService(language: settings.language == "en" ? "en" : "uk", modelId: settings.model, useGpu: settings.useGpu)
     }
 
     private func registerHotkey() {
