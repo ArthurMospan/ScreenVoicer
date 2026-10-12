@@ -93,9 +93,16 @@ async function createShare(request, env, url) {
   const ttl = TTL_DAYS * 86400;
   const expiresAt = new Date(Date.now() + ttl * 1000).toISOString();
 
-  await Promise.all(images.map((image, n) =>
-    env.SHARES.put(`img:${id}:${n}`, image.bytes, { expirationTtl: ttl, metadata: { type: image.type } })));
-  if (preview) await env.SHARES.put(`img:${id}:p`, preview.bytes, { expirationTtl: ttl, metadata: { type: preview.type } });
+  // The free plan has a storage and a daily write limit; when either is reached the writes fail, and the apps tell
+  // the user to try later instead of showing a server error. Parts already written expire on their own.
+  try {
+    await Promise.all(images.map((image, n) =>
+      env.SHARES.put(`img:${id}:${n}`, image.bytes, { expirationTtl: ttl, metadata: { type: image.type } })));
+    if (preview) await env.SHARES.put(`img:${id}:p`, preview.bytes, { expirationTtl: ttl, metadata: { type: preview.type } });
+  } catch (error) {
+    console.log('share storage refused a write', String(error));
+    return json({ error: 'storage_full' }, 503);
+  }
   await env.SHARES.put(`share:${id}`, JSON.stringify({
     id,
     createdAt: new Date().toISOString(),

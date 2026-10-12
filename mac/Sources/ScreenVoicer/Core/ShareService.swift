@@ -98,6 +98,9 @@ enum ShareService {
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
         let text = String(decoding: data, as: UTF8.self)
         guard (200..<300).contains(status) else {
+            if text.contains("storage_full") {
+                throw ShareError(message: "Посилання зараз недоступні: сервер посилань переповнений. Спробуйте за кілька годин.", isNetwork: false)
+            }
             throw ShareError(message: "Сервер посилань відповів \(status): \(describe(text))", isNetwork: false)
         }
 

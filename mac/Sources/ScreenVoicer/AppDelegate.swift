@@ -226,7 +226,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MenuHost {
         appMenu.addItem(withTitle: "Про ScreenVoicer", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
         appMenu.addItem(.separator())
         appMenu.addItem(withTitle: "Сховати ScreenVoicer", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
-        appMenu.addItem(withTitle: "Вийти з ScreenVoicer", action: #selector(quitFromMenu), keyEquivalent: "q").target = self
+        appMenu.addItem(withTitle: "Закрити ScreenVoicer", action: #selector(quitFromMenu), keyEquivalent: "q").target = self
         appItem.submenu = appMenu
         main.addItem(appItem)
 

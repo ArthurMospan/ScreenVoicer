@@ -279,7 +279,7 @@
                     <Button Grid.Column="1" Style="{StaticResource Row}" Foreground="{StaticResource MenuMuted}" Click="OnExitClick">
                         <StackPanel Orientation="Horizontal">
                             <v:GlyphIcon Data="{StaticResource Icon.Exit}" Style="{StaticResource RowIcon}" Foreground="{StaticResource MenuMuted}" Margin="0,0,8,0"/>
-                            <TextBlock Text="Вийти" FontSize="13" VerticalAlignment="Center"/>
+                            <TextBlock Text="Закрити" FontSize="13" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
                 </Grid>
