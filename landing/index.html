@@ -45,13 +45,11 @@ h1, h2, h3 { font-weight: 650; text-wrap: balance; }
 
 /* ── top line ── */
 .top { position: absolute; left: 0; right: 0; top: 0; z-index: 6; }
-.top .wrap { display: flex; align-items: center; justify-content: space-between; height: 68px; }
+.top .wrap { display: flex; align-items: center; justify-content: center; height: 68px; }
 .brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; border-radius: 8px; }
 .brand svg { width: 24px; height: 24px; flex: none; }
 .word { font-weight: 600; font-size: 16px; letter-spacing: -.02em; }
 .word span { color: var(--accent); }
-.top-dl { font-size: 14px; color: var(--muted); text-decoration: none; padding: 8px 14px; border-radius: 999px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.16); transition: color .2s ease, box-shadow .2s ease; }
-.top-dl:hover { color: var(--text); box-shadow: inset 0 0 0 1px rgba(255,255,255,.34); }
 
 /* ── buttons ── */
 .cta { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
@@ -100,7 +98,7 @@ h1, h2, h3 { font-weight: 650; text-wrap: balance; }
 .rig.short .rlab span { font-size: 13px; }
 .rig.short .rlab b { font-size: 9.5px; margin-right: 4px; }
 .h-copy { position: absolute; left: 0; right: 0; padding: 0 var(--gutter); text-align: center; }
-.h-top { top: clamp(92px, 13vh, 132px); }
+.h-top { top: clamp(116px, 16vh, 168px); }
 .h-top h1 { font-size: clamp(38px, 6.4vw, 82px); line-height: 1.02; letter-spacing: -.035em; max-width: 11.5em; margin: 0 auto; }
 .h-bot { bottom: clamp(26px, 6vh, 60px); }
 .h-top .sub { max-width: 31em; margin: 18px auto 0; font-size: clamp(17px, 1.5vw, 20px); line-height: 1.45; color: var(--muted); text-wrap: balance; }
@@ -109,7 +107,7 @@ h1, h2, h3 { font-weight: 650; text-wrap: balance; }
 .reduced .hero { height: auto; }
 .reduced .pin { position: relative; height: 100vh; height: 100svh; }
 @media (max-width: 640px) {
-  .h-top { top: 84px; }
+  .h-top { top: 112px; }
   .h-top .sub { margin-top: 14px; }
 }
 
@@ -591,7 +589,6 @@ footer { padding: 0 0 48px; font-size: 13px; color: var(--faint); text-align: ce
       <svg aria-hidden="true"><use href="#i-mark"/></svg>
       <span class="word">Screen<span>Voicer</span></span>
     </a>
-    <a class="top-dl" href="#get">Завантажити</a>
   </div>
 </header>
 
