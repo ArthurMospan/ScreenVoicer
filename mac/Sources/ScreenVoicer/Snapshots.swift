@@ -83,7 +83,7 @@ enum Snapshots {
         try? samplePNG(width: 1200, height: 800)?.write(to: shot)
         var saved = ToastOptions(title: "Скопійовано в буфер обміну", message: "«Кнопка «Зберегти» не реагує, коли форма порожня»",
                                  kind: .success, imagePath: shot.path,
-                                 copyButtons: [ToastCopyButton(text: "З підписом") { true }, ToastCopyButton(text: "Текст") { true }],
+                                 copyButtons: [ToastCopyButton(text: "Копіювати") { true }, ToastCopyButton(text: "Копіювати з підписом") { true }],
                                  showOpenButton: false, durationMs: 8000)
         saved.actionText = "Посилання"
         saved.onAction = {}

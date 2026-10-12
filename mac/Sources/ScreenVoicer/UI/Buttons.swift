@@ -49,7 +49,7 @@ struct GlassIconButtonStyle: ButtonStyle {
     }
 }
 
-/// Save: a 34 px circle of denser glass with a thin white edge — the fill and the edge set it apart from the tools.
+/// Save: a 34 px circle of denser glass — the fill sets it apart from the tools.
 struct SaveButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         HoverBody { hover in
@@ -57,8 +57,7 @@ struct SaveButtonStyle: ButtonStyle {
             configuration.label
                 .foregroundColor(.white)
                 .frame(width: 34, height: 34)
-                .background(shape.fill(Color(argb: configuration.isPressed ? 0x40FFFFFF : hover ? 0x6BFFFFFF : 0x57FFFFFF)))
-                .overlay(shape.strokeBorder(Color(argb: 0x80FFFFFF), lineWidth: 1))
+                .background(shape.fill(Color(argb: configuration.isPressed ? 0x40FFFFFF : hover ? 0x7AFFFFFF : 0x66FFFFFF)))
                 .contentShape(Rectangle())
         }
     }

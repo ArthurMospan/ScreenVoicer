@@ -98,6 +98,22 @@ namespace ScreenVoicer.Views
             _host.MenuStateChanged += OnHostChanged;
             Closed += (_, _) => _host.MenuStateChanged -= OnHostChanged;
             Deactivated += (_, _) => CloseMenu();
+            // A click anywhere else in the menu closes an open list (a click on its own row toggles it in ToggleDropdown)
+            PreviewMouseDown += (_, _) =>
+            {
+                if (MicPopup.IsOpen && !MicRow.IsMouseOver)
+                {
+                    MicPopup.IsOpen = false;
+                }
+                if (LanguagePopup.IsOpen && !LanguageRow.IsMouseOver)
+                {
+                    LanguagePopup.IsOpen = false;
+                }
+                if (ModelPopup.IsOpen && !ModelRow.IsMouseOver)
+                {
+                    ModelPopup.IsOpen = false;
+                }
+            };
             SizeChanged += (_, _) => KeepAnchoredAndUpdateGlass();
             Refresh();
         }
@@ -197,53 +213,17 @@ namespace ScreenVoicer.Views
 
         private void SetupBackdrop(Drawing.Rectangle stripPx)
         {
-            try
+            _backdrop = GlassBackdrop.Capture(stripPx);
+            if (_backdrop != null)
             {
-                using var bitmap = new Drawing.Bitmap(stripPx.Width, stripPx.Height, Drawing.Imaging.PixelFormat.Format32bppRgb);
-                using (var g = Drawing.Graphics.FromImage(bitmap))
-                {
-                    g.CopyFromScreen(stripPx.Location, Drawing.Point.Empty, stripPx.Size);
-                }
-
-                var data = bitmap.LockBits(new Drawing.Rectangle(0, 0, bitmap.Width, bitmap.Height),
-                    Drawing.Imaging.ImageLockMode.ReadOnly, Drawing.Imaging.PixelFormat.Format32bppRgb);
-                BitmapSource source;
-                try
-                {
-                    source = BitmapSource.Create(bitmap.Width, bitmap.Height, 96, 96, PixelFormats.Bgr32, null,
-                        data.Scan0, data.Stride * bitmap.Height, data.Stride);
-                }
-                finally
-                {
-                    bitmap.UnlockBits(data);
-                }
-
-                // A tiny averaged copy stretched back with linear filtering reads as a strong blur.
-                int smallW = Math.Max(4, stripPx.Width / 12), smallH = Math.Max(4, stripPx.Height / 12);
-                var visual = new DrawingVisual();
-                RenderOptions.SetBitmapScalingMode(visual, BitmapScalingMode.HighQuality);
-                using (var dc = visual.RenderOpen())
-                {
-                    dc.DrawImage(source, new Rect(0, 0, smallW, smallH));
-                }
-                var small = new RenderTargetBitmap(smallW, smallH, 96, 96, PixelFormats.Pbgra32);
-                small.Render(visual);
-                small.Freeze();
-
-                _backdrop = new ImageBrush(small) { ViewboxUnits = BrushMappingMode.Absolute, Stretch = Stretch.Fill };
-                RenderOptions.SetBitmapScalingMode(_backdrop, BitmapScalingMode.Linear);
                 Backdrop.Background = _backdrop;
-            }
-            catch (Exception ex)
-            {
-                Log.Warn("[Tray] Could not capture the glass backdrop", ex);
             }
         }
 
         /// <summary>Shows the part of the blurred strip that is right behind the card now.</summary>
         private void UpdateGlass()
         {
-            if (_backdrop?.ImageSource is not BitmapSource small || _stripPx.Height <= 0 || !IsLoaded)
+            if (_backdrop == null || !IsLoaded)
             {
                 return;
             }
@@ -252,8 +232,7 @@ namespace ScreenVoicer.Views
             double windowTopPx = hwnd != IntPtr.Zero && User32.GetWindowRect(hwnd, out var rect) ? rect.Top : Top * _scale;
             double cardTopPx = windowTopPx + Card.Margin.Top * _scale;
             double cardHeightPx = Card.ActualHeight * _scale;
-            double ky = small.PixelHeight / (double)_stripPx.Height;
-            _backdrop.Viewbox = new Rect(0, (cardTopPx - _stripPx.Top) * ky, small.PixelWidth, cardHeightPx * ky);
+            GlassBackdrop.Align(_backdrop, _stripPx, cardTopPx, cardHeightPx);
         }
 
         /// <summary>Expanding a list grows the panel away from the taskbar, not into it.</summary>
@@ -504,18 +483,15 @@ namespace ScreenVoicer.Views
         private void OnModelToggle(object sender, RoutedEventArgs e) =>
             ToggleDropdown(ModelPopup, ModelRow, ModelChevron, BuildModelList);
 
-        private Popup? _lastClosed;
-        private DateTime _lastClosedAt;
-
         /// <summary>
-        /// Opens a dropdown under its row, over the rest of the menu (it flips above the row near the screen edge).
-        /// A click on the row of an open list closes it: the popup already closed itself on that mouse-down.
+        /// Opens a dropdown under its row, over the rest of the menu (it flips above the row near the screen edge);
+        /// a second click on the row closes it.
         /// </summary>
         private void ToggleDropdown(Popup popup, Button row, GlyphIcon chevron, Action build)
         {
-            bool justClosed = _lastClosed == popup && (DateTime.UtcNow - _lastClosedAt).TotalMilliseconds < 300;
+            bool wasOpen = popup.IsOpen;
             CloseDropdowns();
-            if (justClosed)
+            if (wasOpen)
             {
                 return;
             }
@@ -535,8 +511,6 @@ namespace ScreenVoicer.Views
 
         private void OnDropdownClosed(object? sender, EventArgs e)
         {
-            _lastClosed = sender as Popup;
-            _lastClosedAt = DateTime.UtcNow;
             GlyphIcon chevron = sender == MicPopup ? MicChevron : sender == LanguagePopup ? LanguageChevron : ModelChevron;
             chevron.RenderTransform = null;
         }

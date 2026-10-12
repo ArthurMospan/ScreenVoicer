@@ -22,6 +22,8 @@ namespace ScreenVoicer.Views
         private readonly Storyboard _lifetime = new();
         private readonly List<Button> _copyButtons = new();
         private Point? _thumbDown;
+        private ImageBrush? _backdrop;
+        private System.Drawing.Rectangle _stripPx;
         private bool _dragged;
         private bool _shown;
         private bool _closing;
@@ -77,6 +79,7 @@ namespace ScreenVoicer.Views
             _lifetime.Children.Add(timeBar);
             _lifetime.Completed += (_, _) => Dismiss();
 
+            LocationChanged += (_, _) => UpdateGlass();
             Loaded += (_, _) =>
             {
                 IsHeightKnown = true;
@@ -96,9 +99,21 @@ namespace ScreenVoicer.Views
             {
                 _shown = true;
                 Top = top;
-                BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, ShowDuration));
-                Slide.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(16, 0, ShowDuration) { EasingFunction = Ease });
-                _lifetime.Begin(this, true);
+                // A short wait lets the closing capture overlay leave the screen before the glass photographs it
+                var settle = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(90) };
+                settle.Tick += (_, _) =>
+                {
+                    settle.Stop();
+                    if (_closing)
+                    {
+                        return;
+                    }
+                    SetupGlass();
+                    BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, ShowDuration));
+                    Slide.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(16, 0, ShowDuration) { EasingFunction = Ease });
+                    _lifetime.Begin(this, true);
+                };
+                settle.Start();
                 return;
             }
 
@@ -111,6 +126,36 @@ namespace ScreenVoicer.Views
                 BeginAnimation(TopProperty, null);
                 Top = top;
             }
+        }
+
+        /// <summary>Glass: the screen column the toasts stack in, captured while this toast is still invisible.</summary>
+        private void SetupGlass()
+        {
+            double scale = VisualTreeHelper.GetDpi(this).DpiScaleX;
+            var work = SystemParameters.WorkArea;
+            _stripPx = new System.Drawing.Rectangle(
+                (int)Math.Round((Left + Card.Margin.Left) * scale), (int)Math.Round(work.Top * scale),
+                (int)Math.Round(Card.ActualWidth * scale), (int)Math.Round(work.Height * scale));
+            if (_stripPx.Width <= 0 || _stripPx.Height <= 0)
+            {
+                return;
+            }
+            _backdrop = GlassBackdrop.Capture(_stripPx);
+            if (_backdrop != null)
+            {
+                Backdrop.Background = _backdrop;
+                UpdateGlass();
+            }
+        }
+
+        private void UpdateGlass()
+        {
+            if (_backdrop == null)
+            {
+                return;
+            }
+            double scale = VisualTreeHelper.GetDpi(this).DpiScaleY;
+            GlassBackdrop.Align(_backdrop, _stripPx, (Top + Card.Margin.Top) * scale, Card.ActualHeight * scale);
         }
 
         public void Dismiss()

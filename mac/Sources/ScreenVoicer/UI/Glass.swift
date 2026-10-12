@@ -43,13 +43,13 @@ struct VisualEffectBlur: NSViewRepresentable {
     }
 }
 
-/// Matte glass: the frosted material, a light neutral tint and, on the capture toolbar only, one thin even edge.
+/// Matte glass: the frosted material and a light neutral tint, no rim (an edge only where a caller asks for one).
 /// No sheen, no glow, no gradient.
 struct GlassBackground: View {
     var cornerRadius: CGFloat
     var blending: NSVisualEffectView.BlendingMode = .behindWindow
     var tint: Color = Color(argb: 0x40202028)
-    var edge = true
+    var edge = false
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
