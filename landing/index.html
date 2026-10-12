@@ -129,13 +129,14 @@ h1, h2, h3 { font-weight: 650; text-wrap: balance; }
 /* ── chapters ── */
 .ch { padding-top: clamp(110px, 13vw, 190px); scroll-margin-top: 30px; }
 #ch1 { padding-top: clamp(24px, 4vw, 56px); }
-.ch-head { display: grid; grid-template-columns: minmax(0, 290px) minmax(0, 1fr); gap: 24px 56px; align-items: center; max-width: 1040px; margin: 0 auto; }
-.ch-part { display: flex; justify-content: center; align-items: center; min-height: 150px; }
-.ch-part .tb { position: relative; transform: scale(1.5); opacity: .6; transition: transform 1.2s cubic-bezier(.16,1,.3,1), opacity 1.2s ease; }
-.ch-head.in .ch-part .tb, .reduced .ch-part .tb, .instant .ch-part .tb { transform: scale(1.7); opacity: 1; }
-.ch-n { font: 600 13px/1 var(--mono); letter-spacing: .1em; color: var(--accent); margin-bottom: 14px; }
-.ch h2 { font-size: clamp(32px, 4.2vw, 52px); line-height: 1.06; letter-spacing: -.03em; }
-.ch-txt > .ch-n { margin: 0 0 14px; font-size: 13px; color: var(--accent); }
+/* text on the left, the live example on the right; stacked on phones */
+.ch > .wrap { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 8fr); gap: 28px clamp(32px, 5vw, 72px); align-items: center; }
+.ch > .wrap > .panel { margin-top: 0; }
+.ch > .wrap > .pair { grid-column: 1 / -1; margin-top: clamp(8px, 1.5vw, 20px); }
+.ch-head { max-width: 30em; }
+.ch-n { font: 600 13px/1 var(--mono); letter-spacing: .1em; color: var(--muted); margin-bottom: 14px; }
+.ch h2 { font-size: clamp(30px, 3.4vw, 46px); line-height: 1.06; letter-spacing: -.03em; }
+.ch-txt > .ch-n { margin: 0 0 14px; font-size: 13px; color: var(--muted); }
 .ch-txt > p:not(.ch-n) { margin-top: 16px; font-size: clamp(17px, 1.4vw, 19px); line-height: 1.5; color: var(--muted); max-width: 34em; text-wrap: pretty; }
 .kk { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; margin-top: 20px; font-size: 14px; color: var(--faint); }
 .kk > span { display: inline-flex; align-items: center; gap: 6px; }
@@ -152,10 +153,7 @@ h1, h2, h3 { font-weight: 650; text-wrap: balance; }
 .pair .panel { margin-top: 0; }
 .pair.wl { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); }
 @media (max-width: 860px) {
-  .ch-head { grid-template-columns: 1fr; gap: 8px; }
-  .ch-part { justify-content: flex-start; min-height: 104px; padding-left: 4px; }
-  .ch-part .tb { transform-origin: 0 50%; transform: scale(1.2); }
-  .ch-head.in .ch-part .tb, .reduced .ch-part .tb, .instant .ch-part .tb { transform: scale(1.35); opacity: 1; }
+  .ch > .wrap { grid-template-columns: 1fr; gap: 24px; }
   .pair, .pair.wl { grid-template-columns: 1fr; }
 }
 @media (max-width: 640px) {
@@ -175,7 +173,7 @@ footer { padding: 0 0 48px; font-size: 13px; color: var(--faint); text-align: ce
 .js .reveal { opacity: 0; transform: translateY(16px); transition: opacity 1.1s cubic-bezier(.16,1,.3,1), transform 1.1s cubic-bezier(.16,1,.3,1); }
 .js .reveal.in { opacity: 1; transform: none; }
 .js.reduced .reveal, .js.instant .reveal { opacity: 1; transform: none; transition: none; }
-@media (prefers-reduced-motion: reduce) { .js .reveal { opacity: 1; transform: none; transition: none; } .btn { transition: none; } .ch-part .tb { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .js .reveal { opacity: 1; transform: none; transition: none; } .btn { transition: none; } }
 
 /* ═════════ the product UI, rebuilt ═════════ */
 .stage { font-family: var(--font); color: var(--text); text-align: left; line-height: 1.4; -webkit-font-smoothing: antialiased; }
@@ -621,7 +619,6 @@ footer { padding: 0 0 48px; font-size: 13px; color: var(--faint); text-align: ce
   <section class="ch" id="ch1" data-ch="1">
     <div class="wrap">
       <header class="ch-head reveal">
-        <div class="ch-part" aria-hidden="true"><div class="tb glass"><span class="b on" data-i="region"></span><span class="b" data-i="screen"></span><span class="b" data-i="timer"></span></div></div>
         <div class="ch-txt">
           <p class="ch-n">01 · ОБЛАСТЬ · ВЕСЬ ЕКРАН · ТАЙМЕР</p>
           <h2>Виділіть місце — і підправте рамку</h2>
@@ -664,7 +661,6 @@ footer { padding: 0 0 48px; font-size: 13px; color: var(--faint); text-align: ce
   <section class="ch" id="ch2" data-ch="2">
     <div class="wrap">
       <header class="ch-head reveal">
-        <div class="ch-part" aria-hidden="true"><div class="tb glass"><span class="b w on"><svg class="ic" viewBox="0 0 24 24"><use href="#i-pen"/></svg><svg class="ic chev" viewBox="0 0 24 24"><use href="#i-chev"/></svg></span></div></div>
         <div class="ch-txt">
           <p class="ch-n">02 · ІНСТРУМЕНТИ</p>
           <h2>Вісім інструментів в одній кнопці</h2>
@@ -748,7 +744,6 @@ footer { padding: 0 0 48px; font-size: 13px; color: var(--faint); text-align: ce
   <section class="ch" id="ch3" data-ch="3">
     <div class="wrap">
       <header class="ch-head reveal">
-        <div class="ch-part" aria-hidden="true"><div class="tb glass"><span class="b w on"><i class="cdot"></i><svg class="ic chev" viewBox="0 0 24 24"><use href="#i-chev"/></svg></span></div></div>
         <div class="ch-txt">
           <p class="ch-n">03 · КОЛІР</p>
           <h2>Шість кольорів і три товщини</h2>
@@ -779,7 +774,6 @@ footer { padding: 0 0 48px; font-size: 13px; color: var(--faint); text-align: ce
   <section class="ch" id="ch4" data-ch="4">
     <div class="wrap">
       <header class="ch-head reveal">
-        <div class="ch-part" aria-hidden="true"><div class="tb glass"><span class="b on" data-i="undo"></span><span class="b" data-i="redo"></span></div></div>
         <div class="ch-txt">
           <p class="ch-n">04 · СКАСУВАТИ · ПОВТОРИТИ</p>
           <h2>Помилились — крок назад</h2>
@@ -810,7 +804,6 @@ footer { padding: 0 0 48px; font-size: 13px; color: var(--faint); text-align: ce
   <section class="ch" id="ch5" data-ch="5">
     <div class="wrap">
       <header class="ch-head reveal">
-        <div class="ch-part" aria-hidden="true"><div class="tb glass"><span class="b mic rec"><i class="rd"></i><svg class="ic" viewBox="0 0 24 24"><use href="#i-mic"/></svg></span><span class="b chv"><svg class="ic chev" viewBox="0 0 24 24"><use href="#i-chev"/></svg></span></div></div>
         <div class="ch-txt">
           <p class="ch-n">05 · МІКРОФОН</p>
           <h2>Затисніть Пробіл і говоріть</h2>
@@ -835,7 +828,6 @@ footer { padding: 0 0 48px; font-size: 13px; color: var(--faint); text-align: ce
   <section class="ch" id="ch6" data-ch="6">
     <div class="wrap">
       <header class="ch-head reveal">
-        <div class="ch-part" aria-hidden="true"><div class="tb glass"><span class="field" style="width:150px;margin:0 6px"><span class="ph">Говоріть або…</span></span></div></div>
         <div class="ch-txt">
           <p class="ch-n">06 · КОМЕНТАР</p>
           <h2>Допишіть руками, якщо треба</h2>
@@ -857,7 +849,6 @@ footer { padding: 0 0 48px; font-size: 13px; color: var(--faint); text-align: ce
   <section class="ch" id="ch7" data-ch="7">
     <div class="wrap">
       <header class="ch-head reveal">
-        <div class="ch-part" aria-hidden="true"><div class="tb glass"><span class="b save" data-i="check"></span></div></div>
         <div class="ch-txt">
           <p class="ch-n">07 · ЗБЕРЕГТИ</p>
           <h2>Enter — і все в буфері</h2>
