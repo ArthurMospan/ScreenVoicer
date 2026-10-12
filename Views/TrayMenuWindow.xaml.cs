@@ -50,7 +50,6 @@ namespace ScreenVoicer.Views
         event EventHandler? MenuStateChanged;
 
         void Capture();
-        void CaptureDelayed(int seconds);
         void OpenGallery();
         void OpenScreenshotsFolder();
         void SelectMicrophone(MicrophoneInfo microphone);
@@ -475,14 +474,6 @@ namespace ScreenVoicer.Views
         }
 
         private void OnCaptureClick(object sender, RoutedEventArgs e) => Do(_host.Capture);
-
-        private void OnDelayClick(object sender, RoutedEventArgs e)
-        {
-            if (sender is Button { Tag: string text } && int.TryParse(text, out int seconds))
-            {
-                Do(() => _host.CaptureDelayed(seconds));
-            }
-        }
 
         private void OnGalleryClick(object sender, RoutedEventArgs e) => Do(_host.OpenGallery);
 

@@ -374,7 +374,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MenuHost {
     }
 
     func capture() { triggerCapture(.menu) }
-    func captureDelayed(_ seconds: Int) { triggerDelayedCapture(seconds) }
 
     func selectMicrophone(_ microphone: MicrophoneInfo) {
         settings.selectedMicrophone = microphone.uid
@@ -571,10 +570,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MenuHost {
             let model = GalleryModel(history: history)
             model.hotkeyText = { Self.hotkeyText }
             model.startCapture = { [weak self] in self?.triggerCapture(.gallery) }
-            model.startDelayedCapture = { [weak self] seconds in
-                self?.gallery?.window.miniaturize(nil)
-                self?.triggerDelayedCapture(seconds)
-            }
             model.share = { [weak self] items in await self?.createShare(items) }
             model.unshare = { [weak self] item in await self?.deleteShare(item) ?? false }
             model.openFolder = { [weak self] in self?.openFolder(URL(fileURLWithPath: settings.outputDirectory, isDirectory: true)) }

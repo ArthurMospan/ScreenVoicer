@@ -28,7 +28,6 @@ protocol MenuHost: AnyObject {
     var updateProgress: Double? { get }
 
     func capture()
-    func captureDelayed(_ seconds: Int)
     func openGallery()
     func openScreenshotsFolder()
     func selectMicrophone(_ microphone: MicrophoneInfo)
@@ -113,7 +112,6 @@ struct TrayMenuView: View {
             header
             if let update = model.updateVersion { updateBanner(update) }
             captureButton
-            delayRow
             separator
             row(.gallery, "Галерея", value: model.count > 0 ? Formats.plural(model.count, "знімок", "знімки", "знімків") : nil) {
                 model.run { $0.openGallery() }
@@ -228,21 +226,6 @@ struct TrayMenuView: View {
             .frame(maxWidth: .infinity)
         }
         .buttonStyle(PrimaryButtonStyle(height: 46, horizontalPadding: 14, fontSize: 14))
-    }
-
-    private var delayRow: some View {
-        HStack(spacing: 0) {
-            GlyphIcon(icon: .timer, size: 15).foregroundColor(Theme.menuMuted).padding(.trailing, 7)
-            Text("Із затримкою").font(Theme.font(12.5)).foregroundColor(Theme.menuMuted).padding(.trailing, 10)
-            ForEach([3, 5, 10], id: \.self) { seconds in
-                Button("\(seconds) с") { model.run { $0.captureDelayed(seconds) } }
-                    .buttonStyle(MenuChipStyle())
-                    .padding(.trailing, 6)
-            }
-        }
-        .padding(.leading, 6)
-        .padding(.top, 9)
-        .padding(.bottom, 2)
     }
 
     private var separator: some View {

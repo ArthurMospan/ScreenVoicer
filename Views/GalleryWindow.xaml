@@ -119,10 +119,6 @@
                             <TextBlock Text="Новий знімок" Margin="7,0,0,0" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
-                    <Button x:Name="BtnDelayedCapture" Style="{StaticResource OutlineButton}" Click="OnDelayedCaptureClick" Margin="8,0,0,0" Padding="10,0"
-                            ToolTip="Знімок із затримкою: 3, 5 або 10 секунд">
-                        <v:GlyphIcon Data="{StaticResource Icon.Timer}" Style="{StaticResource SmallIcon}"/>
-                    </Button>
                 </StackPanel>
             </Grid>
         </Border>

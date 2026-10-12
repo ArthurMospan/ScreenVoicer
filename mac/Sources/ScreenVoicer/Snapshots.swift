@@ -119,7 +119,6 @@ enum Snapshots {
         }
         let gallery = GalleryModel(history: history)
         gallery.hotkeyText = { "⌥⇧S" }
-        gallery.startDelayedCapture = { _ in }
         await gallery.load()
         try? await Task.sleep(nanoseconds: 800_000_000) // thumbnails decode in the background
         gallery.selected = [gallery.all[1].id, gallery.all[2].id]
@@ -276,7 +275,6 @@ private final class SampleMenuHost: MenuHost {
     var updateVersion: String?
     var updateProgress: Double?
     func capture() {}
-    func captureDelayed(_ seconds: Int) {}
     func openGallery() {}
     func openScreenshotsFolder() {}
     func selectMicrophone(_ microphone: MicrophoneInfo) {}

@@ -18,7 +18,6 @@ final class GalleryModel: ObservableObject {
     let history: HistoryService
     var hotkeyText: () -> String = { "" }
     var startCapture: () -> Void = {}
-    var startDelayedCapture: ((Int) -> Void)?
     var share: (([ScreenshotHistoryItem]) async -> ShareResult?)?
     var unshare: ((ScreenshotHistoryItem) async -> Bool)?
     var openFolder: () -> Void = {}
@@ -307,34 +306,10 @@ struct GalleryView: View {
                 }
                 .buttonStyle(PrimaryButtonStyle())
                 .help("Сховати галерею і зробити знімок")
-
-                if model.startDelayedCapture != nil && RenderMode.snapshot {
-                    GlyphIcon(icon: .timer, size: 15, weight: 2)
-                        .frame(width: 34, height: 34)
-                        .background(RoundedRectangle(cornerRadius: 11, style: .continuous).fill(Color(argb: 0x14FFFFFF)))
-                        .overlay(RoundedRectangle(cornerRadius: 11, style: .continuous).strokeBorder(Theme.glassEdge, lineWidth: 1))
-                        .padding(.leading, 8)
-                } else if model.startDelayedCapture != nil {
-                    Button { showDelayMenu() } label: { GlyphIcon(icon: .timer, size: 15, weight: 2) }
-                        .buttonStyle(OutlineButtonStyle(horizontalPadding: 10))
-                        .help("Знімок із затримкою: 3, 5 або 10 секунд")
-                        .padding(.leading, 8)
-                }
             }
         }
         .padding(.horizontal, 22)
         .padding(.vertical, 16)
-    }
-
-    /// «Знімок через 3 / 5 / 10 с» under the timer button.
-    private func showDelayMenu() {
-        let menu = NSMenu()
-        menu.appearance = NSAppearance(named: .darkAqua)
-        for seconds in [3, 5, 10] {
-            menu.addItem(ClosureMenuItem(title: "Знімок через \(seconds) с") { [model] in model.startDelayedCapture?(seconds) })
-        }
-        let mouse = NSEvent.mouseLocation
-        menu.popUp(positioning: nil, at: CGPoint(x: mouse.x - 20, y: mouse.y - 24), in: nil)
     }
 
     private var emptyState: some View {
