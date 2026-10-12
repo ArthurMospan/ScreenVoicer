@@ -625,12 +625,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MenuHost {
 
     // MARK: - Updates
 
-    /// First check shortly after start (not competing with the model load), then twice a day.
+    /// First check shortly after start (not competing with the model load), then every three hours.
     private func startUpdateChecks() {
         DispatchQueue.main.asyncAfter(deadline: .now() + 25) { [weak self] in
             Task { await self?.checkForUpdates(manual: false) }
         }
-        updateTimer = Timer.scheduledTimer(withTimeInterval: 12 * 3600, repeats: true) { [weak self] _ in
+        updateTimer = Timer.scheduledTimer(withTimeInterval: 3 * 3600, repeats: true) { [weak self] _ in
             Task { @MainActor in await self?.checkForUpdates(manual: false) }
         }
     }
