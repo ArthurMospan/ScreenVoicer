@@ -431,7 +431,7 @@ struct TrayMenuView: View {
             Button { model.run { $0.quit() } } label: {
                 HStack(spacing: 8) {
                     GlyphIcon(icon: .exit, size: 18).foregroundColor(Theme.menuMuted)
-                    Text("Вийти").font(Theme.font(13)).foregroundColor(Theme.menuMuted)
+                    Text("Закрити").font(Theme.font(13)).foregroundColor(Theme.menuMuted)
                 }
             }
             .buttonStyle(MenuRowStyle())

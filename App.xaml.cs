@@ -164,7 +164,7 @@ namespace ScreenVoicer
             {
                 legacy.Dispose();
                 System.Windows.MessageBox.Show(
-                    "Зараз запущена стара версія ScreenVoicer.\n\nЗакрийте її (іконка в треї → «Вийти») і запустіть програму ще раз.",
+                    "Зараз запущена стара версія ScreenVoicer.\n\nЗакрийте її (іконка в треї → «Закрити») і запустіть програму ще раз.",
                     "ScreenVoicer", MessageBoxButton.OK, MessageBoxImage.Information);
                 return false;
             }

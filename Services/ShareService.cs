@@ -100,7 +100,9 @@ namespace ScreenVoicer.Services
             string body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
             {
-                throw new HttpRequestException($"Сервер посилань відповів {(int)response.StatusCode}: {Describe(body)}");
+                throw new HttpRequestException(body.Contains("storage_full")
+                    ? "Посилання зараз недоступні: сервер посилань переповнений. Спробуйте за кілька годин."
+                    : $"Сервер посилань відповів {(int)response.StatusCode}: {Describe(body)}");
             }
 
             using var document = JsonDocument.Parse(body);

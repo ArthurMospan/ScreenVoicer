@@ -203,7 +203,7 @@
         <!-- 5: first-use hint -->
         <Border x:Name="HintBadge" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False"
                 CornerRadius="18" Effect="{StaticResource GlassShadow}">
-            <Border CornerRadius="17" Background="{StaticResource GlassTint}" Padding="16,12,20,12">
+            <Border CornerRadius="18" Background="{StaticResource GlassTint}" Padding="16,12,20,12">
                 <StackPanel Orientation="Horizontal">
                     <Image Source="{StaticResource BrandMark}" Width="34" Height="34" Margin="0,0,12,0" VerticalAlignment="Center"/>
                     <StackPanel VerticalAlignment="Center">
@@ -219,7 +219,7 @@
         <Border x:Name="Toolbar" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,14,0,0"
                 CornerRadius="23" Effect="{StaticResource GlassShadow}"
                 SizeChanged="OnToolbarSizeChanged">
-            <Border CornerRadius="22" Background="{StaticResource GlassTint}" Padding="5">
+            <Border CornerRadius="23" Background="{StaticResource GlassTint}" Padding="5">
                 <StackPanel Orientation="Horizontal">
                     <Button x:Name="BtnModeRegion" Style="{StaticResource ActiveButton}" Click="OnModeRegionClick" ToolTip="Виділити область">
                         <v:GlyphIcon Data="{StaticResource Icon.Region}"/>
@@ -308,7 +308,7 @@
         <Border x:Name="StatusPill" HorizontalAlignment="Center" VerticalAlignment="Top" Visibility="Collapsed"
                 IsHitTestVisible="False" CornerRadius="15"
                 Effect="{StaticResource GlassShadow}">
-            <Border CornerRadius="14" Background="{StaticResource GlassTint}" Padding="12,5,14,6">
+            <Border CornerRadius="15" Background="{StaticResource GlassTint}" Padding="12,5,14,6">
                 <StackPanel Orientation="Horizontal">
                     <v:GlyphIcon x:Name="BusyGlyph" Data="{StaticResource Icon.Spark}" Width="13" Height="13" Margin="0,0,7,0"
                                  Foreground="{StaticResource AccentLightBrush}" StrokeThickness="2.4" Visibility="Collapsed" RenderTransformOrigin="0.5,0.5">
@@ -325,7 +325,7 @@
         <!-- 8: flyouts of the toolbar (positioned from code next to their buttons) -->
         <Canvas x:Name="FlyoutLayer">
             <Border x:Name="ToolFlyout" Visibility="Collapsed" CornerRadius="21" Effect="{StaticResource GlassShadow}">
-                <Border CornerRadius="20" Background="{StaticResource GlassTint}" Padding="4">
+                <Border CornerRadius="21" Background="{StaticResource GlassTint}" Padding="4">
                     <StackPanel Orientation="Horizontal">
                         <Button x:Name="BtnPen" Style="{StaticResource PillButton}" Click="OnToolClick" Tag="Pen" ToolTip="Олівець (P)">
                             <v:GlyphIcon Data="{StaticResource Icon.Pen}"/>
@@ -359,7 +359,7 @@
             </Border>
 
             <Border x:Name="TimerFlyout" Visibility="Collapsed" CornerRadius="21" Effect="{StaticResource GlassShadow}">
-                <Border CornerRadius="20" Background="{StaticResource GlassTint}" Padding="4">
+                <Border CornerRadius="21" Background="{StaticResource GlassTint}" Padding="4">
                     <StackPanel Orientation="Horizontal">
                         <Button Style="{StaticResource DelayButton}" Content="3 с" Tag="3" Click="OnDelayClick"
                                 ToolTip="Сховати вікно й зняти екран заново через 3 секунди"/>
@@ -372,7 +372,7 @@
             </Border>
 
             <Border x:Name="ColorFlyout" Visibility="Collapsed" CornerRadius="21" Effect="{StaticResource GlassShadow}">
-                <Border CornerRadius="20" Background="{StaticResource GlassTint}" Padding="6,5">
+                <Border CornerRadius="21" Background="{StaticResource GlassTint}" Padding="6,5">
                     <StackPanel Orientation="Horizontal">
                         <StackPanel x:Name="SwatchPanel" Orientation="Horizontal" VerticalAlignment="Center">
                             <Button Style="{StaticResource Swatch}" Background="#EF4444" Click="OnSwatchClick" ToolTip="Червоний (1)"/>
