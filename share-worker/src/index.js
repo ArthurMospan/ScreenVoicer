@@ -49,6 +49,29 @@ export default {
 const TRANSCRIBE_MODEL = '@cf/openai/whisper-large-v3-turbo';
 const MAX_AUDIO_BASE64 = 3 * 1024 * 1024; // ~70 s of 16 kHz mono 16-bit WAV
 const UKRAINIAN_PROMPT = 'Коментар до знімка екрана: що не працює і що треба виправити.';
+// Google Gemini hears Ukrainian noticeably better than Whisper. It runs when the GEMINI_API_KEY secret is set
+// (a free Google AI Studio key: npx wrangler secret put GEMINI_API_KEY); past its free daily limit, or on any error,
+// Workers AI Whisper takes over. GEMINI_MODEL (a plain var) can pin another model.
+const GEMINI_MODEL = 'gemini-flash-latest';
+const GEMINI_PROMPT = 'Transcribe this voice recording word for word, exactly as spoken, in the language spoken ' +
+  '(usually Ukrainian, sometimes English or a mix). Keep Ukrainian words in Ukrainian; do not translate. ' +
+  'Add normal punctuation. Write numbers as digits when that is natural. ' +
+  'Output only the transcript, with no quotes, notes or timestamps. If there is no speech, output nothing.';
+
+async function transcribeWithGemini(env, audio) {
+  const model = env.GEMINI_MODEL || GEMINI_MODEL;
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY },
+    body: JSON.stringify({
+      contents: [{ role: 'user', parts: [{ text: GEMINI_PROMPT }, { inline_data: { mime_type: 'audio/wav', data: audio } }] }],
+      generationConfig: { temperature: 0 }
+    })
+  });
+  if (!response.ok) throw new Error(`gemini ${response.status}: ${(await response.text()).slice(0, 300)}`);
+  const data = await response.json();
+  return (data?.candidates?.[0]?.content?.parts || []).map(part => part.text || '').join('').trim();
+}
 
 async function transcribe(request, env) {
   if (!env.AI) return json({ error: 'unavailable' }, 503);
@@ -58,6 +81,15 @@ async function transcribe(request, env) {
   try { body = await request.json(); } catch { return json({ error: 'bad_request' }, 400); }
   const audio = typeof body?.audio === 'string' ? body.audio : '';
   if (!audio || audio.length > MAX_AUDIO_BASE64) return json({ error: 'bad_audio' }, 400);
+
+  if (env.GEMINI_API_KEY) {
+    try {
+      const text = await transcribeWithGemini(env, audio);
+      return json({ text, language: '', engine: 'gemini' });
+    } catch (error) {
+      console.log('gemini failed, using whisper', String(error));
+    }
+  }
 
   const run = language => env.AI.run(TRANSCRIBE_MODEL, {
     audio,
@@ -73,7 +105,7 @@ async function transcribe(request, env) {
       result = await run('uk');
       language = 'uk';
     }
-    return json({ text: String(result?.text || '').trim(), language });
+    return json({ text: String(result?.text || '').trim(), language, engine: 'whisper' });
   } catch (error) {
     console.log('transcription failed', String(error));
     return json({ error: 'unavailable' }, 503);

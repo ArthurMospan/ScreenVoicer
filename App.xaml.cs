@@ -215,7 +215,9 @@ namespace ScreenVoicer
             _screenCapture = new ScreenCaptureService();
             _audio = new AudioRecorderService { PreferredMicrophone = _settings.SelectedMicrophoneName };
             _settings.Model ??= WhisperModels.Base.Id; // fresh install: small download first, a better model is offered once a GPU shows up
-            _transcription = new WhisperTranscriptionService(_settings.Language, _settings.Model, _settings.UseGpu);
+            // The local model only stands in without internet; with no language choice left it listens for Ukrainian
+            // (English if that was picked before): «auto» on short takes guessed other alphabets.
+            _transcription = new WhisperTranscriptionService(_settings.Language == "en" ? "en" : "uk", _settings.Model, _settings.UseGpu);
             _compositor = new ImageCompositorService(_settings);
             _hotkey = new HotkeyService();
 
