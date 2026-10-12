@@ -118,7 +118,20 @@ namespace ScreenVoicer
                 OpenGallery();
             }
 
-            if (WhisperTranscriptionService.IsModelDownloaded(_transcription!.SelectedModel.Id))
+            // After an update the new version says so: otherwise nothing shows that it was installed.
+            string version = UpdateService.CurrentVersion.ToString(3);
+            bool updated = _settings!.LastRunVersion is string last && last != version;
+            if (_settings.LastRunVersion != version)
+            {
+                _settings.LastRunVersion = version;
+                _settings.Save();
+            }
+            if (updated)
+            {
+                _notifications!.ShowToast($"ScreenVoicer оновлено до версії {version}",
+                    $"Готово, можна працювати: {HotkeyText} — знімок екрана.", ToastKind.Success, 6000);
+            }
+            else if (WhisperTranscriptionService.IsModelDownloaded(_transcription!.SelectedModel.Id))
             {
                 _notifications!.ShowToast("ScreenVoicer працює у треї",
                     $"{HotkeyText} — знімок екрана, затисніть Пробіл — голосовий коментар.", ToastKind.Info, 4000);

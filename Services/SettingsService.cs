@@ -24,6 +24,7 @@ namespace ScreenVoicer.Services
         public bool ModelHintShown { get; set; }
         public string? UpdateNotifiedVersion { get; set; }
         public bool TrayIconPromoted { get; set; }
+        public string? LastRunVersion { get; set; }
 
         public SettingsService(string? dataDirectory = null)
         {
@@ -67,6 +68,7 @@ namespace ScreenVoicer.Services
                 UseGpu = data.UseGpu ?? true;
                 ModelHintShown = data.ModelHintShown;
                 UpdateNotifiedVersion = data.UpdateNotifiedVersion;
+                LastRunVersion = data.LastRunVersion;
                 TrayIconPromoted = data.TrayIconPromoted;
                 if (!string.IsNullOrWhiteSpace(data.Hotkey) && HotkeyGesture.TryParse(data.Hotkey, out _))
                 {
@@ -96,6 +98,7 @@ namespace ScreenVoicer.Services
                         Hotkey = Hotkey,
                         ModelHintShown = ModelHintShown,
                         UpdateNotifiedVersion = UpdateNotifiedVersion,
+                        LastRunVersion = LastRunVersion,
                         TrayIconPromoted = TrayIconPromoted
                     };
 
@@ -122,6 +125,7 @@ namespace ScreenVoicer.Services
             public string? Hotkey { get; set; }
             public bool ModelHintShown { get; set; }
             public string? UpdateNotifiedVersion { get; set; }
+            public string? LastRunVersion { get; set; }
             public bool TrayIconPromoted { get; set; }
         }
     }

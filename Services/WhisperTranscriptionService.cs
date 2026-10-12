@@ -587,12 +587,32 @@ namespace ScreenVoicer.Services
         /// the segment handlers per processor, so cancelling a run and immediately starting another one on the
         /// same processor leaked the old run's text into the new result.
         /// </summary>
+        internal static string? PromptFor(string? language) => language switch
+        {
+            "uk" => "Коментар до знімка екрана: що не працює і що треба виправити.",
+            "en" => "A comment on a screenshot: what is broken and what needs fixing.",
+            _ => null
+        };
+
         private async Task<string> RunCoreAsync(LoadedModel model, float[] samples, bool preview)
         {
             float[] input = AudioAnalysis.PadForWhisper(AudioAnalysis.NormalizeLevel(samples));
             var builder = model.Factory.CreateBuilder()
                 .WithThreads(preview ? _previewThreads : _threads)
                 .WithLanguage(string.IsNullOrWhiteSpace(Language) ? "auto" : Language);
+            // A short sentence in the spoken language steers spelling and punctuation (and keeps Ukrainian from drifting
+            // into Russian words). Same text as the Mac app.
+            if (PromptFor(Language) is string prompt)
+            {
+                builder = builder.WithPrompt(prompt);
+            }
+            if (!preview)
+            {
+                // The final text weighs several candidates instead of taking the first word every time: noticeably
+                // fewer wrong words, at about twice the time; on the CPU a narrower beam keeps it bearable.
+                var beam = (Whisper.net.BeamSearchSamplingStrategyBuilder)builder.WithBeamSearchSamplingStrategy();
+                builder = beam.WithBeamSize(model.OnGpu ? 5 : 3).ParentBuilder;
+            }
 
             if (preview)
             {

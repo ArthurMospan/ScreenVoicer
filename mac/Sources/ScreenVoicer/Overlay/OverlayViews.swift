@@ -160,10 +160,6 @@ final class CanvasView: NSView {
         controller?.cursor(at: convert(event.locationInWindow, from: nil)) ?? .crosshair
     }
 
-    override func resetCursorRects() {
-        addCursorRect(bounds, cursor: .crosshair)
-    }
-
     override func draw(_ dirtyRect: NSRect) {
         guard let controller, let ctx = NSGraphicsContext.current?.cgContext else { return }
         if let clip, clip.isEmpty { return }

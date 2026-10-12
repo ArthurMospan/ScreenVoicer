@@ -525,6 +525,7 @@ namespace ScreenVoicer.Views
 
             _selection = new Rect(_dragStart, ClampToRoot(e.GetPosition(RootGrid)));
             UpdateSelectionVisuals();
+            RepositionPanels(); // the bar stays visible and moves down as soon as the region reaches it
         }
 
         private void OnSelectionMouseUp(object sender, MouseButtonEventArgs e)
@@ -687,6 +688,7 @@ namespace ScreenVoicer.Views
             // Rect(Point, Point) normalizes, so dragging an edge past the opposite one just flips the region
             _selection = new Rect(ClampToRoot(new Point(left, top)), ClampToRoot(new Point(right, bottom)));
             UpdateSelectionVisuals();
+            RepositionPanels();
         }
 
         private void EndResize()
@@ -780,6 +782,7 @@ namespace ScreenVoicer.Views
             InkDrawCanvas.Visibility = Visibility.Visible;
         }
 
+        /// <summary>While a region is dragged the panels stay visible but take no clicks (RepositionPanels keeps them clear).</summary>
         private void SetPanelsFaded(bool faded)
         {
             if (faded)
@@ -789,7 +792,6 @@ namespace ScreenVoicer.Views
             foreach (var panel in new FrameworkElement[] { Toolbar, StatusPill })
             {
                 panel.IsHitTestVisible = !faded;
-                panel.BeginAnimation(OpacityProperty, new DoubleAnimation(faded ? 0.12 : 1, TimeSpan.FromMilliseconds(faded ? 120 : 180)));
             }
         }
 

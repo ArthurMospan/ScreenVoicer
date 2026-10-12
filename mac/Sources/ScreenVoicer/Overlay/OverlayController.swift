@@ -190,6 +190,10 @@ final class OverlayController: NSObject, NSTextFieldDelegate {
     }
 
     func cursor(at point: CGPoint) -> NSCursor {
+        // over the toolbar or an open flyout: the ordinary arrow, like on Windows (the chrome shares these coordinates)
+        if resizeHandle == nil, !isSelecting, model.hitRects.contains(where: { $0.contains(point) }) {
+            return .arrow
+        }
         if let handle = resizeHandle ?? hitHandle(point) {
             return Self.resizeCursor(handle)
         }
@@ -359,6 +363,7 @@ final class OverlayController: NSObject, NSTextFieldDelegate {
         let a = clampToRoot(CGPoint(x: left, y: top)), b = clampToRoot(CGPoint(x: right, y: bottom))
         selection = CGRect(x: min(a.x, b.x), y: min(a.y, b.y), width: abs(b.x - a.x), height: abs(b.y - a.y))
         updateSelectionVisuals()
+        repositionPanels()
     }
 
     private func endResize() {
@@ -486,6 +491,7 @@ final class OverlayController: NSObject, NSTextFieldDelegate {
             selection = CGRect(x: min(dragStart.x, clampToRoot(point).x), y: min(dragStart.y, clampToRoot(point).y),
                                width: abs(clampToRoot(point).x - dragStart.x), height: abs(clampToRoot(point).y - dragStart.y))
             updateSelectionVisuals()
+            repositionPanels() // the bar stays visible and moves down as soon as the region reaches it
             return
         }
         if let item = dragItem {

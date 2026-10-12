@@ -170,6 +170,13 @@ h1, h2, h3 { font-weight: 650; text-wrap: balance; }
 .final h2 { font-size: clamp(36px, 5vw, 62px); line-height: 1.04; letter-spacing: -.035em; }
 .final .cta { margin-top: clamp(32px, 4vw, 44px); }
 .final .note { margin: 28px auto 0; max-width: 36em; font-size: 13px; color: var(--faint); }
+.mac-cmd { max-width: 40em; margin: 26px auto 0; font-size: 14px; color: var(--muted); }
+.mac-cmd > p:first-child { text-wrap: balance; }
+.mac-cmd .note { margin-top: 12px; }
+.cmd { display: flex; align-items: center; gap: 8px; margin: 12px auto 0; padding: 7px 7px 7px 14px; border-radius: 12px; background: #16161b; text-align: left; }
+.cmd code { flex: 1; min-width: 0; overflow-x: auto; white-space: nowrap; font: 500 13px/1.5 var(--mono); color: #ececf1; scrollbar-width: none; }
+.cmd-copy { flex: none; height: 32px; padding: 0 13px; border: 0; border-radius: 9px; background: rgba(255,255,255,.1); color: #f5f5f7; font: 600 12.5px var(--font); cursor: pointer; }
+.cmd-copy:hover { background: rgba(255,255,255,.16); }
 footer { padding: 0 0 48px; font-size: 13px; color: var(--faint); text-align: center; }
 
 /* reveal on scroll */
@@ -900,7 +907,12 @@ footer { padding: 0 0 48px; font-size: 13px; color: var(--faint); text-align: ce
         <a class="btn btn-secondary" data-os="mac" href="https://github.com/ArthurMospan/ScreenVoicer/releases/latest/download/ScreenVoicer-macOS.dmg"><svg aria-hidden="true"><use href="#i-apple"/></svg>Завантажити для Mac</a>
       </div>
       <p class="meta"><span>Безкоштовно</span><span>Без акаунта</span><span>Windows 10/11</span><span>macOS 14+</span></p>
-      <p class="note">Якщо Windows попередить про невідомого видавця, натисніть «Докладніше» → «Однаково запустити». На Mac перший запуск дозвольте в Системних параметрах → Приватність і безпека → «Все одно відкрити».</p>
+      <p class="note">Якщо Windows попередить про невідомого видавця, натисніть «Докладніше» → «Однаково запустити».</p>
+      <div class="mac-cmd">
+        <p>На Mac найпростіше: відкрийте Термінал, вставте команду й натисніть Enter — ScreenVoicer встановиться й запуститься сам.</p>
+        <div class="cmd"><code id="macCmd">curl -fsSL https://sv.mospan.com.ua/install.sh | bash</code><button type="button" class="cmd-copy" id="macCmdCopy">Копіювати</button></div>
+        <p class="note">Або з DMG: перетягніть ScreenVoicer у «Програми», відкрийте його й натисніть «Готово», потім Системні параметри → Приватність і безпека → «Однаково відкрити».</p>
+      </div>
     </div>
   </section>
 </main>
@@ -1359,7 +1371,7 @@ footer { padding: 0 0 48px; font-size: 13px; color: var(--faint); text-align: ce
 
   function SPEC(phone) {
     const a = [
-      { k: 'region', w: 34, html: `<span class="b on">${icon('region')}</span>`, ch: 1, n: '01', name: 'Область', hint: 'рамка й 8 ручок' },
+      { k: 'region', w: 34, html: `<span class="b on">${icon('region')}</span>`, ch: 1, n: '01', name: 'Область', hint: 'потрібна частина екрана' },
       { k: 'screen', w: 34, html: `<span class="b">${icon('screen')}</span>`, ch: 1, n: '01', name: 'Весь екран', hint: 'один клік' },
       { k: 'timer', w: 34, html: `<span class="b">${icon('timer')}</span>`, ch: 1, n: '01', name: 'Таймер', hint: '3 · 5 · 10 с' },
       { dv: 1 },
@@ -1690,6 +1702,17 @@ footer { padding: 0 0 48px; font-size: 13px; color: var(--faint); text-align: ce
     const upd = () => { o.textContent = `vw ${innerWidth} · doc ${root.scrollWidth} · body ${D.body.scrollWidth}` + (root.scrollWidth > innerWidth ? ' OVERFLOW' : ' ok'); };
     upd(); setTimeout(upd, 1500);
   }
+})();
+</script>
+<script>
+(() => {
+  const btn = document.getElementById('macCmdCopy'), cmd = document.getElementById('macCmd');
+  if (!btn || !cmd) return;
+  btn.addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(cmd.textContent); btn.textContent = 'Скопійовано'; }
+    catch { const r = document.createRange(); r.selectNodeContents(cmd); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); btn.textContent = 'Виділено — Cmd+C'; }
+    setTimeout(() => { btn.textContent = 'Копіювати'; }, 2200);
+  });
 })();
 </script>
 </body>

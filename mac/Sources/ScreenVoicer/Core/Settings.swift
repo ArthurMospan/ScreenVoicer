@@ -25,6 +25,8 @@ final class Settings {
     var permissionsGuideShown = false
     /// Launch at login was switched on once at first start (the Windows installer ticks it by default).
     var autostartInitialized = false
+    /// The version that ran last time: a newer one now means an update just finished.
+    var lastRunVersion: String?
 
     private let url: URL
     private let lock = NSLock()
@@ -55,6 +57,7 @@ final class Settings {
             updateNotifiedVersion = s.UpdateNotifiedVersion
             permissionsGuideShown = s.PermissionsGuideShown ?? false
             autostartInitialized = s.AutostartInitialized ?? false
+            lastRunVersion = s.LastRunVersion
             if let hk = s.Hotkey, HotkeyGesture.parse(hk) != nil {
                 hotkey = hk
             }
@@ -77,7 +80,8 @@ final class Settings {
             ModelHintShown: modelHintShown,
             UpdateNotifiedVersion: updateNotifiedVersion,
             PermissionsGuideShown: permissionsGuideShown,
-            AutostartInitialized: autostartInitialized)
+            AutostartInitialized: autostartInitialized,
+            LastRunVersion: lastRunVersion)
         do {
             let encoder = JSONEncoder()
             encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -100,5 +104,6 @@ final class Settings {
         var UpdateNotifiedVersion: String?
         var PermissionsGuideShown: Bool?
         var AutostartInitialized: Bool?
+        var LastRunVersion: String?
     }
 }
