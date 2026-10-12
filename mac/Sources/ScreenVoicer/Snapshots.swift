@@ -82,7 +82,9 @@ enum Snapshots {
         let shot = temp.appendingPathComponent("toast.png")
         try? samplePNG(width: 1200, height: 800)?.write(to: shot)
         var saved = ToastOptions(title: "Скопійовано в буфер обміну", message: "«Кнопка «Зберегти» не реагує, коли форма порожня»",
-                                 kind: .success, imagePath: shot.path, copyText: "x", onOpenGallery: {}, durationMs: 5000)
+                                 kind: .success, imagePath: shot.path,
+                                 copyButtons: [ToastCopyButton(text: "З підписом") { true }, ToastCopyButton(text: "Текст") { true }],
+                                 showOpenButton: false, durationMs: 8000)
         saved.actionText = "Посилання"
         saved.onAction = {}
         save("toast-saved", ToastView(state: ToastState(options: saved), actions: noActions))

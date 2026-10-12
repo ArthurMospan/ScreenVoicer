@@ -22,11 +22,19 @@ namespace ScreenVoicer.Services
         }
 
         /// <remarks>Must be called on an STA thread (the UI thread).</remarks>
-        public bool CopyToClipboard(string text, string? imagePath = null)
+        public bool CopyToClipboard(string text, string? imagePath = null) => Copy(text, imagePath);
+
+        /// <remarks>Must be called on an STA thread (the UI thread).</remarks>
+        public bool CopyImage(string imagePath) => Copy(null, imagePath);
+
+        private static bool Copy(string? text, string? imagePath)
         {
             var dataObject = new WpfDataObject();
-            dataObject.SetData(WpfDataFormats.UnicodeText, text);
-            dataObject.SetData(WpfDataFormats.Text, text);
+            if (text != null)
+            {
+                dataObject.SetData(WpfDataFormats.UnicodeText, text);
+                dataObject.SetData(WpfDataFormats.Text, text);
+            }
 
             if (!string.IsNullOrEmpty(imagePath) && File.Exists(imagePath))
             {

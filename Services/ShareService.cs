@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -9,7 +8,6 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using ScreenVoicer.Models;
@@ -32,8 +30,6 @@ namespace ScreenVoicer.Services
         private const long MaxImageBytes = 8L * 1024 * 1024;
         private const int PreviewWidth = 1200;
         private const int PreviewPictureHeight = 800;
-        private const int CardPad = 56;
-        private const int CardTextX = 86;
         private const int PreviewQuality = 82;
         private const long MaxPreviewBytes = 1024 * 1024;
 
@@ -133,12 +129,9 @@ namespace ScreenVoicer.Services
         }
 
         /// <summary>
-        /// The picture messengers show for a link (a small JPEG: WhatsApp and others skip big images). Messengers
-        /// always put their text above the picture, so the comment is written into the picture itself, under the
-        /// screenshot: screenshot first, comment below, nothing repeated. Card layout, the same as the Mac app:
-        /// 1200 px wide; the screenshot fitted into 1200 × 800 on #0F0F13; under it, when there is a comment, a band
-        /// with 40/44 px padding, a 6 px orange bar at x 56 and the text at x 86 (40 px semibold, 52 px lines, at most
-        /// three, then «…»), plus «Ще N знімки за посиланням» (28 px) when the link holds more screenshots.
+        /// The picture messengers show for a link (a small JPEG: WhatsApp and others skip big images). Messengers always
+        /// put their text above the picture, so the comment is written into the picture itself, under the screenshot
+        /// (CaptionCard at 1200 px, at most three lines), plus «Ще N знімки за посиланням» when the link holds more.
         /// </summary>
         public static byte[]? MakePreview(string path, string caption = "", int moreShots = 0)
         {
@@ -154,57 +147,10 @@ namespace ScreenVoicer.Services
         {
             try
             {
-                using var stream = File.OpenRead(path);
-                var frame = BitmapFrame.Create(stream, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
-                double scale = Math.Min(1.0, Math.Min(PreviewWidth / (double)frame.PixelWidth, PreviewPictureHeight / (double)frame.PixelHeight));
-                double pw = Math.Round(frame.PixelWidth * scale), ph = Math.Round(frame.PixelHeight * scale);
-
-                FormattedText? text = null, more = null;
-                double band = 0;
-                if (caption.Length > 0)
-                {
-                    var family = new FontFamily("Segoe UI Variable Display, Segoe UI");
-                    var culture = CultureInfo.GetCultureInfo("uk-UA");
-                    text = new FormattedText(caption, culture, FlowDirection.LeftToRight,
-                        new Typeface(family, FontStyles.Normal, FontWeights.SemiBold, FontStretches.Normal), 40, CardInk, 1.0)
-                    {
-                        MaxTextWidth = PreviewWidth - CardTextX - CardPad,
-                        MaxLineCount = 3,
-                        LineHeight = 52,
-                        Trimming = TextTrimming.WordEllipsis
-                    };
-                    band = 40 + text.Height + 44;
-                    if (moreShots > 0)
-                    {
-                        more = new FormattedText($"Ще {Plural(moreShots, "знімок", "знімки", "знімків")} за посиланням", culture, FlowDirection.LeftToRight,
-                            new Typeface(family, FontStyles.Normal, FontWeights.Normal, FontStretches.Normal), 28, CardMuted, 1.0);
-                        band += 14 + 36;
-                    }
-                }
-
-                int height = (int)Math.Ceiling(ph + band);
-                var visual = new DrawingVisual();
-                RenderOptions.SetBitmapScalingMode(visual, BitmapScalingMode.HighQuality);
-                using (var dc = visual.RenderOpen())
-                {
-                    dc.DrawRectangle(CardBackground, null, new System.Windows.Rect(0, 0, PreviewWidth, height));
-                    dc.DrawImage(frame, new System.Windows.Rect((PreviewWidth - pw) / 2, 0, pw, ph));
-                    if (text != null)
-                    {
-                        double top = ph + 40;
-                        dc.DrawRectangle(CardAccent, null, new System.Windows.Rect(CardPad, top + 6, 6, Math.Max(20, text.Height - 12)));
-                        dc.DrawText(text, new System.Windows.Point(CardTextX, top));
-                        if (more != null)
-                        {
-                            dc.DrawText(more, new System.Windows.Point(CardTextX, top + text.Height + 14));
-                        }
-                    }
-                }
-                var target = new RenderTargetBitmap(PreviewWidth, height, 96, 96, PixelFormats.Pbgra32);
-                target.Render(visual);
-
+                var card = CaptionCard.Render(path, caption, PreviewWidth, PreviewPictureHeight, maxLines: 3,
+                    footer: moreShots > 0 ? $"Ще {Plural(moreShots, "знімок", "знімки", "знімків")} за посиланням" : null);
                 var encoder = new JpegBitmapEncoder { QualityLevel = PreviewQuality };
-                encoder.Frames.Add(BitmapFrame.Create(new FormatConvertedBitmap(target, PixelFormats.Bgr24, null, 0))); // JPEG has no alpha
+                encoder.Frames.Add(BitmapFrame.Create(card));
                 using var output = new MemoryStream();
                 encoder.Save(output);
                 return output.Length <= MaxPreviewBytes ? output.ToArray() : null;
@@ -214,18 +160,6 @@ namespace ScreenVoicer.Services
                 Log.Warn("[Share] Could not make the link preview", ex);
                 return null;
             }
-        }
-
-        private static readonly SolidColorBrush CardBackground = Frozen(0x0F, 0x0F, 0x13);
-        private static readonly SolidColorBrush CardInk = Frozen(0xF4, 0xF4, 0xF7);
-        private static readonly SolidColorBrush CardMuted = Frozen(0xAA, 0xAA, 0xB6);
-        private static readonly SolidColorBrush CardAccent = Frozen(0xFF, 0x8A, 0x4C);
-
-        private static SolidColorBrush Frozen(byte r, byte g, byte b)
-        {
-            var brush = new SolidColorBrush(Color.FromRgb(r, g, b));
-            brush.Freeze();
-            return brush;
         }
 
         private static string Plural(int n, string one, string few, string many)
