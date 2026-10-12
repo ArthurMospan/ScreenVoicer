@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Windows.Controls;
 using System.Diagnostics;
 using System.IO;
 using System.Windows;
@@ -18,6 +20,9 @@ namespace ScreenVoicer.Views
         private readonly ToastOptions _options;
         private readonly Func<string, string?, bool> _copy;
         private readonly Storyboard _lifetime = new();
+        private readonly List<Button> _copyButtons = new();
+        private Point? _thumbDown;
+        private bool _dragged;
         private bool _shown;
         private bool _closing;
 
@@ -37,7 +42,15 @@ namespace ScreenVoicer.Views
             if (hasImage)
             {
                 LoadThumbnail(options.ImagePath!);
-                BtnOpenImage.Visibility = Visibility.Visible;
+                BtnOpenImage.Visibility = options.ShowOpenButton ? Visibility.Visible : Visibility.Collapsed;
+            }
+            int slot = PanelActions.Children.IndexOf(BtnAction);
+            foreach (var item in options.CopyButtons)
+            {
+                var button = new Button { Style = (Style)FindResource("ToastBtn"), Content = item.Text, Tag = item };
+                button.Click += OnCopyButtonClick;
+                PanelActions.Children.Insert(slot++, button);
+                _copyButtons.Add(button);
             }
             if (!string.IsNullOrEmpty(options.CopyText))
             {
@@ -52,7 +65,7 @@ namespace ScreenVoicer.Views
                 BtnAction.Content = options.ActionText;
                 BtnAction.Visibility = Visibility.Visible;
             }
-            if (hasImage || BtnCopy.Visibility == Visibility.Visible ||
+            if (hasImage || _copyButtons.Count > 0 || BtnCopy.Visibility == Visibility.Visible ||
                 BtnOpenGallery.Visibility == Visibility.Visible || BtnAction.Visibility == Visibility.Visible)
             {
                 PanelActions.Visibility = Visibility.Visible;
@@ -187,7 +200,58 @@ namespace ScreenVoicer.Views
 
         private void OnCloseClick(object sender, RoutedEventArgs e) => Dismiss();
 
-        private void OnThumbClick(object sender, MouseButtonEventArgs e) => OpenImage();
+        private void OnThumbDown(object sender, MouseButtonEventArgs e)
+        {
+            _thumbDown = e.GetPosition(this);
+            _dragged = false;
+        }
+
+        /// <summary>Drag the thumbnail into Telegram, Jira, a mail: the PNG file goes there.</summary>
+        private void OnThumbMove(object sender, MouseEventArgs e)
+        {
+            if (_thumbDown is not Point start || e.LeftButton != MouseButtonState.Pressed ||
+                string.IsNullOrEmpty(_options.ImagePath) || !File.Exists(_options.ImagePath))
+            {
+                return;
+            }
+            Vector moved = e.GetPosition(this) - start;
+            if (Math.Abs(moved.X) < SystemParameters.MinimumHorizontalDragDistance && Math.Abs(moved.Y) < SystemParameters.MinimumVerticalDragDistance)
+            {
+                return;
+            }
+            _dragged = true;
+            _thumbDown = null;
+            _lifetime.Pause(this);
+            var data = new DataObject(DataFormats.FileDrop, new[] { _options.ImagePath });
+            DragDrop.DoDragDrop(Thumb, data, DragDropEffects.Copy);
+            if (!_closing && !IsMouseOver)
+            {
+                _lifetime.Resume(this);
+            }
+        }
+
+        private void OnThumbClick(object sender, MouseButtonEventArgs e)
+        {
+            _thumbDown = null;
+            if (!_dragged)
+            {
+                OpenImage();
+            }
+            _dragged = false;
+        }
+
+        private void OnCopyButtonClick(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Button { Tag: ToastCopyButton item } button)
+            {
+                return;
+            }
+            foreach (var other in _copyButtons)
+            {
+                other.Content = ((ToastCopyButton)other.Tag).Text;
+            }
+            button.Content = item.Copy() ? "✓ " + item.Text : "Буфер зайнятий";
+        }
 
         private void OnOpenImageClick(object sender, RoutedEventArgs e) => OpenImage();
 

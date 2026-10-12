@@ -2300,17 +2300,26 @@ namespace ScreenVoicer.Views
                     message = "Голосовий коментар не встиг розпізнатися (розпізнавання ще готується). " + message;
                 }
 
+                // The clean screenshot is on the clipboard; the toast offers the same picture with the comment written
+                // under it (one paste gives a messenger or an AI chat both) and the comment alone.
+                var clipboard = _clipboard;
+                string shot = saved.Path, said = comment;
+                var copyButtons = comment.Length == 0 ? Array.Empty<ToastCopyButton>() : new[]
+                {
+                    new ToastCopyButton("З підписом", () => CaptionCard.SaveForClipboard(shot, said) is string card && clipboard.CopyImage(card)),
+                    new ToastCopyButton("Текст", () => clipboard.CopyToClipboard(said))
+                };
                 _notifications.Show(new ToastOptions
                 {
                     Title = copied ? "Скопійовано в буфер обміну" : "Збережено, але буфер обміну зайнятий",
                     Message = message,
                     Kind = copied && !voiceLost ? ToastKind.Success : ToastKind.Warning,
                     ImagePath = saved.Path,
-                    CopyText = markdown,
-                    OnOpenGallery = _openGallery,
+                    ShowOpenButton = false,
+                    CopyButtons = copyButtons,
                     ActionText = _shareItem != null ? "Посилання" : null,
                     OnAction = _shareItem != null ? () => _shareItem(entry) : null,
-                    DurationMs = 5000
+                    DurationMs = 8000
                 });
 
                 Close();

@@ -1,7 +1,11 @@
 using System;
+using System.Collections.Generic;
 
 namespace ScreenVoicer.Services
 {
+    /// <summary>A toast button that copies something and keeps the toast open, showing «✓» on itself.</summary>
+    public sealed record ToastCopyButton(string Text, Func<bool> Copy);
+
     public enum ToastKind
     {
         Info,
@@ -27,6 +31,12 @@ namespace ScreenVoicer.Services
         /// <summary>Optional extra button (e.g. "Повторити").</summary>
         public string? ActionText { get; init; }
         public Action? OnAction { get; init; }
+
+        /// <summary>Copy buttons before the action button (the saved-screenshot toast: «З підписом», «Текст»).</summary>
+        public IReadOnlyList<ToastCopyButton> CopyButtons { get; init; } = Array.Empty<ToastCopyButton>();
+
+        /// <summary>«Відкрити» next to the thumbnail; the thumbnail opens the image anyway.</summary>
+        public bool ShowOpenButton { get; init; } = true;
 
         public int DurationMs { get; init; } = 4500;
     }

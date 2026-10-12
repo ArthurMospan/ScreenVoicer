@@ -1,6 +1,6 @@
 # Windows ↔ macOS parity
 
-Both apps must look and behave the same (see `CLAUDE.md`). This file lists what still differs.
+Both apps must look and behave the same. This file lists what still differs.
 
 ## Pending
 

@@ -19,7 +19,17 @@ struct ToastOptions {
     /// Optional extra button (e.g. «Повторити»).
     var actionText: String?
     var onAction: (() -> Void)?
+    /// Copy buttons before the action button (the saved-screenshot toast: «З підписом», «Текст»).
+    var copyButtons: [ToastCopyButton] = []
+    /// «Відкрити» next to the thumbnail; the thumbnail opens the image anyway.
+    var showOpenButton = true
     var durationMs = 4500
+}
+
+/// A toast button that copies something and keeps the toast open, showing «✓» on itself.
+struct ToastCopyButton {
+    let text: String
+    let copy: () -> Bool
 }
 
 /// Toasts in a bottom-right stack, newest at the bottom (NotificationService.cs).
@@ -74,6 +84,8 @@ final class ToastState: ObservableObject {
     let options: ToastOptions
     let duration: TimeInterval
     @Published var copyLabel = "Копіювати"
+    /// The copy button pressed last and whether it worked («✓ З підписом» / «Буфер зайнятий»).
+    @Published var copiedButton: (index: Int, ok: Bool)?
     @Published var paused = false
     var deadline: Date
     var pausedRemaining: TimeInterval = 0
@@ -114,6 +126,7 @@ final class ToastPanel: NSPanel {
         let view = ToastView(state: state, actions: ToastActions(
             close: { [weak self] in self?.dismiss() },
             copy: { [weak self] in self?.copy() },
+            copyButton: { [weak self] index in self?.runCopyButton(index) },
             openImage: { [weak self] in self?.openImage() },
             action: { [weak self] in
                 self?.state.options.onAction?()
@@ -207,6 +220,11 @@ final class ToastPanel: NSPanel {
         state.copyLabel = Clipboard.copy(text, imagePath: state.options.imagePath) ? "✓ Скопійовано" : "Буфер зайнятий"
     }
 
+    private func runCopyButton(_ index: Int) {
+        guard state.options.copyButtons.indices.contains(index) else { return }
+        state.copiedButton = (index, state.options.copyButtons[index].copy())
+    }
+
     private func openImage() {
         if let path = state.options.imagePath, FileManager.default.fileExists(atPath: path) {
             NSWorkspace.shared.open(URL(fileURLWithPath: path))
@@ -218,6 +236,7 @@ final class ToastPanel: NSPanel {
 struct ToastActions {
     let close: () -> Void
     let copy: () -> Void
+    var copyButton: (Int) -> Void = { _ in }
     let openImage: () -> Void
     let action: () -> Void
     let gallery: () -> Void
@@ -238,7 +257,7 @@ struct ToastView: View {
     private var options: ToastOptions { state.options }
     private var hasImage: Bool { options.imagePath.map { FileManager.default.fileExists(atPath: $0) } ?? false }
     private var hasActions: Bool {
-        hasImage || options.copyText != nil || options.onOpenGallery != nil || (options.onAction != nil && options.actionText != nil)
+        hasImage || !options.copyButtons.isEmpty || options.copyText != nil || options.onOpenGallery != nil || (options.onAction != nil && options.actionText != nil)
     }
 
     var body: some View {
@@ -274,8 +293,11 @@ struct ToastView: View {
             if hasActions {
                 HStack(spacing: 6) {
                     Spacer(minLength: 0)
-                    if hasImage {
+                    if hasImage && options.showOpenButton {
                         Button("Відкрити", action: actions.openImage).buttonStyle(ChipButtonStyle())
+                    }
+                    ForEach(Array(options.copyButtons.enumerated()), id: \.offset) { index, button in
+                        Button(copyLabel(index, button), action: { actions.copyButton(index) }).buttonStyle(ChipButtonStyle())
                     }
                     if options.copyText != nil {
                         Button(state.copyLabel, action: actions.copy).buttonStyle(ChipButtonStyle())
@@ -309,6 +331,11 @@ struct ToastView: View {
         .onHover(perform: actions.hover)
     }
 
+    private func copyLabel(_ index: Int, _ button: ToastCopyButton) -> String {
+        guard let last = state.copiedButton, last.index == index else { return button.text }
+        return last.ok ? "✓ " + button.text : "Буфер зайнятий"
+    }
+
     @ViewBuilder
     private var badge: some View {
         if hasImage, let thumbnail {
@@ -319,7 +346,10 @@ struct ToastView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Color(argb: 0x33FFFFFF), lineWidth: 1))
                 .onTapGesture(perform: actions.openImage)
-                .help("Відкрити знімок")
+                .onDrag { // drag the thumbnail into Telegram, Jira, a mail: the PNG file goes there
+                    options.imagePath.flatMap { NSItemProvider(contentsOf: URL(fileURLWithPath: $0)) } ?? NSItemProvider()
+                }
+                .help("Клік — відкрити знімок, перетягніть — щоб покласти файл у чат чи задачу")
         } else if let status = kindIcon {
             ZStack {
                 RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color(rgb: status.1).opacity(0x2E / 255.0))

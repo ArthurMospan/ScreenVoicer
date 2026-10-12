@@ -61,7 +61,8 @@
                     </Border>
                     <Image x:Name="BadgeLogo" Source="{StaticResource BrandMark}" Visibility="Collapsed"/>
                     <Border x:Name="Thumb" CornerRadius="10" Visibility="Collapsed" Cursor="Hand"
-                            BorderBrush="#33FFFFFF" BorderThickness="1" MouseLeftButtonUp="OnThumbClick" ToolTip="Відкрити знімок">
+                            BorderBrush="#33FFFFFF" BorderThickness="1" MouseLeftButtonDown="OnThumbDown" MouseMove="OnThumbMove"
+                            MouseLeftButtonUp="OnThumbClick" ToolTip="Клік — відкрити знімок, перетягніть — щоб покласти файл у чат чи задачу">
                         <Border.Background>
                             <ImageBrush x:Name="ThumbBrush" Stretch="UniformToFill"/>
                         </Border.Background>

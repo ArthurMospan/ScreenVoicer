@@ -212,6 +212,13 @@ enum SelfTest {
         let gap = short.flatMap { pixel($0, x: 30, y: 750 + 40 + 20) }
         check("preview card has the orange bar", bar.map { $0.r > 200 && $0.g > 100 && $0.g < 170 && $0.b < 120 } == true
               && gap.map { $0.r < 40 && $0.g < 40 && $0.b < 40 } == true, "bar \(String(describing: bar)), gap \(String(describing: gap))")
+
+        // «З підписом»: the screenshot at its own size, the whole comment under it, as a PNG for the clipboard
+        let captioned = CaptionCard.saveForClipboard(path: path, caption: long)
+        let captionedImage = captioned.flatMap { CGImageSourceCreateWithURL(URL(fileURLWithPath: $0) as CFURL, nil) }
+            .flatMap { CGImageSourceCreateImageAtIndex($0, 0, nil) }
+        check("captioned copy keeps the size, adds the comment", captionedImage.map { $0.width == 1600 && $0.height > 1000 + 300 } == true,
+              "\(captionedImage?.width ?? 0)x\(captionedImage?.height ?? 0)")
     }
 
     /// Pixel (x, y), top-left origin.

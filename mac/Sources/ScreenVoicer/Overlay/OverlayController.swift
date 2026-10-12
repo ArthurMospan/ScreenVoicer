@@ -1271,16 +1271,23 @@ final class OverlayController: NSObject, NSTextFieldDelegate {
             }
 
             let share = shareItem
+            // The clean screenshot is on the clipboard; the toast offers the same picture with the comment written
+            // under it (one paste gives a messenger or an AI chat both) and the comment alone.
+            let shot = saved.path, said = comment
+            let copyButtons = said.isEmpty ? [] : [
+                ToastCopyButton(text: "З підписом") { CaptionCard.saveForClipboard(path: shot, caption: said).map { Clipboard.copyImage(path: $0) } ?? false },
+                ToastCopyButton(text: "Текст") { Clipboard.copy(said) }
+            ]
             ToastCenter.shared.show(ToastOptions(
                 title: copied ? "Скопійовано в буфер обміну" : "Збережено, але буфер обміну зайнятий",
                 message: message,
                 kind: copied && !voiceLost ? .success : .warning,
                 imagePath: saved.path,
-                copyText: markdown,
-                onOpenGallery: openGallery,
                 actionText: share != nil ? "Посилання" : nil,
                 onAction: share.map { share in { share(entry) } },
-                durationMs: 5000))
+                copyButtons: copyButtons,
+                showOpenButton: false,
+                durationMs: 8000))
             close()
         } catch {
             Log.error("[Overlay] Saving failed", error)
