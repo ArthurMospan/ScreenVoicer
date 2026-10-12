@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -176,6 +177,7 @@ namespace ScreenVoicer.Views
             {
                 return;
             }
+            CloseDropdowns();
             _closing = true;
             Hide(); // gone from the screen at once (a capture may follow); Close after the current input settles
             Dispatcher.BeginInvoke(Close);
@@ -301,7 +303,7 @@ namespace ScreenVoicer.Views
             var selected = microphones.FirstOrDefault(m => string.Equals(m.Name, _host.SelectedMicrophone, StringComparison.OrdinalIgnoreCase));
             TxtMicrophone.Text = selected == null || selected.IsSystemDefault ? "Системний" : ShortName(selected.DisplayName);
 
-            UpdateLanguageChips();
+            TxtLanguage.Text = LanguageName(_host.VoiceLanguage);
 
             TxtModel.Text = _host.SelectedModel.Title;
 
@@ -320,26 +322,38 @@ namespace ScreenVoicer.Views
                 TxtUpdateAction.Text = progress != null ? string.Empty : "Оновити";
                 BtnUpdate.IsEnabled = progress == null;
             }
-            if (MicWell.Visibility == Visibility.Visible)
+            if (MicPopup.IsOpen)
             {
                 BuildMicrophoneList(microphones);
             }
-            if (ModelWell.Visibility == Visibility.Visible)
+            if (ModelPopup.IsOpen)
             {
                 BuildModelList();
             }
         }
 
-        // Language chips keep their code in Tag; the Chip style lights up when Tag is exactly "on", so the code moves to Uid.
-        private void UpdateLanguageChips()
+        private static readonly (string Code, string Name, string? Detail)[] Languages =
         {
-            foreach (Button chip in LanguagePanel.Children)
+            ("uk", "Українська", null),
+            ("en", "English", null),
+            ("auto", "Автовизначення", "повільніше: спершу вгадує мову")
+        };
+
+        private static string LanguageName(string code) => Languages.FirstOrDefault(l => l.Code == code).Name ?? "Українська";
+
+        private void BuildLanguageList()
+        {
+            LanguageList.Children.Clear();
+            foreach (var (code, name, detail) in Languages)
             {
-                if (string.IsNullOrEmpty(chip.Uid))
+                var row = OptionRow(name, detail, code == _host.VoiceLanguage);
+                row.Click += (_, _) =>
                 {
-                    chip.Uid = (string)chip.Tag!;
-                }
-                chip.Tag = chip.Uid == _host.VoiceLanguage ? "on" : null;
+                    _host.SetVoiceLanguage(code);
+                    LanguagePopup.IsOpen = false;
+                    Refresh();
+                };
+                LanguageList.Children.Add(row);
             }
         }
 
@@ -353,6 +367,7 @@ namespace ScreenVoicer.Views
                 row.Click += (_, _) =>
                 {
                     _host.SelectMicrophone(microphone);
+                    MicPopup.IsOpen = false;
                     Refresh();
                 };
                 MicList.Children.Add(row);
@@ -376,6 +391,7 @@ namespace ScreenVoicer.Views
                 row.Click += (_, _) =>
                 {
                     _host.SelectModel(model);
+                    ModelPopup.IsOpen = false;
                     Refresh();
                 };
                 ModelList.Children.Add(row);
@@ -479,41 +495,50 @@ namespace ScreenVoicer.Views
 
         private void OnFolderClick(object sender, RoutedEventArgs e) => Do(_host.OpenScreenshotsFolder);
 
-        private void OnMicrophoneToggle(object sender, RoutedEventArgs e)
+        private void OnMicrophoneToggle(object sender, RoutedEventArgs e) =>
+            ToggleDropdown(MicPopup, MicRow, MicChevron, () => BuildMicrophoneList(_host.GetMicrophones()));
+
+        private void OnLanguageToggle(object sender, RoutedEventArgs e) =>
+            ToggleDropdown(LanguagePopup, LanguageRow, LanguageChevron, BuildLanguageList);
+
+        private void OnModelToggle(object sender, RoutedEventArgs e) =>
+            ToggleDropdown(ModelPopup, ModelRow, ModelChevron, BuildModelList);
+
+        private Popup? _lastClosed;
+        private DateTime _lastClosedAt;
+
+        /// <summary>
+        /// Opens a dropdown under its row, over the rest of the menu (it flips above the row near the screen edge).
+        /// A click on the row of an open list closes it: the popup already closed itself on that mouse-down.
+        /// </summary>
+        private void ToggleDropdown(Popup popup, Button row, GlyphIcon chevron, Action build)
         {
-            bool open = MicWell.Visibility != Visibility.Visible;
-            ModelWell.Visibility = Visibility.Collapsed;
-            ModelChevron.RenderTransform = null;
-            MicWell.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
-            MicChevron.RenderTransformOrigin = new Point(0.5, 0.5);
-            MicChevron.RenderTransform = open ? new RotateTransform(180) : null;
-            if (open)
+            bool justClosed = _lastClosed == popup && (DateTime.UtcNow - _lastClosedAt).TotalMilliseconds < 300;
+            CloseDropdowns();
+            if (justClosed)
             {
-                BuildMicrophoneList(_host.GetMicrophones());
+                return;
             }
+            build();
+            popup.Width = row.ActualWidth + 20;
+            popup.IsOpen = true;
+            chevron.RenderTransformOrigin = new Point(0.5, 0.5);
+            chevron.RenderTransform = new RotateTransform(180);
         }
 
-        private void OnModelToggle(object sender, RoutedEventArgs e)
+        private void CloseDropdowns()
         {
-            bool open = ModelWell.Visibility != Visibility.Visible;
-            MicWell.Visibility = Visibility.Collapsed;
-            MicChevron.RenderTransform = null;
-            ModelWell.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
-            ModelChevron.RenderTransformOrigin = new Point(0.5, 0.5);
-            ModelChevron.RenderTransform = open ? new RotateTransform(180) : null;
-            if (open)
-            {
-                BuildModelList();
-            }
+            MicPopup.IsOpen = false;
+            LanguagePopup.IsOpen = false;
+            ModelPopup.IsOpen = false;
         }
 
-        private void OnLanguageClick(object sender, RoutedEventArgs e)
+        private void OnDropdownClosed(object? sender, EventArgs e)
         {
-            if (sender is Button chip)
-            {
-                _host.SetVoiceLanguage(chip.Uid);
-                UpdateLanguageChips();
-            }
+            _lastClosed = sender as Popup;
+            _lastClosedAt = DateTime.UtcNow;
+            GlyphIcon chevron = sender == MicPopup ? MicChevron : sender == LanguagePopup ? LanguageChevron : ModelChevron;
+            chevron.RenderTransform = null;
         }
 
         private void OnHotkeyClick(object sender, RoutedEventArgs e) => Do(_host.OpenHotkeySettings);

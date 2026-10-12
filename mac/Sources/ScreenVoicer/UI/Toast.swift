@@ -344,7 +344,6 @@ struct ToastView: View {
                 .aspectRatio(contentMode: .fill)
                 .frame(width: 44, height: 44)
                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Color(argb: 0x33FFFFFF), lineWidth: 1))
                 .onTapGesture(perform: actions.openImage)
                 .onDrag { // drag the thumbnail into Telegram, Jira, a mail: the PNG file goes there
                     options.imagePath.flatMap { NSItemProvider(contentsOf: URL(fileURLWithPath: $0)) } ?? NSItemProvider()
@@ -353,7 +352,6 @@ struct ToastView: View {
         } else if let status = kindIcon {
             ZStack {
                 RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color(rgb: status.1).opacity(0x2E / 255.0))
-                RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Theme.glassEdge, lineWidth: 1)
                 GlyphIcon(icon: status.0, size: 20, weight: 2.2).foregroundColor(Color(rgb: status.1))
             }
         } else {

@@ -302,8 +302,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MenuHost {
         guard let button = statusItem.button, let buttonWindow = button.window else { return }
         let itemFrame = buttonWindow.convertToScreen(button.convert(button.bounds, to: nil))
         let menu = TrayMenuPanel(model: trayMenuModel)
-        trayMenuModel.micOpen = false
-        trayMenuModel.modelOpen = false
+        trayMenuModel.dropdown = nil
         trayMenuModel.aboutOpen = false
         menu.onClosed = { [weak self, weak menu] in
             guard let self else { return }

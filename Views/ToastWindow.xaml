@@ -29,7 +29,7 @@
     </Window.Resources>
 
     <!-- Room around the card for its shadow -->
-    <Border x:Name="Card" Margin="14" CornerRadius="16" BorderBrush="{StaticResource PanelRim}" BorderThickness="1"
+    <Border x:Name="Card" Margin="14" CornerRadius="16"
             Effect="{StaticResource CardShadow}" MouseEnter="OnCardMouseEnter" MouseLeave="OnCardMouseLeave">
         <Border.Background>
             <SolidColorBrush Color="#F51B1B21"/>
@@ -53,7 +53,7 @@
 
                 <!-- Status badge, the logo, or a screenshot thumbnail (ImageBrush so the rounded corners really clip it) -->
                 <Grid Grid.Column="0" Width="44" Height="44" Margin="0,0,12,0" VerticalAlignment="Top">
-                    <Border x:Name="IconBadge" CornerRadius="12" BorderBrush="{StaticResource GlassRim}" BorderThickness="1">
+                    <Border x:Name="IconBadge" CornerRadius="12">
                         <Grid>
                             <Border CornerRadius="12" Background="{StaticResource GlassSheen}" Opacity="0.6"/>
                             <v:GlyphIcon x:Name="BadgeIcon" Width="20" Height="20" StrokeThickness="2.2"/>
@@ -61,7 +61,7 @@
                     </Border>
                     <Image x:Name="BadgeLogo" Source="{StaticResource BrandMark}" Visibility="Collapsed"/>
                     <Border x:Name="Thumb" CornerRadius="10" Visibility="Collapsed" Cursor="Hand"
-                            BorderBrush="#33FFFFFF" BorderThickness="1" MouseLeftButtonDown="OnThumbDown" MouseMove="OnThumbMove"
+                            MouseLeftButtonDown="OnThumbDown" MouseMove="OnThumbMove"
                             MouseLeftButtonUp="OnThumbClick" ToolTip="Клік — відкрити знімок, перетягніть — щоб покласти файл у чат чи задачу">
                         <Border.Background>
                             <ImageBrush x:Name="ThumbBrush" Stretch="UniformToFill"/>

@@ -103,14 +103,22 @@
             <Setter Property="Margin" Value="8,5"/>
         </Style>
 
-        <!-- Expanded lists (microphones, models) sit in a recessed well -->
+        <!-- The «Про програму» box under the footer -->
         <Style x:Key="Well" TargetType="Border">
             <Setter Property="Margin" Value="38,0,4,4"/>
             <Setter Property="Padding" Value="3"/>
             <Setter Property="CornerRadius" Value="11"/>
             <Setter Property="Background" Value="#24000000"/>
-            <Setter Property="BorderBrush" Value="#0FFFFFFF"/>
-            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+
+        <!-- Dropdown lists (microphone, language, recognition) open over the menu instead of stretching it;
+             the margin leaves room for the shadow, the popup is moved back by it -->
+        <Style x:Key="Dropdown" TargetType="Border">
+            <Setter Property="Margin" Value="10,2,10,16"/>
+            <Setter Property="Padding" Value="4"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Background" Value="#FF222229"/>
+            <Setter Property="Effect" Value="{StaticResource CardShadow}"/>
         </Style>
     </Window.Resources>
 
@@ -123,7 +131,6 @@
             <!-- matte glass: the blurred desktop behind the card (set from code), a neutral frosted tint, one thin edge -->
             <Border x:Name="Backdrop" CornerRadius="18" Background="#141418"/>
             <Border CornerRadius="18" Background="#B01C1C23"/>
-            <Border CornerRadius="18" BorderThickness="1" BorderBrush="{StaticResource PanelRim}"/>
 
             <StackPanel Margin="10">
                 <!-- header: logo, voice status, version -->
@@ -147,7 +154,7 @@
                 </Grid>
 
                 <!-- update available: an orange-tinted glass strip above everything else -->
-                <Border x:Name="UpdateBanner" CornerRadius="11" Background="#24FF8A4C" BorderBrush="#66FFC68A" BorderThickness="1"
+                <Border x:Name="UpdateBanner" CornerRadius="11" Background="#2EFF8A4C"
                         Margin="0,0,0,8" Visibility="Collapsed">
                     <Button x:Name="BtnUpdate" Style="{StaticResource Row}" Click="OnUpdateClick">
                         <DockPanel>
@@ -191,7 +198,7 @@
                 <Rectangle Style="{StaticResource Separator}"/>
 
                 <!-- microphone -->
-                <Button Style="{StaticResource Row}" Click="OnMicrophoneToggle">
+                <Button x:Name="MicRow" Style="{StaticResource Row}" Click="OnMicrophoneToggle">
                     <DockPanel>
                         <v:GlyphIcon Data="{StaticResource Icon.Mic}" Style="{StaticResource RowIcon}"/>
                         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
@@ -201,30 +208,29 @@
                         <TextBlock Text="Мікрофон" VerticalAlignment="Center"/>
                     </DockPanel>
                 </Button>
-                <Border x:Name="MicWell" Style="{StaticResource Well}" Visibility="Collapsed">
-                    <StackPanel x:Name="MicList"/>
-                </Border>
+                <Popup x:Name="MicPopup" PlacementTarget="{Binding ElementName=MicRow}" Placement="Bottom" HorizontalOffset="-10"
+                       StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" Closed="OnDropdownClosed">
+                    <Border Style="{StaticResource Dropdown}"><StackPanel x:Name="MicList"/></Border>
+                </Popup>
 
                 <!-- language -->
-                <Grid Margin="9,6,10,6">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    <v:GlyphIcon Data="{StaticResource Icon.Globe}" Style="{StaticResource RowIcon}"/>
-                    <TextBlock Grid.Column="1" Text="Мова голосу" FontSize="13.5" Foreground="{StaticResource GlassText}" VerticalAlignment="Center"/>
-                    <Border Grid.Column="2" Background="#0FFFFFFF" CornerRadius="10" Padding="2" BorderBrush="#14FFFFFF" BorderThickness="1">
-                        <StackPanel x:Name="LanguagePanel" Orientation="Horizontal">
-                            <Button Style="{StaticResource Chip}" Content="УКР" Tag="uk" Margin="0" Click="OnLanguageClick" ToolTip="Українська"/>
-                            <Button Style="{StaticResource Chip}" Content="ENG" Tag="en" Margin="0" Click="OnLanguageClick" ToolTip="English"/>
-                            <Button Style="{StaticResource Chip}" Content="Авто" Tag="auto" Margin="0" Click="OnLanguageClick" ToolTip="Автовизначення (повільніше)"/>
+                <Button x:Name="LanguageRow" Style="{StaticResource Row}" Click="OnLanguageToggle">
+                    <DockPanel>
+                        <v:GlyphIcon Data="{StaticResource Icon.Globe}" Style="{StaticResource RowIcon}"/>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <TextBlock x:Name="TxtLanguage" Style="{StaticResource RowValue}"/>
+                            <v:GlyphIcon x:Name="LanguageChevron" Data="{StaticResource Icon.Chevron}" Style="{StaticResource SmallChevron}"/>
                         </StackPanel>
-                    </Border>
-                </Grid>
+                        <TextBlock Text="Мова голосу" VerticalAlignment="Center"/>
+                    </DockPanel>
+                </Button>
+                <Popup x:Name="LanguagePopup" PlacementTarget="{Binding ElementName=LanguageRow}" Placement="Bottom" HorizontalOffset="-10"
+                       StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" Closed="OnDropdownClosed">
+                    <Border Style="{StaticResource Dropdown}"><StackPanel x:Name="LanguageList"/></Border>
+                </Popup>
 
                 <!-- recognition model -->
-                <Button Style="{StaticResource Row}" Click="OnModelToggle">
+                <Button x:Name="ModelRow" Style="{StaticResource Row}" Click="OnModelToggle">
                     <DockPanel>
                         <v:GlyphIcon Data="{StaticResource Icon.Chip}" Style="{StaticResource RowIcon}"/>
                         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
@@ -234,9 +240,10 @@
                         <TextBlock Text="Розпізнавання" VerticalAlignment="Center"/>
                     </DockPanel>
                 </Button>
-                <Border x:Name="ModelWell" Style="{StaticResource Well}" Visibility="Collapsed">
-                    <StackPanel x:Name="ModelList"/>
-                </Border>
+                <Popup x:Name="ModelPopup" PlacementTarget="{Binding ElementName=ModelRow}" Placement="Bottom" HorizontalOffset="-10"
+                       StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" Closed="OnDropdownClosed">
+                    <Border Style="{StaticResource Dropdown}"><StackPanel x:Name="ModelList"/></Border>
+                </Popup>
 
                 <Button Style="{StaticResource Row}" Click="OnHotkeyClick">
                     <DockPanel>

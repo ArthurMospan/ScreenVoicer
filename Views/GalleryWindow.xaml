@@ -50,14 +50,11 @@
 
         <!-- Matte card: a flat surface whose edge brightens under the mouse -->
         <Style x:Key="Card" TargetType="Border">
-            <Setter Property="BorderBrush" Value="{StaticResource PanelRim}"/>
-            <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="16"/>
             <Setter Property="Background" Value="#19191F"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="BorderBrush" Value="#4DFFFFFF"/>
-                    <Setter Property="Background" Value="#1E1E25"/>
+                    <Setter Property="Background" Value="#202028"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
@@ -90,7 +87,7 @@
 
                 <!-- Search -->
                 <Border Grid.Column="1" HorizontalAlignment="Center" Width="360" Height="38" Margin="20,0"
-                        Background="#0DFFFFFF" BorderBrush="{StaticResource PanelRim}" BorderThickness="1" CornerRadius="12" Padding="12,0">
+                        Background="#14FFFFFF" CornerRadius="12" Padding="12,0">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
@@ -152,20 +149,20 @@
                                                 <ImageBrush ImageSource="{Binding Thumbnail}" Stretch="UniformToFill" AlignmentY="Top"/>
                                             </Border.Background>
                                         </Border>
-                                        <Border CornerRadius="10" BorderBrush="#1FFFFFFF" BorderThickness="1"/>
+                                        
                                         <Border HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="8" Background="#C70F0F13"
-                                                BorderBrush="#26FFFFFF" BorderThickness="1" CornerRadius="7" Padding="7,2">
+                                                CornerRadius="7" Padding="7,2">
                                             <TextBlock Text="{Binding SizeText}" FontSize="11" Foreground="#E6E6EC"/>
                                         </Border>
                                         <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="8" Background="#C70F0F13"
-                                                BorderBrush="#26FFFFFF" BorderThickness="1" CornerRadius="7" Padding="7,2">
+                                                CornerRadius="7" Padding="7,2">
                                             <TextBlock Text="{Binding DateText}" FontSize="11" FontWeight="SemiBold" Foreground="#FFFFFF"/>
                                         </Border>
                                         <CheckBox Style="{StaticResource SelectBox}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8"
                                                   IsChecked="{Binding IsSelected, Mode=TwoWay}" Click="OnSelectClick"/>
                                         <!-- the public link of this screenshot: click copies it, × deletes it -->
                                         <Border HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8" Background="#D90F0F13"
-                                                BorderBrush="#80FFC68A" BorderThickness="1" CornerRadius="8" Visibility="{Binding ShareVisibility}">
+                                                CornerRadius="8" Visibility="{Binding ShareVisibility}">
                                             <StackPanel Orientation="Horizontal">
                                                 <Button Style="{StaticResource PillButton}" Height="26" MinWidth="0" Padding="8,0,6,0" Margin="0"
                                                         Click="OnCopyShareClick" ToolTip="{Binding ShareUrlTip}">
@@ -235,7 +232,7 @@
 
         <!-- Shown while screenshots are selected: one link for all of them -->
         <Border x:Name="SelectionBar" Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,22"
-                Visibility="Collapsed" CornerRadius="16" BorderBrush="{StaticResource PanelRim}" BorderThickness="1" Padding="8"
+                Visibility="Collapsed" CornerRadius="16" Padding="8"
                 Effect="{StaticResource CardShadow}">
             <Border.Background>
                 <SolidColorBrush Color="#F51C1C22"/>
@@ -255,7 +252,7 @@
 
         <!-- Snackbar -->
         <Border x:Name="Snackbar" Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,22"
-                Background="#F21E1E25" BorderBrush="{StaticResource PanelRim}" BorderThickness="1" CornerRadius="12" Padding="16,10"
+                Background="#F21E1E25" CornerRadius="12" Padding="16,10"
                 Opacity="0" IsHitTestVisible="False" Effect="{StaticResource CardShadow}">
             <TextBlock x:Name="TxtSnackbar" Foreground="{StaticResource InkBrush}" FontSize="13" FontWeight="SemiBold"/>
         </Border>

@@ -17,7 +17,7 @@
         MouseLeftButtonUp="OnClick"
         ToolTip="Клацніть, щоб скасувати">
 
-    <Border Margin="16" CornerRadius="20" BorderBrush="{StaticResource PanelRim}" BorderThickness="1" Padding="16,10,22,10"
+    <Border Margin="16" CornerRadius="20" Padding="16,10,22,10"
             Effect="{StaticResource CardShadow}">
         <Border.Background>
             <SolidColorBrush Color="#F51B1B21"/>

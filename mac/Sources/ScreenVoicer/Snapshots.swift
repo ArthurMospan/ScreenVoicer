@@ -73,7 +73,7 @@ enum Snapshots {
         let menuOpen = TrayMenuModel()
         menuOpen.host = host
         menuOpen.refresh()
-        menuOpen.modelOpen = true
+        menuOpen.dropdown = .model
         menuOpen.aboutOpen = true
         menuOpen.updateVersion = "1.11.0"
         save("menu-expanded", TrayMenuView(model: menuOpen))

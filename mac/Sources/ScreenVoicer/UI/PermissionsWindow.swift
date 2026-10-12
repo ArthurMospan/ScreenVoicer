@@ -93,7 +93,6 @@ struct PermissionsView: View {
         HStack(alignment: .top, spacing: 12) {
             ZStack {
                 RoundedRectangle(cornerRadius: 11, style: .continuous).fill(granted ? Theme.green.opacity(0.18) : Theme.activeTint)
-                RoundedRectangle(cornerRadius: 11, style: .continuous).strokeBorder(Theme.glassEdge, lineWidth: 1)
                 GlyphIcon(icon: granted ? .check : icon, size: 19, weight: granted ? 2.4 : 1.9)
                     .foregroundColor(granted ? Theme.green : Theme.accentLight)
             }
@@ -110,8 +109,7 @@ struct PermissionsView: View {
             }
         }
         .padding(12)
-        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color(argb: 0x0AFFFFFF)))
-        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Theme.line, lineWidth: 1))
+        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color(argb: 0x0FFFFFFF)))
     }
 }
 
