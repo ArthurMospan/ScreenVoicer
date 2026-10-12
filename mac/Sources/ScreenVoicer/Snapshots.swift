@@ -273,8 +273,7 @@ private final class SampleMenuHost: MenuHost {
     var gpuAvailable = true
     var gpuName: String? = "Apple M2"
     var autostartEnabled = true
-    var aboutText = "ScreenVoicer 1.12.7 — скриншоти з голосовими коментарями для баг-репортів і AI-асистентів.
-Скриншоти: ~/AI_Screenshots"
+    var aboutText = "ScreenVoicer 1.12.7 — скриншоти з голосовими коментарями для баг-репортів і AI-асистентів.\nСкриншоти: ~/AI_Screenshots"
     var updateVersion: String?
     var updateProgress: Double?
     func capture() {}
