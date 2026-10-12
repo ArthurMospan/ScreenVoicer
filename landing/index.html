@@ -103,14 +103,14 @@ h1, h2, h3 { font-weight: 650; text-wrap: balance; }
 .h-top { top: clamp(92px, 13vh, 132px); }
 .h-top h1 { font-size: clamp(38px, 6.4vw, 82px); line-height: 1.02; letter-spacing: -.035em; max-width: 11.5em; margin: 0 auto; }
 .h-bot { bottom: clamp(26px, 6vh, 60px); }
-.h-bot .sub { max-width: 31em; margin: 0 auto 26px; font-size: clamp(17px, 1.5vw, 20px); line-height: 1.45; color: var(--muted); text-wrap: balance; }
+.h-top .sub { max-width: 31em; margin: 18px auto 0; font-size: clamp(17px, 1.5vw, 20px); line-height: 1.45; color: var(--muted); text-wrap: balance; }
 .cap { position: absolute; left: 0; right: 0; padding: 0 var(--gutter); text-align: center; font-size: clamp(22px, 2.6vw, 34px); line-height: 1.15; font-weight: 650; letter-spacing: -.02em; text-wrap: balance; opacity: 0; visibility: hidden; pointer-events: none; }
 .cap small { display: block; margin-top: 8px; font-size: clamp(15px, 1.3vw, 17px); font-weight: 400; letter-spacing: 0; color: var(--muted); }
 .reduced .hero { height: auto; }
 .reduced .pin { position: relative; height: 100vh; height: 100svh; }
 @media (max-width: 640px) {
   .h-top { top: 84px; }
-  .h-bot .sub { margin-bottom: 20px; }
+  .h-top .sub { margin-top: 14px; }
 }
 
 /* ── the dock: the toolbar as the page's chapter bar ── */
@@ -602,9 +602,9 @@ footer { padding: 0 0 48px; font-size: 13px; color: var(--faint); text-align: ce
       <div class="rig" id="rig" aria-hidden="true"></div>
       <div class="h-copy h-top" id="hTop">
         <h1>Скріншот. Коментар. Відправити.</h1>
+        <p class="sub">Виділіть місце на екрані, скажіть, що не так, і натисніть Enter. Картинка з вашими словами вже в буфері обміну.</p>
       </div>
       <div class="h-copy h-bot" id="hBot">
-        <p class="sub">Виділіть місце на екрані, скажіть, що не так, і натисніть Enter. Картинка з вашими словами вже в буфері обміну.</p>
         <div class="cta" data-cta>
           <a class="btn btn-primary" data-os="win" href="https://github.com/ArthurMospan/ScreenVoicer/releases/latest/download/ScreenVoicer-Setup.exe"><svg aria-hidden="true"><use href="#i-win"/></svg>Завантажити для Windows</a>
           <a class="btn btn-secondary" data-os="mac" href="https://github.com/ArthurMospan/ScreenVoicer/releases/latest/download/ScreenVoicer-macOS.dmg"><svg aria-hidden="true"><use href="#i-apple"/></svg>Завантажити для Mac</a>
