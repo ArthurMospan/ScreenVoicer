@@ -58,6 +58,39 @@ const GEMINI_PROMPT = 'Transcribe this voice recording word for word, exactly as
   'Add normal punctuation. Write numbers as digits when that is natural. ' +
   'Output only the transcript, with no quotes, notes or timestamps. If there is no speech, output nothing.';
 
+// Groq runs the full Whisper large-v3, which hears real Ukrainian speech clearly better than the turbo model above,
+// on its free plan (about 2 000 requests and 8 hours of speech a day). Key: npx wrangler secret put GROQ_API_KEY.
+// GROQ_MODEL (a plain var) can pin another model. Past its limit, or on any error, the engines below take over.
+const GROQ_MODEL = 'whisper-large-v3';
+const HEARD_AS_IS = new Set(['uk', 'ukrainian', 'en', 'english']);
+
+async function transcribeWithGroq(env, bytes, language) {
+  const form = new FormData();
+  form.append('file', new File([bytes], 'comment.wav', { type: 'audio/wav' }));
+  form.append('model', env.GROQ_MODEL || GROQ_MODEL);
+  form.append('temperature', '0');
+  form.append('response_format', 'verbose_json');
+  if (language) {
+    form.append('language', language);
+    form.append('prompt', UKRAINIAN_PROMPT);
+  }
+  const response = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+    method: 'POST',
+    headers: { authorization: 'Bearer ' + env.GROQ_API_KEY },
+    body: form
+  });
+  if (!response.ok) throw new Error('groq ' + response.status + ': ' + (await response.text()).slice(0, 300));
+  const data = await response.json();
+  return { text: String(data.text || '').trim(), language: String(data.language || '').toLowerCase() };
+}
+
+function base64ToBytes(base64) {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
 async function transcribeWithGemini(env, audio) {
   const model = env.GEMINI_MODEL || GEMINI_MODEL;
   const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
@@ -82,6 +115,23 @@ async function transcribe(request, env) {
   const audio = typeof body?.audio === 'string' ? body.audio : '';
   if (!audio || audio.length > MAX_AUDIO_BASE64) return json({ error: 'bad_audio' }, 400);
 
+  const seconds = Math.round(audio.length * 3 / 4 / 32000);
+  const app = request.headers.get('user-agent') || '';
+  if (env.GROQ_API_KEY) {
+    try {
+      const bytes = base64ToBytes(audio);
+      // the language is detected first, so English stays English; anything other than Ukrainian or English is
+      // almost always Ukrainian misheard (short takes are often taken for Russian), so it is redone in Ukrainian
+      let result = await transcribeWithGroq(env, bytes, null);
+      const heard = result.language;
+      if (heard && !HEARD_AS_IS.has(heard)) result = { ...(await transcribeWithGroq(env, bytes, 'uk')), language: 'ukrainian' };
+      console.log(JSON.stringify({ engine: 'groq', heard, language: result.language, seconds, chars: result.text.length, app }));
+      return json({ text: result.text, language: result.language, engine: 'groq' });
+    } catch (error) {
+      console.log('groq failed, using the next engine', String(error));
+    }
+  }
+
   if (env.GEMINI_API_KEY) {
     try {
       const text = await transcribeWithGemini(env, audio);
@@ -100,12 +150,16 @@ async function transcribe(request, env) {
   try {
     let result = await run(null);
     let language = String(result?.transcription_info?.language || '');
-    // Whisper now and then hears Ukrainian as Russian; the people using ScreenVoicer speak Ukrainian, so that one is redone
-    if (language === 'ru') {
+    // Whisper now and then hears Ukrainian as Russian (or another language); the people using ScreenVoicer speak
+    // Ukrainian or English, so anything else is redone in Ukrainian
+    if (language && language !== 'uk' && language !== 'en') {
       result = await run('uk');
       language = 'uk';
     }
-    return json({ text: String(result?.text || '').trim(), language, engine: 'whisper' });
+    const text = String(result?.text || '').trim();
+    // what came in, without the words: for checking the service from the logs (npx wrangler tail)
+    console.log(JSON.stringify({ engine: 'whisper', language, seconds, chars: text.length, app }));
+    return json({ text, language, engine: 'whisper' });
   } catch (error) {
     console.log('transcription failed', String(error));
     return json({ error: 'unavailable' }, 503);
