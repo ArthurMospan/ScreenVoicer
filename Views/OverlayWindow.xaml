@@ -95,14 +95,14 @@
             </Setter>
         </Style>
 
-        <!-- Save: a square of denser glass with a thin white edge — the square shape sets it apart from the round tools -->
+        <!-- Save: a circle of denser glass with a thin white edge — the fill and the edge set it apart from the tools -->
         <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource PillButton}">
             <Setter Property="Foreground" Value="#FFFFFF"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Grid>
-                            <Border x:Name="fill" CornerRadius="11" Background="#57FFFFFF" BorderBrush="#80FFFFFF" BorderThickness="1"/>
+                            <Border x:Name="fill" CornerRadius="17" Background="#57FFFFFF" BorderBrush="#80FFFFFF" BorderThickness="1"/>
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Grid>
                         <ControlTemplate.Triggers>

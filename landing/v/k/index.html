@@ -505,6 +505,13 @@ footer { padding: 0 0 48px; font-size: 13px; color: var(--faint); text-align: ce
 .inst .ibtn { position: absolute; right: 18px; bottom: 16px; height: 34px; padding: 0 18px; border-radius: 11px; display: grid; place-items: center; background: rgba(255,255,255,.92); color: #1d1d22; font-size: 13px; font-weight: 600; }
 
 #dbgOut { position: fixed; z-index: 99; left: 8px; bottom: 8px; padding: 6px 10px; border-radius: 8px; background: #000; color: #0f0; font: 12px/1.3 var(--mono); }
+/* link preview: the picture the apps make — the screenshot, the comment under it on a dark band */
+.ogi { margin-top: 7px; border-radius: 8px; overflow: hidden; background: #0f0f13; }
+.ogi svg { display: block; margin: 0 !important; border-radius: 0 !important; }
+.ogc { padding: 7px 10px 8px; background: #0f0f13; text-align: left; }
+.ogt { padding-left: 9px; box-shadow: inset 2px 0 0 #ff8a4c; color: #f4f4f7; font-size: 11px; line-height: 14px; font-weight: 600; }
+.ogm { padding-left: 9px; margin-top: 3px; color: #aaaab6; font-size: 9.5px; line-height: 12px; font-weight: 400; }
+.msg .mpv .pim { background: #0f0f13; }
 </style>
 </head>
 <body>
@@ -1052,7 +1059,7 @@ footer { padding: 0 0 48px; font-size: 13px; color: var(--faint); text-align: ce
                 <div class="msg">
                   <div class="mh"><i>Д</i><div><b>Дмитро</b><small>у мережі</small></div></div>
                   <div class="mb in" style="top:72px">Що там із кошиком?</div>
-                  <div class="mb out" id="pv-b" style="top:118px"><span class="ml">screenvoicer…/s/7Kq2x</span><div class="mpv" id="pv-c"><b>ScreenVoicer</b><strong>2 знімки</strong><span>1. Кнопка «Оплатити» перекриває суму на телефоні</span><div class="pim"><svg viewBox="0 0 480 262" preserveAspectRatio="xMidYMid slice"><use href="#shot-cart"/></svg></div></div><span class="mt">14:36</span></div>
+                  <div class="mb out" id="pv-b" style="top:118px"><span class="ml">screenvoicer…/s/7Kq2x</span><div class="mpv" id="pv-c"><b>ScreenVoicer</b><strong>2 знімки екрана з коментарями</strong><div class="pim"><svg viewBox="0 0 480 262" preserveAspectRatio="xMidYMid slice"><use href="#shot-cart"/></svg><div class="ogc"><div class="ogt">Кнопка «Оплатити» перекриває суму на телефоні</div><div class="ogm">Ще 1 знімок за посиланням</div></div></div></div><span class="mt">14:36</span></div>
                   <div class="mb in" id="pv-r" style="top:388px">Бачу. Виправлю сьогодні</div>
                 </div>
               </div>

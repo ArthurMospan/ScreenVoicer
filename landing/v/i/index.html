@@ -456,6 +456,14 @@ html:has(.zoom[open]) { overflow: hidden; }
 
 /* debug readout (#dbg) */
 #dbgOut { position: fixed; z-index: 99; left: 8px; bottom: 8px; padding: 6px 10px; border-radius: 8px; background: #000; color: #0f0; font: 12px/1.3 var(--mono); }
+/* link preview: the picture the apps make — the screenshot, the comment under it on a dark band */
+.ogi { margin-top: 7px; border-radius: 8px; overflow: hidden; background: #0f0f13; }
+.ogi svg { display: block; margin: 0 !important; border-radius: 0 !important; }
+.ogc { padding: 7px 10px 8px; background: #0f0f13; text-align: left; }
+.ogt { padding-left: 9px; box-shadow: inset 2px 0 0 #ff8a4c; color: #f4f4f7; font-size: 11px; line-height: 14px; font-weight: 600; }
+.ogm { padding-left: 9px; margin-top: 3px; color: #aaaab6; font-size: 9.5px; line-height: 12px; font-weight: 400; }
+.m-card .ogi { border-radius: 6px; }
+.m-card .ogi svg { height: 72px; }
 </style>
 </head>
 <body>
@@ -816,9 +824,9 @@ html:has(.zoom[open]) { overflow: hidden; }
             <div class="msg">
               <div class="m-in" id="m-in">Де саме не працює? Скинь, будь ласка.</div>
               <div class="m-out" id="m-out"><span class="m-link">screenvoicer…/s/7Kq2xM</span>
-                <div class="m-card"><em>ScreenVoicer</em><b>Кнопка «Зберегти» не реагує, якщо змінити email</b><svg viewBox="0 0 480 262"><use href="#shot-form"/></svg></div>
+                <div class="m-card"><em>ScreenVoicer</em><b>Знімок екрана з коментарем</b><div class="ogi"><svg viewBox="0 0 480 262" preserveAspectRatio="xMidYMid slice"><use href="#shot-form"/></svg><div class="ogc"><div class="ogt">Кнопка «Зберегти» не реагує, якщо змінити email</div></div></div></div>
               </div>
-              <div class="m-in" id="m-re" style="top:250px">Бачу, дякую! Зараз виправлю.</div>
+              <div class="m-in" id="m-re" style="top:262px">Бачу, дякую! Зараз виправлю.</div>
             </div>
           </div></div>
           <div class="tt"><b>У месенджері видно все одразу</b><span>Telegram, WhatsApp, Slack: картинка й коментар у прев’ю.</span></div>

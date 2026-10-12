@@ -29,7 +29,6 @@ namespace ScreenVoicer.Views
         private readonly IClipboardService _clipboardService;
         private readonly ISettingsService _settingsService;
         private readonly Action _startCapture;
-        private readonly Action<int>? _startDelayedCapture;
         private readonly Func<IReadOnlyList<ScreenshotHistoryItem>, Task<ShareResult?>>? _share;
         private readonly Func<ScreenshotHistoryItem, Task<bool>>? _unshare;
         private bool _sharing;
@@ -47,7 +46,6 @@ namespace ScreenVoicer.Views
             IClipboardService clipboardService,
             ISettingsService settingsService,
             Action startCapture,
-            Action<int>? startDelayedCapture = null,
             Func<IReadOnlyList<ScreenshotHistoryItem>, Task<ShareResult?>>? share = null,
             Func<ScreenshotHistoryItem, Task<bool>>? unshare = null)
         {
@@ -57,10 +55,8 @@ namespace ScreenVoicer.Views
             _clipboardService = clipboardService;
             _settingsService = settingsService;
             _startCapture = startCapture;
-            _startDelayedCapture = startDelayedCapture;
             _share = share;
             _unshare = unshare;
-            BtnDelayedCapture.Visibility = startDelayedCapture != null ? Visibility.Visible : Visibility.Collapsed;
 
             _searchDebounce = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
             _searchDebounce.Tick += (_, _) =>
@@ -222,33 +218,6 @@ namespace ScreenVoicer.Views
         }
 
         private void OnNewCaptureClick(object sender, RoutedEventArgs e) => _startCapture();
-
-        /// <summary>«3 / 5 / 10 s» next to «New screenshot»: the gallery steps aside for the countdown.</summary>
-        private void OnDelayedCaptureClick(object sender, RoutedEventArgs e)
-        {
-            if (_startDelayedCapture == null || sender is not Button button)
-            {
-                return;
-            }
-
-            var menu = new ContextMenu
-            {
-                PlacementTarget = button,
-                Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom,
-                VerticalOffset = 6
-            };
-            foreach (int seconds in new[] { 3, 5, 10 })
-            {
-                var item = new MenuItem { Header = $"Знімок через {seconds} с" };
-                item.Click += (_, _) =>
-                {
-                    WindowState = WindowState.Minimized;
-                    _startDelayedCapture(seconds);
-                };
-                menu.Items.Add(item);
-            }
-            menu.IsOpen = true;
-        }
 
         private void OnOpenFolderClick(object sender, RoutedEventArgs e)
         {

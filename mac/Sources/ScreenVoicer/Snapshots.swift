@@ -119,7 +119,6 @@ enum Snapshots {
         }
         let gallery = GalleryModel(history: history)
         gallery.hotkeyText = { "⌥⇧S" }
-        gallery.startDelayedCapture = { _ in }
         await gallery.load()
         try? await Task.sleep(nanoseconds: 800_000_000) // thumbnails decode in the background
         gallery.selected = [gallery.all[1].id, gallery.all[2].id]
@@ -129,6 +128,19 @@ enum Snapshots {
         empty.hotkeyText = { "⌥⇧S" }
         await empty.load()
         save("gallery-empty", GalleryView(model: empty).frame(width: 900, height: 560), background: Theme.window)
+
+        // The picture messengers show for a shared link
+        for (name, comment, more) in [("share-card", comments[0], 0), ("share-card-more", comments[2] + ". " + comments[0] + ". " + comments[2], 2),
+                                      ("share-card-plain", "", 0)] {
+            if let jpeg = ShareService.makePreview(path: (settings.outputDirectory as NSString)
+                .appendingPathComponent("screenshot_20261010_120000_000.png"), caption: comment, moreShots: more) {
+                try? jpeg.write(to: directory.appendingPathComponent("\(name).jpg"))
+                print("OK    snapshot \(name)")
+            } else {
+                print("FAIL  snapshot \(name)")
+                failures += 1
+            }
+        }
 
         // Dialogs
         let hotkey = HotkeyModel(current: HotkeyGesture.parse("Alt+Shift+S")!)
@@ -263,7 +275,6 @@ private final class SampleMenuHost: MenuHost {
     var updateVersion: String?
     var updateProgress: Double?
     func capture() {}
-    func captureDelayed(_ seconds: Int) {}
     func openGallery() {}
     func openScreenshotsFolder() {}
     func selectMicrophone(_ microphone: MicrophoneInfo) {}

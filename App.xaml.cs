@@ -683,7 +683,6 @@ namespace ScreenVoicer
         }
 
         void ITrayMenuHost.Capture() => TriggerCapture(CaptureTrigger.TrayMenu);
-        void ITrayMenuHost.CaptureDelayed(int seconds) => TriggerDelayedCapture(seconds);
         void ITrayMenuHost.OpenGallery() => OpenGallery();
         void ITrayMenuHost.OpenScreenshotsFolder() => OpenScreenshotsFolder();
         void ITrayMenuHost.SelectMicrophone(MicrophoneInfo microphone) => SelectMicrophone(microphone);
@@ -844,7 +843,7 @@ namespace ScreenVoicer
 
             if (_gallery == null)
             {
-                _gallery = new GalleryWindow(_history, _clipboard, _settings, () => TriggerCapture(CaptureTrigger.Gallery), TriggerDelayedCapture,
+                _gallery = new GalleryWindow(_history, _clipboard, _settings, () => TriggerCapture(CaptureTrigger.Gallery),
                     CreateShareAsync, DeleteShareAsync);
                 _gallery.Closed += (_, _) => _gallery = null;
                 _gallery.Show();

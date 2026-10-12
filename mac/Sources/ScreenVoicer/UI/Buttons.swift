@@ -49,11 +49,11 @@ struct GlassIconButtonStyle: ButtonStyle {
     }
 }
 
-/// Save: a 34 px rounded square of denser glass with a thin white edge — set apart from the round tools.
+/// Save: a 34 px circle of denser glass with a thin white edge — the fill and the edge set it apart from the tools.
 struct SaveButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         HoverBody { hover in
-            let shape = RoundedRectangle(cornerRadius: 11, style: .continuous)
+            let shape = Circle()
             configuration.label
                 .foregroundColor(.white)
                 .frame(width: 34, height: 34)
@@ -195,7 +195,7 @@ struct MenuRowStyle: ButtonStyle {
     }
 }
 
-/// Glass chip of the menu: delay buttons, the language switch.
+/// Glass chip of the menu: the language switch.
 struct MenuChipStyle: ButtonStyle {
     var on = false
 

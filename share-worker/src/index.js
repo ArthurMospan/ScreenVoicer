@@ -103,7 +103,8 @@ async function createShare(request, env, url) {
     deleteHash: await sha256(deleteToken),
     title: String(meta.title || '').slice(0, 200),
     app: String(meta.app || '').slice(0, 40),
-    preview: preview ? { ext: preview.ext } : null,
+    // caption: the app wrote the comment under the screenshot in the preview picture (apps from 1.12.1)
+    preview: preview ? { ext: preview.ext, caption: meta.previewCaption === true } : null,
     items
   }), { expirationTtl: ttl });
 
@@ -149,6 +150,7 @@ async function sharePage(env, url, id, format) {
   const link = `${url.origin}/s/${id}`;
   const imageUrl = n => `${url.origin}/i/${id}/${n}.${share.items[n].ext}`;
   const expiresText = new Date(share.expiresAt).toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Kyiv' });
+  const expiresShort = new Date(share.expiresAt).toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', timeZone: 'Europe/Kyiv' });
   const items = share.items.map((item, n) => ({
     src: imageUrl(n),
     ext: item.ext,
@@ -174,19 +176,23 @@ async function sharePage(env, url, id, format) {
 
   const shots = count === 1 ? 'Знімок екрана' : `${count} ${plural(count, 'знімок', 'знімки', 'знімків')} екрана`;
   const first = items.map(i => i.comment).find(Boolean) || '';
-  // Messengers show the site name, the title, the description and the picture: the comment is the useful part.
-  const ogTitle = first ? (count === 1 ? truncate(oneLine(first), 90) : `${shots}: ${truncate(oneLine(first), 70)}`) : shots;
-  const ogDescription = count === 1
-    ? (oneLine(first).length > 90 ? truncate(oneLine(first), 300) : 'Знімок екрана з коментарем у ScreenVoicer')
-    : truncate(items.map((i, n) => i.comment ? `${n + 1}. ${oneLine(i.comment)}` : '').filter(Boolean).join('  ') || 'Знімки екрана в ScreenVoicer', 300);
+  // Messengers show the site name, a bold title, the description, then the picture, always in that order. The comment
+  // goes in exactly once: as the description, or (apps from 1.12.1) written under the screenshot in the preview picture
+  // itself, which reads picture first, comment below; then there is no description at all.
+  const card = !!(share.preview && share.preview.caption);
+  const ogTitle = first ? (count === 1 ? 'Знімок екрана з коментарем' : `${shots} з коментарями`) : shots;
+  const ogDescription = card || !first ? ''
+    : count === 1 ? truncate(oneLine(first), 300)
+    : truncate(items.map((i, n) => i.comment ? `${n + 1}. ${oneLine(i.comment)}` : '').filter(Boolean).join('  '), 300);
   const ogImage = share.preview ? `${url.origin}/i/${id}/p.${share.preview.ext}` : imageUrl(0);
+  const tabTitle = first ? truncate(oneLine(first), 70) : shots;
 
   const head = `
-<meta name="description" content="${esc(ogDescription)}">
+${ogDescription ? `<meta name="description" content="${esc(ogDescription)}">` : ''}
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="ScreenVoicer">
 <meta property="og:title" content="${esc(ogTitle)}">
-<meta property="og:description" content="${esc(ogDescription)}">
+${ogDescription ? `<meta property="og:description" content="${esc(ogDescription)}">` : ''}
 <meta property="og:url" content="${link}">
 <meta property="og:image" content="${ogImage}">
 <meta property="og:image:alt" content="${esc(truncate(first || shots, 200))}">
@@ -204,10 +210,10 @@ ${!share.preview && items[0].width ? `<meta property="og:image:width" content="$
     <div class="cap${count > 1 ? ' step' : ''}">
       ${count > 1 ? `<span class="marker" aria-label="Крок ${n + 1}">${n + 1}</span>` : ''}
       ${item.comment ? `<p class="comment">${keepNumbers(esc(item.comment))}</p>` : '<p class="comment none">Без коментаря</p>'}
-    </div>
-    <div class="acts">
-      <button class="chip" type="button" data-copy="${n}" title="${item.comment ? 'Знімок і коментар разом' : 'Знімок у буфер обміну'}">${ICON.copy}<span>Копіювати</span></button>
-      <button class="chip" type="button" data-download="${n}" title="PNG${item.comment ? ' з коментарем усередині файлу' : ''}">${ICON.download}<span>Завантажити</span></button>
+      <div class="acts">
+        <button class="ib" type="button" data-copy="${n}" aria-label="Копіювати" title="${item.comment ? 'Копіювати знімок разом із коментарем' : 'Копіювати знімок'}">${ICON.copy}</button>
+        <button class="ib" type="button" data-download="${n}" aria-label="Завантажити" title="Завантажити PNG${item.comment ? ' з коментарем усередині файлу' : ''}">${ICON.download}</button>
+      </div>
     </div>
   </article>`).join('');
 
@@ -215,23 +221,18 @@ ${!share.preview && items[0].width ? `<meta property="og:image:width" content="$
   const body = `
 <header class="bar"><div class="bar-in">
   <a class="brand" href="${LANDING}" aria-label="ScreenVoicer: сайт програми">${LOGO}<span>ScreenVoicer</span></a>
-  <button class="primary" id="copyLink" type="button" aria-label="Копіювати посилання">${ICON.link}<span>Копіювати посилання</span></button>
+  <span class="meta" title="Посилання діє до ${esc(expiresText)}. Автор може видалити його раніше.">${count} ${plural(count, 'знімок', 'знімки', 'знімків')} · до ${esc(expiresShort)}</span>
+  <div class="tools">
+    <button class="chip" id="copyAi" type="button" aria-label="Копіювати для AI" title="Текст із посиланнями на знімки й коментарями: вставте в ChatGPT, Claude чи Cursor">${ICON.spark}<span>Копіювати для AI</span></button>
+    ${count > 1 ? `<button class="chip" id="zip" type="button" aria-label="Завантажити все" title="Усі знімки одним архівом, коментарі всередині">${ICON.download}<span>Завантажити все</span></button>` : ''}
+    <button class="primary" id="copyLink" type="button" aria-label="Копіювати посилання">${ICON.link}<span>Копіювати посилання</span></button>
+  </div>
 </div></header>
 <main>
-  <div class="intro">
-    <h1>${esc(shots)}</h1>
-    <p class="until">Посилання діє до ${esc(expiresText)}</p>
-    <div class="tools">
-      <button class="chip" id="copyAi" type="button" title="Markdown із посиланнями на знімки й коментарями: вставте в ChatGPT, Claude чи Cursor">${ICON.spark}<span>Копіювати для AI</span></button>
-      ${count > 1 ? `<button class="chip" id="zip" type="button" title="Усі знімки одним ZIP-архівом, коментарі всередині">${ICON.download}<span>Завантажити все</span></button>` : ''}
-    </div>
-  </div>
+  <h1 class="sr">${esc(shots)}</h1>
   ${figures}
 </main>
-<footer>
-  <p>Автор може видалити посилання раніше. Коментар записаний і в сам файл знімка, тож не загубиться після завантаження.</p>
-  <p><a href="${LANDING}">Зроблено в ScreenVoicer</a>: знімок екрана з коментарем голосом за 10 секунд, для Windows і Mac.</p>
-</footer>
+<footer><a href="${LANDING}">Зроблено в ScreenVoicer</a> · знімок екрана з голосовим коментарем, для Windows і Mac</footer>
 <dialog id="lb" aria-label="Знімок на весь екран">
   <div class="lb-top"><span id="lbCount"></span><button type="button" class="lb-x" data-close aria-label="Закрити">${ICON.close}</button></div>
   <div class="lb-view" id="lbView"><img id="lbImg" alt=""></div>
@@ -244,7 +245,7 @@ ${!share.preview && items[0].width ? `<meta property="og:image:width" content="$
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script>const SHARE = ${safeJson(data)};</script>
 <script>${CLIENT}</script>`;
-  return page(200, ogTitle, body, head);
+  return page(200, tabTitle, body, head);
 }
 
 function toMarkdown(items, link, expiresText) {
@@ -535,43 +536,46 @@ button { font: inherit; color: inherit; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .i { width: 17px; height: 17px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
 
+.sr { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* One thin bar holds everything about the link; the page below is the screenshots. */
 .bar { position: sticky; top: 0; z-index: 5;
-  padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 12px max(16px, env(safe-area-inset-left));
-  background: rgba(15,15,19,.78); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); border-bottom: 1px solid var(--line); }
-.bar-in { max-width: 1088px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 600; font-size: 16px; letter-spacing: -.01em; }
-.logo { width: 28px; height: 28px; flex: none; }
-.primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 38px; padding: 0 16px; border: 0; border-radius: 11px; cursor: pointer;
-  background: var(--primary); color: var(--ink); font-weight: 600; font-size: 14.5px; text-decoration: none; white-space: nowrap; }
+  padding: max(9px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 9px max(16px, env(safe-area-inset-left));
+  background: rgba(15,15,19,.8); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); border-bottom: 1px solid var(--line); }
+.bar-in { max-width: 1280px; margin: 0 auto; display: flex; align-items: center; gap: 14px; }
+.brand { display: flex; align-items: center; gap: 9px; flex: none; text-decoration: none; font-weight: 600; font-size: 15px; letter-spacing: -.01em; }
+.logo { width: 26px; height: 26px; flex: none; }
+.meta { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 14px;
+  padding-left: 14px; border-left: 1px solid var(--line); }
+.tools { display: flex; gap: 8px; flex: none; }
+.primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 34px; padding: 0 14px; border: 0; border-radius: 10px; cursor: pointer;
+  background: var(--primary); color: var(--ink); font-weight: 600; font-size: 14px; text-decoration: none; white-space: nowrap; }
 .primary .i { color: var(--accent); stroke-width: 2.2; }
 .primary:hover { background: #fff; }
-.chip { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 14px; border-radius: 10px; cursor: pointer;
+.chip { display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 34px; padding: 0 12px; border-radius: 10px; cursor: pointer;
   background: var(--glass); border: 1px solid var(--edge); color: var(--soft); font-weight: 600; font-size: 14px; white-space: nowrap; }
 .chip:hover { background: var(--glass-hover); color: var(--text); }
 .chip:disabled { opacity: .55; cursor: progress; }
 
-main { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
-.intro { padding: 34px 0 6px; }
-h1 { margin: 0; font-size: clamp(26px, 4vw, 34px); line-height: 1.15; font-weight: 650; letter-spacing: -.025em; }
-.until { margin: 6px 0 0; color: var(--muted); font-size: 15px; }
-.tools { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+main { max-width: 1312px; margin: 0 auto; padding: 0 16px; }
+.shot { width: fit-content; min-width: min(100%, 560px); max-width: 100%; margin: 40px 0 0; scroll-margin-top: 64px; }
+.shot:first-of-type { margin-top: 20px; }
+.frame { display: block; width: fit-content; max-width: 100%; padding: 0; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--surface); cursor: zoom-in; }
+.frame img { display: block; max-width: 100%; height: auto; }
+.cap { display: flex; align-items: flex-start; gap: 14px; margin: 14px 0 0; }
+.marker { display: grid; place-items: center; width: 30px; height: 30px; flex: none; border-radius: 50%; background: var(--accent); color: #fff;
+  font-weight: 700; font-size: 15px; box-shadow: 0 0 0 2px #fff, 0 2px 8px rgba(0,0,0,.4); margin: 2px 2px 0; }
+.comment { flex: 1; min-width: 0; margin: 0; font-size: clamp(17px, 2vw, 20px); line-height: 1.5; font-weight: 500; letter-spacing: -.005em; white-space: pre-wrap; overflow-wrap: anywhere; max-width: 64ch; }
+.cap:not(.step) .comment { padding-left: 14px; border-left: 3px solid var(--accent); }
+.cap.step .comment { padding-top: 2px; }
+.comment.none { color: var(--muted); font-weight: 400; font-size: 15px; border-left-color: var(--line) !important; }
+.acts { display: flex; gap: 6px; flex: none; margin-left: auto; }
+.ib { display: grid; place-items: center; width: 36px; height: 36px; padding: 0; border-radius: 10px; cursor: pointer;
+  background: var(--glass); border: 1px solid var(--line); color: var(--soft); }
+.ib:hover { background: var(--glass-hover); border-color: var(--edge); color: var(--text); }
 
-.shot { margin: 30px 0 0; scroll-margin-top: 80px; }
-.frame { display: block; width: 100%; padding: 0; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: var(--surface); cursor: zoom-in; }
-.frame img { display: block; width: 100%; height: auto; }
-.cap { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; margin: 18px 0 0; padding-left: 16px; border-left: 3px solid var(--accent); }
-.cap.step { grid-template-columns: auto minmax(0, 1fr); padding-left: 0; border-left: 0; align-items: start; }
-.marker { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--accent); color: #fff;
-  font-weight: 700; font-size: 16px; box-shadow: 0 0 0 2.5px #fff, 0 2px 8px rgba(0,0,0,.4); margin: 2px 2px 0; }
-.comment { margin: 0; font-size: clamp(18px, 2.1vw, 21px); line-height: 1.5; font-weight: 500; letter-spacing: -.005em; white-space: pre-wrap; overflow-wrap: anywhere; max-width: 62ch; }
-.cap.step .comment { padding-top: 3px; }
-.comment.none { color: var(--muted); font-weight: 400; font-size: 16px; }
-.acts { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 0; }
-.cap:not(.step) + .acts { padding-left: 19px; }
-.cap.step + .acts { padding-left: 50px; }
-
-footer { max-width: 1120px; margin: 56px auto 0; padding: 22px 16px max(36px, env(safe-area-inset-bottom)); border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }
-footer p { margin: 0 0 6px; max-width: 70ch; }
+footer { max-width: 1312px; margin: 48px auto 0; padding: 18px 16px max(28px, env(safe-area-inset-bottom)); color: var(--muted); font-size: 13.5px; }
+footer a { color: var(--soft); }
 
 .toast { position: fixed; left: 50%; bottom: max(22px, env(safe-area-inset-bottom)); transform: translate(-50%, 16px); opacity: 0; pointer-events: none; z-index: 20;
   width: max-content; max-width: calc(100vw - 32px); padding: 11px 16px; border-radius: 12px; background: rgba(28,28,35,.96); border: 1px solid var(--edge);
@@ -595,16 +599,28 @@ dialog.single .lb-nav { visibility: hidden; }
 
 .empty { min-height: 88vh; display: grid; place-content: center; justify-items: center; text-align: center; gap: 12px; padding: 24px 16px; }
 .empty .logo { width: 64px; height: 64px; margin-bottom: 8px; }
-.empty h1 { font-size: 28px; }
+.empty h1 { margin: 0; font-size: 28px; line-height: 1.15; font-weight: 650; letter-spacing: -.025em; }
 .empty p { color: var(--muted); max-width: 42ch; margin: 0 0 10px; }
 
-@media (max-width: 560px) {
+@media (max-width: 920px) {
+  .bar .chip span { display: none; }
+  .bar .chip { width: 34px; padding: 0; }
+}
+@media (max-width: 600px) {
+  .bar-in { gap: 10px; }
+  .brand span { display: none; }
+  .meta { padding-left: 10px; font-size: 13px; }
+  .tools { gap: 6px; }
   .bar .primary span { display: none; }
-  .bar .primary { width: 40px; padding: 0; }
-  .intro { padding-top: 24px; }
-  .shot { margin-top: 26px; }
-  .frame { border-radius: 10px; }
-  .cap:not(.step) + .acts, .cap.step + .acts { padding-left: 0; }
+  .bar .primary { width: 34px; padding: 0; }
+  main { padding: 0 10px; }
+  .shot { margin-top: 32px; }
+  .shot:first-of-type { margin-top: 10px; }
+  .frame { border-radius: 9px; }
+  .cap { gap: 10px; margin-top: 12px; }
+  .comment { font-size: 17px; }
+  .cap:not(.step) .comment { padding-left: 11px; }
+  .ib { width: 34px; height: 34px; }
   .lb-nav { width: 36px; height: 36px; }
 }
 @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }

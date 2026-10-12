@@ -172,14 +172,6 @@
                     </Grid>
                 </Button>
 
-                <StackPanel Orientation="Horizontal" Margin="6,9,0,2">
-                    <v:GlyphIcon Data="{StaticResource Icon.Timer}" Width="15" Height="15" Foreground="{StaticResource MenuMuted}" Margin="0,0,7,0"/>
-                    <TextBlock Text="Із затримкою" Foreground="{StaticResource MenuMuted}" FontSize="12.5" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                    <Button Style="{StaticResource Chip}" Content="3 с" Tag="3" Click="OnDelayClick"/>
-                    <Button Style="{StaticResource Chip}" Content="5 с" Tag="5" Click="OnDelayClick"/>
-                    <Button Style="{StaticResource Chip}" Content="10 с" Tag="10" Click="OnDelayClick"/>
-                </StackPanel>
-
                 <Rectangle Style="{StaticResource Separator}"/>
 
                 <Button Style="{StaticResource Row}" Click="OnGalleryClick">

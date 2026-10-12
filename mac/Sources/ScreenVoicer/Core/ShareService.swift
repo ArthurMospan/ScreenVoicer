@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import ImageIO
 import UniformTypeIdentifiers
@@ -16,6 +17,9 @@ enum ShareService {
     static let maxImages = 10
     private static let maxImageBytes: Int64 = 8 * 1024 * 1024
     private static let previewWidth = 1200
+    private static let previewPictureHeight = 800
+    private static let cardPad = 56
+    private static let cardTextX = 86
     private static let previewQuality = 0.82
     private static let maxPreviewBytes = 1024 * 1024
 
@@ -41,8 +45,13 @@ enum ShareService {
         var body = Data()
         func append(_ text: String) { body.append(Data(text.utf8)) }
 
+        // the link preview: the first screenshot with its comment written under it (see makePreview)
+        let caption = items[0].transcribedText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let preview = makePreview(path: items[0].imagePath, caption: caption, moreShots: items.count - 1)
+
         let meta: [String: Any] = [
             "app": "ScreenVoicer \(AppInfo.version)",
+            "previewCaption": preview != nil && !caption.isEmpty,
             "items": items.map { item in
                 [
                     "comment": item.transcribedText,
@@ -70,7 +79,7 @@ enum ShareService {
             body.append(try Data(contentsOf: url))
             append("\r\n")
         }
-        if let first = items.first, let preview = makePreview(path: first.imagePath) {
+        if let preview {
             append("--\(boundary)\r\nContent-Disposition: form-data; name=\"preview\"; filename=\"preview.jpg\"\r\nContent-Type: image/jpeg\r\n\r\n")
             body.append(preview)
             append("\r\n")
@@ -118,23 +127,85 @@ enum ShareService {
         Log.info("[Share] \(id) deleted.")
     }
 
-    /// A small JPEG of the first screenshot for link previews: WhatsApp and some messengers skip big images, so
-    /// without it the link would arrive as bare text. The same size and quality as the Windows app (1200 px wide).
-    static func makePreview(path: String) -> Data? {
+    /// The picture messengers show for a link (a small JPEG: WhatsApp and others skip big images). Messengers always
+    /// put their text above the picture, so the comment is written into the picture itself, under the screenshot:
+    /// screenshot first, comment below, nothing repeated. Card layout, the same as the Windows app: 1200 px wide; the
+    /// screenshot fitted into 1200 × 800 on #0F0F13; under it, when there is a comment, a band with 40/44 px padding,
+    /// a 6 px orange bar at x 56 and the text at x 86 (40 px semibold, 52 px lines, at most three, then «…»), plus
+    /// «Ще N знімки за посиланням» (28 px) when the link holds more screenshots.
+    static func makePreview(path: String, caption: String = "", moreShots: Int = 0) -> Data? {
         guard let source = CGImageSourceCreateWithURL(URL(fileURLWithPath: path) as CFURL, nil),
               let props = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
               let width = props[kCGImagePropertyPixelWidth] as? Int, let height = props[kCGImagePropertyPixelHeight] as? Int,
-              width > 0 else { return nil }
-        let scale = min(1, CGFloat(previewWidth) / CGFloat(width))
+              width > 0, height > 0 else { return nil }
+        let scale = min(1, CGFloat(previewWidth) / CGFloat(width), CGFloat(previewPictureHeight) / CGFloat(height))
+        let pw = (CGFloat(width) * scale).rounded(), ph = (CGFloat(height) * scale).rounded()
         let options: [CFString: Any] = [
             kCGImageSourceCreateThumbnailFromImageAlways: true,
-            kCGImageSourceThumbnailMaxPixelSize: Int((CGFloat(max(width, height)) * scale).rounded()),
+            kCGImageSourceThumbnailMaxPixelSize: Int(max(pw, ph)),
             kCGImageSourceCreateThumbnailWithTransform: true
         ]
-        guard let thumbnail = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else { return nil }
+        guard let picture = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else { return nil }
+
+        let caption = caption.trimmingCharacters(in: .whitespacesAndNewlines)
+        let textWidth = CGFloat(previewWidth - cardTextX - cardPad)
+        var text: NSAttributedString?, more: NSAttributedString?
+        var textHeight: CGFloat = 0, band: CGFloat = 0
+        if !caption.isEmpty {
+            let paragraph = NSMutableParagraphStyle()
+            paragraph.minimumLineHeight = 52
+            paragraph.maximumLineHeight = 52
+            paragraph.lineBreakMode = .byWordWrapping
+            let attributed = NSAttributedString(string: caption, attributes: [
+                .font: NSFont.systemFont(ofSize: 40, weight: .semibold),
+                .foregroundColor: NSColor(rgb: 0xF4F4F7),
+                .paragraphStyle: paragraph
+            ])
+            let full = attributed.boundingRect(with: CGSize(width: textWidth, height: .greatestFiniteMagnitude),
+                                               options: [.usesLineFragmentOrigin]).height
+            textHeight = CGFloat(max(1, min(3, Int((full / 52 - 0.05).rounded(.up))))) * 52
+            text = attributed
+            band = 40 + textHeight + 44
+            if moreShots > 0 {
+                more = NSAttributedString(string: "Ще \(Formats.plural(moreShots, "знімок", "знімки", "знімків")) за посиланням", attributes: [
+                    .font: NSFont.systemFont(ofSize: 28, weight: .regular),
+                    .foregroundColor: NSColor(rgb: 0xAAAAB6)
+                ])
+                band += 14 + 36
+            }
+        }
+
+        let canvasHeight = Int((ph + band).rounded(.up))
+        guard let ctx = CGContext(data: nil, width: previewWidth, height: canvasHeight, bitsPerComponent: 8, bytesPerRow: 0,
+                                  space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                                  bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue) else { return nil }
+        // top-left origin, like the Windows drawing code
+        ctx.translateBy(x: 0, y: CGFloat(canvasHeight))
+        ctx.scaleBy(x: 1, y: -1)
+        ctx.setFillColor(NSColor(rgb: 0x0F0F13).cgColor)
+        ctx.fill(CGRect(x: 0, y: 0, width: CGFloat(previewWidth), height: CGFloat(canvasHeight)))
+        ctx.interpolationQuality = .high
+        ctx.saveGState()
+        ctx.translateBy(x: 0, y: ph) // CGContext.draw expects y up: flip back for the picture
+        ctx.scaleBy(x: 1, y: -1)
+        ctx.draw(picture, in: CGRect(x: (CGFloat(previewWidth) - pw) / 2, y: 0, width: pw, height: ph))
+        ctx.restoreGState()
+        if let text {
+            let top = ph + 40
+            ctx.setFillColor(NSColor(rgb: 0xFF8A4C).cgColor)
+            ctx.fill(CGRect(x: CGFloat(cardPad), y: top + 6, width: 6, height: max(20, textHeight - 12)))
+            NSGraphicsContext.saveGraphicsState()
+            NSGraphicsContext.current = NSGraphicsContext(cgContext: ctx, flipped: true)
+            text.draw(with: CGRect(x: CGFloat(cardTextX), y: top, width: textWidth, height: textHeight + 4),
+                      options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine])
+            more?.draw(at: CGPoint(x: CGFloat(cardTextX), y: top + textHeight + 14))
+            NSGraphicsContext.restoreGraphicsState()
+        }
+
+        guard let card = ctx.makeImage() else { return nil }
         let data = NSMutableData()
         guard let destination = CGImageDestinationCreateWithData(data, UTType.jpeg.identifier as CFString, 1, nil) else { return nil }
-        CGImageDestinationAddImage(destination, thumbnail, [kCGImageDestinationLossyCompressionQuality: previewQuality] as CFDictionary)
+        CGImageDestinationAddImage(destination, card, [kCGImageDestinationLossyCompressionQuality: previewQuality] as CFDictionary)
         guard CGImageDestinationFinalize(destination), data.length <= maxPreviewBytes else { return nil }
         return data as Data
     }
