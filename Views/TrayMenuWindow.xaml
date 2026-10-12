@@ -213,38 +213,6 @@
                     <Border Style="{StaticResource Dropdown}"><StackPanel x:Name="MicList"/></Border>
                 </Popup>
 
-                <!-- language -->
-                <Button x:Name="LanguageRow" Style="{StaticResource Row}" Click="OnLanguageToggle">
-                    <DockPanel>
-                        <v:GlyphIcon Data="{StaticResource Icon.Globe}" Style="{StaticResource RowIcon}"/>
-                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                            <TextBlock x:Name="TxtLanguage" Style="{StaticResource RowValue}"/>
-                            <v:GlyphIcon x:Name="LanguageChevron" Data="{StaticResource Icon.Chevron}" Style="{StaticResource SmallChevron}"/>
-                        </StackPanel>
-                        <TextBlock Text="Мова голосу" VerticalAlignment="Center"/>
-                    </DockPanel>
-                </Button>
-                <Popup x:Name="LanguagePopup" PlacementTarget="{Binding ElementName=LanguageRow}" Placement="Bottom" HorizontalOffset="-10"
-                       StaysOpen="True" AllowsTransparency="True" PopupAnimation="Fade" Closed="OnDropdownClosed">
-                    <Border Style="{StaticResource Dropdown}"><StackPanel x:Name="LanguageList"/></Border>
-                </Popup>
-
-                <!-- recognition model -->
-                <Button x:Name="ModelRow" Style="{StaticResource Row}" Click="OnModelToggle">
-                    <DockPanel>
-                        <v:GlyphIcon Data="{StaticResource Icon.Chip}" Style="{StaticResource RowIcon}"/>
-                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                            <TextBlock x:Name="TxtModel" Style="{StaticResource RowValue}"/>
-                            <v:GlyphIcon x:Name="ModelChevron" Data="{StaticResource Icon.Chevron}" Style="{StaticResource SmallChevron}"/>
-                        </StackPanel>
-                        <TextBlock Text="Розпізнавання" VerticalAlignment="Center"/>
-                    </DockPanel>
-                </Button>
-                <Popup x:Name="ModelPopup" PlacementTarget="{Binding ElementName=ModelRow}" Placement="Bottom" HorizontalOffset="-10"
-                       StaysOpen="True" AllowsTransparency="True" PopupAnimation="Fade" Closed="OnDropdownClosed">
-                    <Border Style="{StaticResource Dropdown}"><StackPanel x:Name="ModelList"/></Border>
-                </Popup>
-
                 <Button Style="{StaticResource Row}" Click="OnHotkeyClick">
                     <DockPanel>
                         <v:GlyphIcon Data="{StaticResource Icon.Keyboard}" Style="{StaticResource RowIcon}"/>
@@ -290,7 +258,6 @@
                         <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                             <Button Style="{StaticResource Chip}" Content="Перевірити оновлення" Click="OnCheckUpdatesClick"/>
                             <Button Style="{StaticResource Chip}" Content="Журнал" Click="OnOpenLogClick"/>
-                            <Button Style="{StaticResource Chip}" Content="Моделі" Click="OnOpenModelsClick"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>

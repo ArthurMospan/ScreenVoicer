@@ -1851,7 +1851,7 @@ namespace ScreenVoicer.Views
             string how = _recordingHandsFree
                 ? "Говоріть… щоб зупинити — натисніть Пробіл або мікрофон"
                 : "Говоріть… відпустіть Пробіл, коли закінчите";
-            ShowStatus(_transcription.IsModelReady ? how : how + " (розпізнавання ще готується)", StatusKind.Recording);
+            ShowStatus(how, StatusKind.Recording); // recognized online, so no waiting for the model on this computer
         }
 
         /// <summary>Esc while talking: drop this take, keep the rest of the comment.</summary>
@@ -1947,7 +1947,7 @@ namespace ScreenVoicer.Views
 
         private async Task FinishChunkAsync(VoiceChunk chunk, float[] samples)
         {
-            ShowStatus(_transcription.IsModelReady ? "Розпізнаю…" : "Готую розпізнавання…", StatusKind.Busy);
+            ShowStatus("Розпізнаю…", StatusKind.Busy);
 
             string text = string.Empty;
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
@@ -1986,7 +1986,7 @@ namespace ScreenVoicer.Views
             }
             else if (!_transcription.IsModelReady)
             {
-                ShowStatus(_transcription.LastError ?? "Модель розпізнавання недоступна.", StatusKind.Error);
+                ShowStatus("Не вдалося розпізнати голос: перевірте інтернет і спробуйте ще раз.", StatusKind.Error);
             }
             else if (AudioAnalysis.IsDigitalSilence(samples))
             {
@@ -2098,24 +2098,8 @@ namespace ScreenVoicer.Views
                 return;
             }
 
-            switch (_transcription.State)
-            {
-                case ModelState.Ready when _transcription.DownloadingModel is { } next:
-                    ShowStatus($"Говоріть або пишіть · «{next.Title}»: {_transcription.DownloadProgress:P0}", StatusKind.Idle);
-                    break;
-                case ModelState.Ready:
-                    ShowStatus("Утримуйте Пробіл і говоріть, або пишіть", StatusKind.Idle);
-                    break;
-                case ModelState.Downloading:
-                    ShowStatus($"Готую розпізнавання… {_transcription.DownloadProgress:P0} — записувати вже можна.", StatusKind.Busy);
-                    break;
-                case ModelState.Failed:
-                    ShowStatus($"Голос недоступний: {_transcription.LastError}", StatusKind.Error);
-                    break;
-                default:
-                    ShowStatus("Запускаю розпізнавання…", StatusKind.Busy);
-                    break;
-            }
+            // Voice is recognized online, so it is ready whatever the model on this computer is doing
+            ShowStatus("Утримуйте Пробіл і говоріть, або пишіть", StatusKind.Idle);
         }
 
         /// <summary>Idle hints live in the comment placeholder; anything else gets the small status line.</summary>
@@ -2299,7 +2283,7 @@ namespace ScreenVoicer.Views
                     : "Вставте (Ctrl+V) у чат чи задачу — шлях до PNG і коментар уже в буфері.";
                 if (voiceLost)
                 {
-                    message = "Голосовий коментар не встиг розпізнатися (розпізнавання ще готується). " + message;
+                    message = "Голосовий коментар не встиг розпізнатися. " + message;
                 }
 
                 // The clean screenshot is on the clipboard; «Копіювати з підписом» swaps in the same picture with the

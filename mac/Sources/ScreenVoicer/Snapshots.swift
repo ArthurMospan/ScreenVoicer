@@ -73,7 +73,7 @@ enum Snapshots {
         let menuOpen = TrayMenuModel()
         menuOpen.host = host
         menuOpen.refresh()
-        menuOpen.dropdown = .model
+        menuOpen.dropdown = .mic
         menuOpen.aboutOpen = true
         menuOpen.updateVersion = "1.11.0"
         save("menu-expanded", TrayMenuView(model: menuOpen))
@@ -258,7 +258,7 @@ enum Snapshots {
 private final class SampleMenuHost: MenuHost {
     var captureHotkey = "⌥⇧S"
     var appVersion = "1.11.0"
-    var voiceStatus: (text: String, kind: TrayStatusKind) = ("Голос готовий · Точна · Apple M2", .ready)
+    var voiceStatus: (text: String, kind: TrayStatusKind) = ("Голос готовий", .ready)
     var screenshotCount = 23
     func microphones() -> [MicrophoneInfo] {
         [MicrophoneInfo(uid: "", displayName: "Системний за замовчуванням (MacBook Air Microphone)"),
@@ -273,7 +273,7 @@ private final class SampleMenuHost: MenuHost {
     var gpuAvailable = true
     var gpuName: String? = "Apple M2"
     var autostartEnabled = true
-    var aboutText = "ScreenVoicer 1.11.0 — скриншоти з голосовими коментарями для баг-репортів і AI-асистентів.\nРозпізнавання: «Точна», офлайн, на Apple M2.\nСкриншоти: ~/AI_Screenshots"
+    var aboutText = "ScreenVoicer 1.12.7 — скриншоти з голосовими коментарями для баг-репортів і AI-асистентів.\nСкриншоти: ~/AI_Screenshots"
     var updateVersion: String?
     var updateProgress: Double?
     func capture() {}

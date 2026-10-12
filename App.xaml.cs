@@ -54,7 +54,6 @@ namespace ScreenVoicer
         private OverlayWindow? _overlay;
         private GalleryWindow? _gallery;
         private bool _captureStarting;
-        private bool _modelWasDownloading;
         private ModelState _lastReportedState;
         private bool _cleanedUp;
 
@@ -317,37 +316,17 @@ namespace ScreenVoicer
                 return;
             }
 
+            // Voice is recognized online; the model on this computer only stands in without internet, so its
+            // download and loading stay quiet (the log keeps the details).
             var state = _transcription.State;
             UpdateTrayStatus();
-            OfferAccurateModelOnce();
-
-            if (state == _lastReportedState)
+            if (state != _lastReportedState)
             {
-                return;
-            }
-            _lastReportedState = state;
-
-            switch (state)
-            {
-                case ModelState.Downloading:
-                    _modelWasDownloading = true;
-                    break;
-                case ModelState.Ready when _modelWasDownloading:
-                    _modelWasDownloading = false;
-                    _notifications!.ShowToast("Розпізнавання голосу готове",
-                        "Затисніть Пробіл у вікні знімка, щоб надиктувати коментар.", ToastKind.Success, 5000);
-                    break;
-                case ModelState.Failed:
-                    _notifications!.Show(new ToastOptions
-                    {
-                        Title = "Розпізнавання голосу недоступне",
-                        Message = _transcription.LastError ?? "Невідома помилка.",
-                        Kind = ToastKind.Error,
-                        DurationMs = 9000,
-                        ActionText = "Повторити",
-                        OnAction = RetryModel
-                    });
-                    break;
+                _lastReportedState = state;
+                if (state == ModelState.Failed)
+                {
+                    Log.Warn($"[Model] Not available on this computer: {_transcription.LastError}");
+                }
             }
         }
 
@@ -624,16 +603,8 @@ namespace ScreenVoicer
                 return ("Запускаюсь…", TrayStatusKind.Busy);
             }
 
-            string where = t.IsRunningOnGpu ? ShortGpuName(t.GpuName) : "процесор";
-            return t.State switch
-            {
-                ModelState.Ready when t.DownloadingModel != null =>
-                    ($"Завантажую «{t.DownloadingModel.Title}»: {t.DownloadProgress:P0}", TrayStatusKind.Busy),
-                ModelState.Ready => ($"Голос готовий · {t.ActiveModel?.Title} · {where}", TrayStatusKind.Ready),
-                ModelState.Downloading => ($"Завантажую розпізнавання «{t.DownloadingModel?.Title}»: {t.DownloadProgress:P0}", TrayStatusKind.Busy),
-                ModelState.Failed => ("Голос недоступний — відкрийте «Розпізнавання»", TrayStatusKind.Error),
-                _ => ("Розпізнавання запускається…", TrayStatusKind.Busy)
-            };
+            // Voice is recognized online (the model on this computer only stands in without internet), so it is ready
+            return ("Голос готовий", TrayStatusKind.Ready);
         }
 
         /// <summary>"NVIDIA GeForce GTX 1650" → "GTX 1650": fits the one-line status.</summary>
@@ -648,13 +619,7 @@ namespace ScreenVoicer
                 return;
             }
 
-            var t = _transcription;
-            string tip = t.State switch
-            {
-                ModelState.Downloading => $"ScreenVoicer — готую розпізнавання {t.DownloadProgress:P0}",
-                ModelState.Failed => "ScreenVoicer — голос недоступний",
-                _ => $"ScreenVoicer\nКлік або {HotkeyText} — знімок, правий клік — меню"
-            };
+            string tip = $"ScreenVoicer\nКлік або {HotkeyText} — знімок, правий клік — меню";
             _notifyIcon.Text = tip.Length > 120 ? tip[..120] : tip;
             TrayMenuStateChanged?.Invoke(this, EventArgs.Empty);
         }
@@ -685,8 +650,6 @@ namespace ScreenVoicer
 
         string ITrayMenuHost.AboutText =>
             $"ScreenVoicer {Version} — скриншоти з голосовими коментарями для баг-репортів і AI-асистентів.\n" +
-            $"Розпізнавання: «{_transcription?.ActiveModel?.Title ?? "—"}», офлайн, на " +
-            $"{(_transcription?.IsRunningOnGpu == true ? _transcription.GpuName : "процесорі")}.\n" +
             $"Скриншоти: {_settings?.OutputDirectory}";
 
         event EventHandler? ITrayMenuHost.MenuStateChanged
@@ -887,11 +850,9 @@ namespace ScreenVoicer
                 $"• {HotkeyText} — знімок екрана під курсором (змінити: меню трея)\n" +
                 "• Миша — виділити область, потім малювати поверх\n" +
                 "• P H A R T N B E — олівець, маркер, стрілка, рамка, текст, мітки 1-2-3, «Приховати», гумка\n" +
-                "• Затиснути Пробіл — голосовий коментар (розпізнається офлайн, на цьому комп'ютері)\n" +
+                "• Затиснути Пробіл — голосовий коментар\n" +
                 "• Enter — зберегти PNG і скопіювати Markdown, Esc — скасувати\n" +
                 "• Ctrl+Z / Ctrl+Y — скасувати / повторити\n\n" +
-                $"Розпізнавання: «{_transcription?.ActiveModel?.Title}», офлайн, на " +
-                $"{(_transcription?.IsRunningOnGpu == true ? _transcription.GpuName : "процесорі")}\n" +
                 $"Скриншоти: {_settings?.OutputDirectory}\n" +
                 $"Журнал: {Log.LogFilePath}",
                 "Про ScreenVoicer", MessageBoxButton.OK, MessageBoxImage.Information);

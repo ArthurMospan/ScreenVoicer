@@ -105,14 +105,6 @@ namespace ScreenVoicer.Views
                 {
                     MicPopup.IsOpen = false;
                 }
-                if (LanguagePopup.IsOpen && !LanguageRow.IsMouseOver)
-                {
-                    LanguagePopup.IsOpen = false;
-                }
-                if (ModelPopup.IsOpen && !ModelRow.IsMouseOver)
-                {
-                    ModelPopup.IsOpen = false;
-                }
             };
             SizeChanged += (_, _) => KeepAnchoredAndUpdateGlass();
             Refresh();
@@ -282,10 +274,6 @@ namespace ScreenVoicer.Views
             var selected = microphones.FirstOrDefault(m => string.Equals(m.Name, _host.SelectedMicrophone, StringComparison.OrdinalIgnoreCase));
             TxtMicrophone.Text = selected == null || selected.IsSystemDefault ? "Системний" : ShortName(selected.DisplayName);
 
-            TxtLanguage.Text = LanguageName(_host.VoiceLanguage);
-
-            TxtModel.Text = _host.SelectedModel.Title;
-
             bool autostart = _host.AutostartEnabled;
             ToggleTrack.Background = autostart ? (Brush)FindResource("AccentFill") : ToggleOff;
             ToggleKnob.HorizontalAlignment = autostart ? HorizontalAlignment.Right : HorizontalAlignment.Left;
@@ -304,35 +292,6 @@ namespace ScreenVoicer.Views
             if (MicPopup.IsOpen)
             {
                 BuildMicrophoneList(microphones);
-            }
-            if (ModelPopup.IsOpen)
-            {
-                BuildModelList();
-            }
-        }
-
-        private static readonly (string Code, string Name, string? Detail)[] Languages =
-        {
-            ("uk", "Українська", null),
-            ("en", "English", null),
-            ("auto", "Автовизначення", "повільніше: спершу вгадує мову")
-        };
-
-        private static string LanguageName(string code) => Languages.FirstOrDefault(l => l.Code == code).Name ?? "Українська";
-
-        private void BuildLanguageList()
-        {
-            LanguageList.Children.Clear();
-            foreach (var (code, name, detail) in Languages)
-            {
-                var row = OptionRow(name, detail, code == _host.VoiceLanguage);
-                row.Click += (_, _) =>
-                {
-                    _host.SetVoiceLanguage(code);
-                    LanguagePopup.IsOpen = false;
-                    Refresh();
-                };
-                LanguageList.Children.Add(row);
             }
         }
 
@@ -357,55 +316,6 @@ namespace ScreenVoicer.Views
             listen.ToolTip = "Так звучить ваш голос для розпізнавання. Якщо глухо чи тихо — справа в мікрофоні або його підключенні.";
             listen.Click += (_, _) => _host.PlayLastRecording();
             MicList.Children.Add(listen);
-        }
-
-        private void BuildModelList()
-        {
-            ModelList.Children.Clear();
-            foreach (var model in WhisperModels.All)
-            {
-                string detail = $"{model.SizeMb} МБ" + (model.NeedsGpu && !_host.GpuAvailable ? " · повільно без відеокарти" : string.Empty);
-                var row = OptionRow(model.Title, detail, model == _host.SelectedModel);
-                row.ToolTip = model.Hint;
-                row.Click += (_, _) =>
-                {
-                    _host.SelectModel(model);
-                    ModelPopup.IsOpen = false;
-                    Refresh();
-                };
-                ModelList.Children.Add(row);
-            }
-
-            ModelList.Children.Add(new System.Windows.Shapes.Rectangle { Style = (Style)FindResource("Separator"), Margin = new Thickness(6, 4, 6, 4) });
-
-            string gpuTitle = _host.GpuName != null ? $"Відеокарта · {_host.GpuName}" : "Використовувати відеокарту";
-            var gpu = OptionRow(gpuTitle, null, _host.UseGpu, (Geometry)FindResource("Icon.Gpu"), showCheck: true);
-            gpu.IsEnabled = _host.GpuAvailable || _host.UseGpu;
-            gpu.Click += (_, _) =>
-            {
-                _host.SetUseGpu(!_host.UseGpu);
-                Refresh();
-            };
-            ModelList.Children.Add(gpu);
-
-            if (_host.Cuda != CudaOffer.Hidden)
-            {
-                (string text, string? detail2, bool enabled) = _host.Cuda switch
-                {
-                    CudaOffer.Active => ("Прискорення NVIDIA увімкнено", (string?)null, false),
-                    CudaOffer.Downloading => ($"Завантажую прискорення… {_host.CudaProgress:P0}", null, false),
-                    CudaOffer.NeedsRestart => ("Прискорення готове — перезапустити", "щоб розпізнавання стало швидшим", true),
-                    _ => ("Прискорити для NVIDIA", $"≈{CudaPack.DownloadMegabytes} МБ один раз · «{WhisperModels.Large.Title}» удвічі швидше", true)
-                };
-                var cuda = OptionRow(text, detail2, _host.Cuda == CudaOffer.Active, (Geometry)FindResource("Icon.Spark"), showCheck: _host.Cuda == CudaOffer.Active);
-                cuda.IsEnabled = enabled;
-                cuda.Click += (_, _) =>
-                {
-                    _host.CudaAction();
-                    Refresh();
-                };
-                ModelList.Children.Add(cuda);
-            }
         }
 
         /// <summary>A choice inside an expanded list: a check (or an icon), a title and an optional second line.</summary>
@@ -477,11 +387,6 @@ namespace ScreenVoicer.Views
         private void OnMicrophoneToggle(object sender, RoutedEventArgs e) =>
             ToggleDropdown(MicPopup, MicRow, MicChevron, () => BuildMicrophoneList(_host.GetMicrophones()));
 
-        private void OnLanguageToggle(object sender, RoutedEventArgs e) =>
-            ToggleDropdown(LanguagePopup, LanguageRow, LanguageChevron, BuildLanguageList);
-
-        private void OnModelToggle(object sender, RoutedEventArgs e) =>
-            ToggleDropdown(ModelPopup, ModelRow, ModelChevron, BuildModelList);
 
         /// <summary>
         /// Opens a dropdown under its row, over the rest of the menu (it flips above the row near the screen edge);
@@ -505,14 +410,11 @@ namespace ScreenVoicer.Views
         private void CloseDropdowns()
         {
             MicPopup.IsOpen = false;
-            LanguagePopup.IsOpen = false;
-            ModelPopup.IsOpen = false;
         }
 
         private void OnDropdownClosed(object? sender, EventArgs e)
         {
-            GlyphIcon chevron = sender == MicPopup ? MicChevron : sender == LanguagePopup ? LanguageChevron : ModelChevron;
-            chevron.RenderTransform = null;
+            MicChevron.RenderTransform = null;
         }
 
         private void OnHotkeyClick(object sender, RoutedEventArgs e) => Do(_host.OpenHotkeySettings);
@@ -528,7 +430,6 @@ namespace ScreenVoicer.Views
 
         private void OnOpenLogClick(object sender, RoutedEventArgs e) => Do(_host.OpenLog);
 
-        private void OnOpenModelsClick(object sender, RoutedEventArgs e) => Do(_host.OpenModelsFolder);
 
         private void OnExitClick(object sender, RoutedEventArgs e) => Do(_host.Exit);
 

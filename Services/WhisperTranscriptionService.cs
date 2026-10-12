@@ -495,6 +495,13 @@ namespace ScreenVoicer.Services
                 return string.Empty;
             }
 
+            // Online first: accurate and fast on any computer; without internet (or when the server is out of its
+            // daily allowance) the model on this computer does it, as before.
+            if (await CloudTranscriber.TranscribeAsync(samples, cancellationToken).ConfigureAwait(false) is string online)
+            {
+                return online;
+            }
+
             if (!await EnsureModelLoadedAsync(cancellationToken).ConfigureAwait(false))
             {
                 return string.Empty;
