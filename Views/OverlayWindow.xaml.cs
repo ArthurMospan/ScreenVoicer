@@ -798,25 +798,19 @@ namespace ScreenVoicer.Views
         private void OnToolbarSizeChanged(object sender, SizeChangedEventArgs e) => RepositionPanels();
 
         /// <summary>
-        /// The bar sits at the top; it moves to the bottom only when the selected region would end up under it.
-        /// The status pill hangs off the bar's inner side.
+        /// The bar always sits at the top, visible, even over the region being selected (the screenshot is taken from
+        /// the frozen screen, so the bar never ends up in it). The status pill hangs under the bar.
         /// </summary>
         private void RepositionPanels()
         {
-            double width = RootGrid.ActualWidth, height = RootGrid.ActualHeight;
+            double width = RootGrid.ActualWidth;
             if (width <= 0 || Toolbar.ActualHeight <= 0)
             {
                 return;
             }
 
             const double edge = 16, gap = 8;
-            bool atBottom = false;
-            if (_mode == CaptureMode.RectangleRegion && _selection is Rect r && r.Width >= 8)
-            {
-                var topZone = new Rect((width - Toolbar.ActualWidth) / 2, 0, Toolbar.ActualWidth, edge + Toolbar.ActualHeight + 40);
-                var bottomZone = new Rect(topZone.X, height - topZone.Height, topZone.Width, topZone.Height);
-                atBottom = r.IntersectsWith(topZone) && !r.IntersectsWith(bottomZone);
-            }
+            const bool atBottom = false;
 
             var vertical = atBottom ? VerticalAlignment.Bottom : VerticalAlignment.Top;
             var barMargin = atBottom ? new Thickness(0, 0, 0, edge + 8) : new Thickness(0, edge, 0, 0);

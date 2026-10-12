@@ -379,18 +379,10 @@ final class OverlayController: NSObject, NSTextFieldDelegate {
 
     func toolbarFrameChanged() { repositionPanels() }
 
-    /// The bar sits at the top; it moves to the bottom only when the selection would end up under it.
+    /// The bar always sits at the top, visible, even over the region being selected (the screenshot comes from the
+    /// frozen screen, so the bar never ends up in it). Same as the Windows app.
     private func repositionPanels() {
-        let width = root.bounds.width, height = root.bounds.height
-        let bar = model.toolbarFrame
-        guard width > 0, bar.width > 0 else { return }
-        let edge: CGFloat = 16 + model.topInset
-        var atBottom = false
-        if model.mode == .rectangleRegion, let r = selection, r.width >= 8 {
-            let topZone = CGRect(x: (width - bar.width) / 2, y: 0, width: bar.width, height: edge + bar.height + 40)
-            let bottomZone = CGRect(x: topZone.minX, y: height - topZone.height, width: topZone.width, height: topZone.height)
-            atBottom = r.intersects(topZone) && !r.intersects(bottomZone)
-        }
+        let atBottom = false
         if model.toolbarAtBottom != atBottom {
             closeFlyout() // it was placed for the old position
             model.toolbarAtBottom = atBottom
