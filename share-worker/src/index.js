@@ -212,7 +212,7 @@ ${!share.preview && items[0].width ? `<meta property="og:image:width" content="$
       ${item.comment ? `<p class="comment">${keepNumbers(esc(item.comment))}</p>` : '<p class="comment none">Без коментаря</p>'}
       <div class="acts">
         <button class="ib" type="button" data-copy="${n}" aria-label="Копіювати" title="${item.comment ? 'Копіювати знімок разом із коментарем' : 'Копіювати знімок'}">${ICON.copy}</button>
-        <button class="ib" type="button" data-download="${n}" aria-label="Завантажити" title="Завантажити PNG${item.comment ? ' з коментарем усередині файлу' : ''}">${ICON.download}</button>
+        <button class="ib" type="button" data-download="${n}" aria-label="Завантажити" title="Завантажити PNG">${ICON.download}</button>
       </div>
     </div>
   </article>`).join('');
@@ -224,7 +224,7 @@ ${!share.preview && items[0].width ? `<meta property="og:image:width" content="$
   <span class="meta" title="Посилання діє до ${esc(expiresText)}. Автор може видалити його раніше.">${count} ${plural(count, 'знімок', 'знімки', 'знімків')} · до ${esc(expiresShort)}</span>
   <div class="tools">
     <button class="chip" id="copyAi" type="button" aria-label="Копіювати для AI" title="Текст із посиланнями на знімки й коментарями: вставте в ChatGPT, Claude чи Cursor">${ICON.spark}<span>Копіювати для AI</span></button>
-    ${count > 1 ? `<button class="chip" id="zip" type="button" aria-label="Завантажити все" title="Усі знімки одним архівом, коментарі всередині">${ICON.download}<span>Завантажити все</span></button>` : ''}
+    ${count > 1 ? `<button class="chip" id="zip" type="button" aria-label="Завантажити все" title="Усі знімки одним архівом, коментарі окремим файлом поруч">${ICON.download}<span>Завантажити все</span></button>` : ''}
     <button class="primary" id="copyLink" type="button" aria-label="Копіювати посилання">${ICON.link}<span>Копіювати посилання</span></button>
   </div>
 </div></header>
@@ -394,7 +394,7 @@ const CLIENT = String.raw`
   async function download(n) {
     try {
       save(new Blob([await fileBytes(n)], { type: SHARE.items[n].ext === 'png' ? 'image/png' : 'image/jpeg' }), fileName(n));
-      toast(SHARE.items[n].comment ? 'Завантажено, коментар записано у файл' : 'Завантажено');
+      toast('Завантажено');
     } catch { toast('Не вдалося завантажити. Перевірте інтернет'); }
   }
 

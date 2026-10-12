@@ -880,21 +880,7 @@ footer { padding: 0 0 48px; font-size: 13px; color: var(--faint); text-align: ce
           </div>
         </div>
       </div>
-      <div class="pair">
-        <div class="panel reveal" role="img" aria-label="Крупний план: коментар заходить усередину PNG-файлу, файл переносять у задачу, і там він відкривається разом із коментарем.">
-          <div class="fit" style="--ar:480/280">
-            <div class="stage mstage" id="sPng" style="width:480px;height:280px" aria-hidden="true">
-              <div class="desk"></div>
-              <div class="win2" style="left:16px;top:28px;width:208px;height:232px"><div class="wt"><svg class="ic" viewBox="0 0 24 24"><use href="#i-folder"/></svg>Знімки</div></div>
-              <div class="win2" style="left:256px;top:28px;width:208px;height:232px"><div class="wt"><svg class="ic" viewBox="0 0 24 24"><use href="#i-check"/></svg>Нова задача</div></div>
-              <div class="ftile" id="p-tile"><div class="fimg"><svg viewBox="0 0 480 262" preserveAspectRatio="xMidYMid slice"><use href="#shot-form"/></svg></div><div class="fname">screenshot_1432.png</div><span class="fin" id="p-in">коментар усередині</span></div>
-              <div class="cpill glass" id="p-pill">Кнопка «Зберегти» не реагує, якщо змінити email</div>
-              <div class="openv" id="p-open" style="left:272px;top:80px"><div class="oimg"><svg viewBox="0 0 480 262" preserveAspectRatio="xMidYMid slice"><use href="#shot-form"/></svg></div><p>Кнопка «Зберегти» не реагує, якщо змінити email</p></div>
-              <div data-cursor id="p-cur"></div>
-            </div>
-          </div>
-          <div class="pcap"><h3>Коментар живе всередині PNG</h3><p>Перешліть чи перенесіть файл — опис залишиться з ним.</p></div>
-        </div>
+      <div class="pair" style="grid-template-columns:minmax(0,1fr);max-width:620px;margin-left:auto;margin-right:auto">
         <div class="panel reveal" role="img" aria-label="Сповіщення «Скопійовано в буфер обміну» з кнопками «Копіювати», «Галерея» і «Посилання».">
           <div class="fit" style="--ar:480/280">
             <div class="stage mstage" id="sToast" style="width:480px;height:280px" aria-hidden="true">
@@ -1351,27 +1337,6 @@ footer { padding: 0 0 48px; font-size: 13px; color: var(--faint); text-align: ce
     };
   });
 
-  /* ── 07b the comment goes inside the PNG ── */
-  scene('sPng', 9, 4.9, s => {
-    const tile = g('p-tile'), fin = g('p-in'), pill = g('p-pill'), open = g('p-open'), cur = cursor(g('p-cur'));
-    const TP = track([[0, 54, 86], [2.4, 54, 86], [3.5, 294, 86], [9, 294, 86]]);
-    const CP = track([[0, 330, 240], [1.9, 330, 240], [2.35, 120, 126], [2.4, 120, 126], [3.5, 360, 126], [3.9, 400, 220], [9, 330, 240]]);
-    s.render = t => {
-      place(s, { x: 0, y: 0, w: 480 });
-      const [x, y] = TP(t);
-      const back = seg(t, 8.4, 8.9);
-      op(tile, t < 3.8 ? 1 : 1 - seg(t, 3.8, 4.1) + back);
-      tf(tile, `translate(${r2(t >= 8.4 ? 54 : x)}px,${r2(t >= 8.4 ? 86 : y - 4 * Math.sin(seg(t, 2.4, 3.5) * Math.PI))}px)`);
-      const pp = io(seg(t, 1.0, 1.7));
-      op(pill, seg(t, 0.2, 0.5) * (1 - seg(t, 1.45, 1.7)));
-      tf(pill, `translate(${r2(lerp(20, 54 + 66 - 100, pp))}px,${r2(lerp(10 + (1 - ex(seg(t, 0.2, 0.5))) * 8, 110, pp))}px) scale(${r2(lerp(1, 0.2, pp))})`);
-      op(fin, seg(t, 1.6, 1.9) * (1 - back));
-      op(open, fade(t, 3.95, 4.4, 8.1, 8.4)); tf(open, `scale(${r2(0.94 + 0.06 * ex(seg(t, 3.95, 4.4)))})`);
-      const [cx, cy] = CP(t);
-      cur.at(cx, cy, 'arrow');
-    };
-  });
-
   /* ── 07c the toast and its buttons ── */
   scene('sToast', 6, 2.0, s => {
     const toast = g('o-toast'), tline = $('.tl', toast), btns = $$('.tbtn', toast), cur = cursor(g('o-cur'));
@@ -1656,7 +1621,7 @@ footer { padding: 0 0 48px; font-size: 13px; color: var(--faint); text-align: ce
   }
 
   /* ═════════ engine: one rAF loop for the hero and the visible scenes ═════════ */
-  const alias = { region: 'sRegion', tools: 'sTools', hide: 'sHide', color: 'sColor', undo: 'sUndo', voice: 'sVoice', field: 'sField', save: 'sSave', png: 'sPng', toast: 'sToast', erase: 'sErase' };
+  const alias = { region: 'sRegion', tools: 'sTools', hide: 'sHide', color: 'sColor', undo: 'sUndo', voice: 'sVoice', field: 'sField', save: 'sSave', toast: 'sToast', erase: 'sErase' };
   let debug = params.has('rm') || params.has('shot') || frozenP !== null;
   for (const [key, val] of params) { const s = scenes.find(x => x.id === (alias[key] || key)); if (s && val !== '' && !isNaN(+val)) { s.frozen = +val; debug = true; } }
   let reduced = reduceMQ.matches || params.has('rm');
