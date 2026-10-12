@@ -993,7 +993,7 @@ namespace ScreenVoicer
         private double? _updateProgress;
         private System.Windows.Threading.DispatcherTimer? _updateTimer;
 
-        /// <summary>First check shortly after start (not competing with the model load), then twice a day.</summary>
+        /// <summary>First check shortly after start (not competing with the model load), then every three hours.</summary>
         private void StartUpdateChecks()
         {
             var first = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(25) };
@@ -1004,7 +1004,7 @@ namespace ScreenVoicer
             };
             first.Start();
 
-            _updateTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromHours(12) };
+            _updateTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromHours(3) };
             _updateTimer.Tick += (_, _) => _ = CheckForUpdatesAsync(manual: false);
             _updateTimer.Start();
         }
