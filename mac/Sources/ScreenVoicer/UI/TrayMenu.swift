@@ -139,7 +139,7 @@ private struct DropdownLayer<Content: View>: View {
             VStack(alignment: .leading, spacing: 0) { content }
                 .padding(4)
                 .frame(width: row.width)
-                .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color(argb: 0xFA222229)))
+                .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color(argb: 0xFF222229)))
                 .shadow(color: .black.opacity(0.45), radius: 14, x: 0, y: 6)
                 .background(GeometryReader { geo in
                     Color.clear

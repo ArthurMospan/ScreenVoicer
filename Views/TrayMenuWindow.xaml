@@ -117,7 +117,7 @@
             <Setter Property="Margin" Value="10,2,10,16"/>
             <Setter Property="Padding" Value="4"/>
             <Setter Property="CornerRadius" Value="12"/>
-            <Setter Property="Background" Value="#FA222229"/>
+            <Setter Property="Background" Value="#FF222229"/>
             <Setter Property="Effect" Value="{StaticResource CardShadow}"/>
         </Style>
     </Window.Resources>
