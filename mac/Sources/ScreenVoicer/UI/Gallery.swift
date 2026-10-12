@@ -219,7 +219,6 @@ struct GalleryView: View {
                         .padding(.horizontal, 16)
                         .padding(.vertical, 10)
                         .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color(argb: 0xF21E1E25)))
-                        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Theme.glassEdge, lineWidth: 1))
                         .shadow(color: .black.opacity(0.45), radius: 15, y: 6)
                         .padding(.bottom, model.selected.isEmpty ? 22 : 96)
                         .transition(.opacity)
@@ -285,7 +284,6 @@ struct GalleryView: View {
             .padding(.horizontal, 12)
             .frame(width: 360, height: 38)
             .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Theme.subtle))
-            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Theme.glassEdge, lineWidth: 1))
             Spacer(minLength: 20)
             HStack(spacing: 0) {
                 Button(action: model.openFolder) {
@@ -360,7 +358,6 @@ struct GalleryView: View {
         }
         .padding(8)
         .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color(argb: 0xF51C1C22)))
-        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Theme.glassEdge, lineWidth: 1))
         .shadow(color: .black.opacity(0.45), radius: 15, y: 6)
     }
 }
@@ -413,8 +410,7 @@ private struct GalleryCard: View {
         }
         .padding(10)
         .frame(width: 326)
-        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(hover ? Color(rgb: 0x1E1E25) : Color(rgb: 0x19191F)))
-        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(hover ? Color(argb: 0x4DFFFFFF) : Theme.glassEdge, lineWidth: 1))
+        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(hover ? Color(rgb: 0x202028) : Color(rgb: 0x19191F)))
         .onHover { hover = $0 }
     }
 
@@ -431,7 +427,6 @@ private struct GalleryCard: View {
         }
         .frame(width: 306, height: 184)
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Color(argb: 0x1FFFFFFF), lineWidth: 1))
         .overlay(alignment: .bottomLeading) { badge(sizeText).padding(8) }
         .overlay(alignment: .bottomTrailing) { badge(item.displayDate, bold: true).padding(8) }
         .overlay(alignment: .topLeading) { selectBox.padding(8) }
@@ -459,7 +454,6 @@ private struct GalleryCard: View {
             .padding(.horizontal, 7)
             .padding(.vertical, 2)
             .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Color(argb: 0xC70F0F13)))
-            .overlay(RoundedRectangle(cornerRadius: 7, style: .continuous).strokeBorder(Color(argb: 0x26FFFFFF), lineWidth: 1))
     }
 
     private var selectBox: some View {
@@ -495,7 +489,6 @@ private struct GalleryCard: View {
                 .help("Видалити посилання: за ним більше нічого не відкриється")
         }
         .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color(argb: 0xD90F0F13)))
-        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(Color(argb: 0x80FFC68A), lineWidth: 1))
     }
 }
 

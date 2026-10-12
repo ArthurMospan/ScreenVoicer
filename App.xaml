@@ -181,7 +181,7 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Grid>
-                            <Border x:Name="fill" CornerRadius="11" Background="#14FFFFFF" BorderBrush="{StaticResource PanelRim}" BorderThickness="1"/>
+                            <Border x:Name="fill" CornerRadius="11" Background="#1AFFFFFF"/>
                             <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
                         </Grid>
                         <ControlTemplate.Triggers>
@@ -213,7 +213,7 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Grid>
-                            <Border x:Name="fill" Background="{TemplateBinding Background}" CornerRadius="9" BorderBrush="#1AFFFFFF" BorderThickness="1"/>
+                            <Border x:Name="fill" Background="{TemplateBinding Background}" CornerRadius="9"/>
                             <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
                         </Grid>
                         <ControlTemplate.Triggers>
@@ -233,7 +233,7 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Grid>
-                            <Border x:Name="fill" Background="{TemplateBinding Background}" CornerRadius="9" BorderBrush="#1AFFFFFF" BorderThickness="1"/>
+                            <Border x:Name="fill" Background="{TemplateBinding Background}" CornerRadius="9"/>
                             <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
                         </Grid>
                         <ControlTemplate.Triggers>
@@ -259,8 +259,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ToolTip">
-                        <Border Background="{TemplateBinding Background}" BorderBrush="{StaticResource PanelRim}" BorderThickness="1"
-                                CornerRadius="9" Padding="{TemplateBinding Padding}">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="9" Padding="{TemplateBinding Padding}">
                             <ContentPresenter/>
                         </Border>
                     </ControlTemplate>
@@ -277,7 +276,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ContextMenu">
-                        <Border Background="#F51A1A20" BorderBrush="{StaticResource PanelRim}" BorderThickness="1" CornerRadius="12" Padding="5">
+                        <Border Background="#F51A1A20" CornerRadius="12" Padding="5">
                             <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle"/>
                         </Border>
                     </ControlTemplate>

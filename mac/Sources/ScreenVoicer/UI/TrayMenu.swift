@@ -67,8 +67,8 @@ final class TrayMenuModel: ObservableObject {
     @Published var updateVersion: String?
     @Published var updateProgress: Double?
 
-    @Published var micOpen = false
-    @Published var modelOpen = false
+    /// The open dropdown list, drawn over the menu (TrayMenuWindow's popups on Windows).
+    @Published var dropdown: TrayDropdown?
     @Published var aboutOpen = false
 
     func refresh() {
@@ -103,7 +103,57 @@ final class TrayMenuModel: ObservableObject {
     }
 }
 
-/// The glass menu under the menu-bar icon. Expanded lists grow inside the panel instead of side menus.
+enum TrayDropdown: Hashable {
+    case mic, language, model
+}
+
+/// Where each dropdown row sits, so its list can open right under it.
+struct DropdownAnchorKey: PreferenceKey {
+    static var defaultValue: [TrayDropdown: Anchor<CGRect>] = [:]
+    static func reduce(value: inout [TrayDropdown: Anchor<CGRect>], nextValue: () -> [TrayDropdown: Anchor<CGRect>]) {
+        value.merge(nextValue()) { $1 }
+    }
+}
+
+/// An open dropdown: the list over the menu under its row (above the row when the menu ends too soon);
+/// a click anywhere else in the menu closes it.
+private struct DropdownLayer<Content: View>: View {
+    let row: CGRect
+    let menuHeight: CGFloat
+    let close: () -> Void
+    let content: Content
+    @State private var listHeight: CGFloat = 0
+
+    init(row: CGRect, menuHeight: CGFloat, close: @escaping () -> Void, @ViewBuilder content: () -> Content) {
+        self.row = row
+        self.menuHeight = menuHeight
+        self.close = close
+        self.content = content()
+    }
+
+    var body: some View {
+        let below = row.maxY + 2
+        let y = below + listHeight <= menuHeight - 6 ? below : max(6, row.minY - 2 - listHeight)
+        return ZStack(alignment: .topLeading) {
+            Color.black.opacity(0.001).contentShape(Rectangle()).onTapGesture(perform: close)
+            VStack(alignment: .leading, spacing: 0) { content }
+                .padding(4)
+                .frame(width: row.width)
+                .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color(argb: 0xFA222229)))
+                .shadow(color: .black.opacity(0.45), radius: 14, x: 0, y: 6)
+                .background(GeometryReader { geo in
+                    Color.clear
+                        .onAppear { listHeight = geo.size.height }
+                        .onChange(of: geo.size.height) { listHeight = $0 }
+                })
+                .opacity(listHeight > 0 ? 1 : 0)
+                .offset(x: row.minX, y: y)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+}
+
+/// The glass menu under the menu-bar icon. Microphone, language and recognition open as dropdowns over it.
 struct TrayMenuView: View {
     @ObservedObject var model: TrayMenuModel
 
@@ -118,17 +168,9 @@ struct TrayMenuView: View {
             }
             row(.folder, "Папка зі скриншотами") { model.run { $0.openScreenshotsFolder() } }
             separator
-            expandingRow(.mic, "Мікрофон", value: model.microphoneSummary, open: model.micOpen) {
-                model.modelOpen = false
-                model.micOpen.toggle()
-            }
-            if model.micOpen { microphoneWell }
-            languageRow
-            expandingRow(.chip, "Розпізнавання", value: model.model.title, open: model.modelOpen) {
-                model.micOpen = false
-                model.modelOpen.toggle()
-            }
-            if model.modelOpen { modelWell }
+            dropdownRow(.mic, .mic, "Мікрофон", value: model.microphoneSummary)
+            dropdownRow(.language, .globe, "Мова голосу", value: Self.languageName(model.language))
+            dropdownRow(.model, .chip, "Розпізнавання", value: model.model.title)
             row(.keyboard, "Гаряча клавіша", value: model.hotkey) { model.run { $0.openHotkeySettings() } }
             Button {
                 model.host?.setAutostart(!model.autostart)
@@ -148,7 +190,16 @@ struct TrayMenuView: View {
         }
         .padding(10)
         .frame(width: 344)
-        .background(GlassBackground(cornerRadius: 18, blending: .behindWindow, tint: Color(argb: 0x8C1C1C23)))
+        .background(GlassBackground(cornerRadius: 18, blending: .behindWindow, tint: Color(argb: 0x8C1C1C23), edge: false))
+        .overlayPreferenceValue(DropdownAnchorKey.self) { anchors in
+            GeometryReader { geo in
+                if let open = model.dropdown, let anchor = anchors[open] {
+                    DropdownLayer(row: geo[anchor], menuHeight: geo.size.height, close: { model.dropdown = nil }) {
+                        dropdownContent(open)
+                    }
+                }
+            }
+        }
     }
 
     // MARK: parts
@@ -205,8 +256,7 @@ struct TrayMenuView: View {
         }
         .buttonStyle(MenuRowStyle())
         .disabled(model.updateProgress != nil)
-        .background(RoundedRectangle(cornerRadius: 11, style: .continuous).fill(Color(argb: 0x24FF8A4C)))
-        .overlay(RoundedRectangle(cornerRadius: 11, style: .continuous).strokeBorder(Color(argb: 0x66FFC68A), lineWidth: 1))
+        .background(RoundedRectangle(cornerRadius: 11, style: .continuous).fill(Color(argb: 0x2EFF8A4C)))
         .padding(.bottom, 8)
     }
 
@@ -250,8 +300,9 @@ struct TrayMenuView: View {
         .buttonStyle(MenuRowStyle())
     }
 
-    private func expandingRow(_ icon: Icon, _ title: String, value: String, open: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
+    /// A row that opens a dropdown list over the menu (the menu itself never grows).
+    private func dropdownRow(_ kind: TrayDropdown, _ icon: Icon, _ title: String, value: String) -> some View {
+        Button { model.dropdown = model.dropdown == kind ? nil : kind } label: {
             HStack(spacing: 0) {
                 rowIcon(icon)
                 Text(title)
@@ -260,29 +311,23 @@ struct TrayMenuView: View {
                 GlyphIcon(icon: .chevron, size: 12, weight: 2.6)
                     .foregroundColor(Theme.menuMuted)
                     .opacity(0.7)
-                    .rotationEffect(.degrees(open ? 180 : 0))
+                    .rotationEffect(.degrees(model.dropdown == kind ? 180 : 0))
                     .padding(.leading, 5)
                     .padding(.top, 1)
             }
         }
         .buttonStyle(MenuRowStyle())
+        .anchorPreference(key: DropdownAnchorKey.self, value: .bounds) { [kind: $0] }
     }
 
-    private func well<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 0, content: content)
-            .padding(3)
-            .background(RoundedRectangle(cornerRadius: 11, style: .continuous).fill(Color(argb: 0x24000000)))
-            .overlay(RoundedRectangle(cornerRadius: 11, style: .continuous).strokeBorder(Color(argb: 0x0FFFFFFF), lineWidth: 1))
-            .padding(.leading, 38)
-            .padding(.trailing, 4)
-            .padding(.bottom, 4)
-    }
-
-    private var microphoneWell: some View {
-        well {
+    @ViewBuilder
+    private func dropdownContent(_ kind: TrayDropdown) -> some View {
+        switch kind {
+        case .mic:
             ForEach(model.microphones) { mic in
                 optionRow(mic.displayName, checked: mic.uid == model.selectedMicrophone) {
                     model.host?.selectMicrophone(mic)
+                    model.dropdown = nil
                     model.refresh()
                 }
             }
@@ -291,16 +336,21 @@ struct TrayMenuView: View {
             }
             .disabled(!model.canPlayLast)
             .help("Так звучить ваш голос для розпізнавання. Якщо глухо чи тихо — справа в мікрофоні або його підключенні.")
-        }
-    }
-
-    private var modelWell: some View {
-        well {
+        case .language:
+            ForEach(Self.languages, id: \.code) { language in
+                optionRow(language.name, detail: language.detail, checked: model.language == language.code) {
+                    model.host?.setVoiceLanguage(language.code)
+                    model.dropdown = nil
+                    model.refresh()
+                }
+            }
+        case .model:
             ForEach(WhisperModels.all) { info in
                 optionRow(info.title,
                           detail: "\(info.sizeMb) МБ" + (info.needsGpu && !model.gpuAvailable ? " · повільно без відеокарти" : ""),
                           checked: info == model.model) {
                     model.host?.selectModel(info)
+                    model.dropdown = nil
                     model.refresh()
                 }
                 .help(info.hint)
@@ -343,32 +393,21 @@ struct TrayMenuView: View {
         .buttonStyle(MenuRowStyle())
     }
 
-    private var languageRow: some View {
-        HStack(spacing: 0) {
-            rowIcon(.globe)
-            Text("Мова голосу").font(Theme.font(13.5)).foregroundColor(Theme.glassText)
-            Spacer(minLength: 8)
-            HStack(spacing: 0) {
-                ForEach(Self.languages.indices, id: \.self) { index in
-                    let (code, label, tip) = Self.languages[index]
-                    Button(label) {
-                        model.host?.setVoiceLanguage(code)
-                        model.refresh()
-                    }
-                    .buttonStyle(MenuChipStyle(on: model.language == code))
-                    .help(tip)
-                }
-            }
-            .padding(2)
-            .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Color(argb: 0x0FFFFFFF)))
-            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Color(argb: 0x14FFFFFF), lineWidth: 1))
-        }
-        .padding(.leading, 9)
-        .padding(.trailing, 10)
-        .padding(.vertical, 6)
+    private struct VoiceLanguage {
+        let code: String
+        let name: String
+        let detail: String?
     }
 
-    private static let languages = [("uk", "УКР", "Українська"), ("en", "ENG", "English"), ("auto", "Авто", "Автовизначення (повільніше)")]
+    private static let languages = [
+        VoiceLanguage(code: "uk", name: "Українська", detail: nil),
+        VoiceLanguage(code: "en", name: "English", detail: nil),
+        VoiceLanguage(code: "auto", name: "Автовизначення", detail: "повільніше: спершу вгадує мову")
+    ]
+
+    private static func languageName(_ code: String) -> String {
+        languages.first { $0.code == code }?.name ?? "Українська"
+    }
 
     private func toggle(_ on: Bool) -> some View {
         ZStack(alignment: on ? .trailing : .leading) {
@@ -418,7 +457,6 @@ struct TrayMenuView: View {
         .padding(.vertical, 10)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: 11, style: .continuous).fill(Color(argb: 0x24000000)))
-        .overlay(RoundedRectangle(cornerRadius: 11, style: .continuous).strokeBorder(Color(argb: 0x0FFFFFFF), lineWidth: 1))
         .padding(.horizontal, 4)
         .padding(.top, 2)
         .padding(.bottom, 4)

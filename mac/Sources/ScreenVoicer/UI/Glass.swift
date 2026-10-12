@@ -43,11 +43,13 @@ struct VisualEffectBlur: NSViewRepresentable {
     }
 }
 
-/// Matte glass: the frosted material, a light neutral tint and one thin even edge. No sheen, no glow, no gradient.
+/// Matte glass: the frosted material, a light neutral tint and, on the capture toolbar only, one thin even edge.
+/// No sheen, no glow, no gradient.
 struct GlassBackground: View {
     var cornerRadius: CGFloat
     var blending: NSVisualEffectView.BlendingMode = .behindWindow
     var tint: Color = Color(argb: 0x40202028)
+    var edge = true
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
@@ -60,7 +62,7 @@ struct GlassBackground: View {
             tint
         }
         .clipShape(shape)
-        .overlay(shape.strokeBorder(Theme.glassEdge, lineWidth: 1))
+        .overlay(shape.strokeBorder(edge ? Theme.glassEdge : .clear, lineWidth: 1))
     }
 }
 
@@ -71,10 +73,8 @@ extension View {
             .shadow(color: .black.opacity(shadow ? 0.35 : 0), radius: 14, x: 0, y: 5)
     }
 
-    /// The opaque dark card of toasts, the countdown and dialogs (#F51B1B21 + thin rim).
+    /// The opaque dark card of toasts, the countdown and dialogs (#F51B1B21, no rim).
     func darkCard(cornerRadius: CGFloat) -> some View {
-        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-        return background(shape.fill(Theme.card))
-            .overlay(shape.strokeBorder(Theme.glassEdge, lineWidth: 1))
+        background(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous).fill(Theme.card))
     }
 }

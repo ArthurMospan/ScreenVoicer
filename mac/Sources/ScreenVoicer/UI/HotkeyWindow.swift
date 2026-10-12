@@ -97,7 +97,6 @@ struct HotkeyView: View {
             HStack(spacing: 12) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 11, style: .continuous).fill(Theme.activeTint)
-                    RoundedRectangle(cornerRadius: 11, style: .continuous).strokeBorder(Theme.glassEdge, lineWidth: 1)
                     GlyphIcon(icon: .keyboard, size: 19).foregroundColor(Theme.accentLight)
                 }
                 .frame(width: 36, height: 36)
@@ -130,8 +129,7 @@ struct HotkeyView: View {
             }
             .frame(maxWidth: .infinity, minHeight: 78)
             .padding(12)
-            .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color(argb: 0x0AFFFFFF)))
-            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Theme.line, lineWidth: 1))
+            .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color(argb: 0x0FFFFFFF)))
             .padding(.top, 18)
 
             Text(model.status)

@@ -108,8 +108,7 @@ struct OutlineButtonStyle: ButtonStyle {
                 .foregroundColor(Theme.ink)
                 .padding(.horizontal, horizontalPadding)
                 .frame(height: height)
-                .background(shape.fill(Color(argb: configuration.isPressed ? 0x33FFFFFF : hover ? 0x26FFFFFF : 0x14FFFFFF)))
-                .overlay(shape.strokeBorder(Theme.glassEdge, lineWidth: 1))
+                .background(shape.fill(Color(argb: configuration.isPressed ? 0x33FFFFFF : hover ? 0x26FFFFFF : 0x1AFFFFFF)))
                 .contentShape(Rectangle())
         }
     }
@@ -160,8 +159,7 @@ struct ChipButtonStyle: ButtonStyle {
                 .padding(.horizontal, 9)
                 .padding(.vertical, 5)
                 .frame(minHeight: 28)
-                .background(shape.fill(hover ? (danger ? Color(argb: 0x59EF4444) : Color(argb: 0x26FFFFFF)) : Color(argb: 0x12FFFFFF)))
-                .overlay(shape.strokeBorder(Color(argb: 0x1AFFFFFF), lineWidth: 1))
+                .background(shape.fill(hover ? (danger ? Color(argb: 0x59EF4444) : Color(argb: 0x26FFFFFF)) : Color(argb: 0x17FFFFFF)))
                 .contentShape(Rectangle())
         }
     }

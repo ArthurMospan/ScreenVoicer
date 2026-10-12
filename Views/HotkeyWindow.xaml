@@ -30,15 +30,14 @@
         </Style>
     </Window.Resources>
 
-    <Border Margin="18" CornerRadius="18" BorderBrush="{StaticResource PanelRim}" BorderThickness="1" Padding="24,22,24,20"
+    <Border Margin="18" CornerRadius="18" Padding="24,22,24,20"
             Effect="{StaticResource CardShadow}" MouseLeftButtonDown="OnDragArea">
         <Border.Background>
             <SolidColorBrush Color="#F71B1B21"/>
         </Border.Background>
         <StackPanel>
             <StackPanel Orientation="Horizontal">
-                <Border Width="36" Height="36" CornerRadius="11" Background="{StaticResource ActiveTint}" BorderBrush="{StaticResource GlassRim}"
-                        BorderThickness="1" Margin="0,0,12,0" VerticalAlignment="Center">
+                <Border Width="36" Height="36" CornerRadius="11" Background="{StaticResource ActiveTint}" Margin="0,0,12,0" VerticalAlignment="Center">
                     <v:GlyphIcon Data="{StaticResource Icon.Keyboard}" Foreground="{StaticResource AccentLightBrush}" Width="19" Height="19"/>
                 </Border>
                 <StackPanel VerticalAlignment="Center">
@@ -49,7 +48,7 @@
                 </StackPanel>
             </StackPanel>
 
-            <Border Background="#0AFFFFFF" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="14"
+            <Border Background="#0FFFFFFF" CornerRadius="14"
                     Padding="12" MinHeight="78" Margin="0,18,0,0">
                 <WrapPanel x:Name="KeysPanel" HorizontalAlignment="Center" VerticalAlignment="Center"/>
             </Border>
