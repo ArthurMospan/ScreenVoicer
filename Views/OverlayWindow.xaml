@@ -95,19 +95,19 @@
             </Setter>
         </Style>
 
-        <!-- Save: a circle of denser glass with a thin white edge — the fill and the edge set it apart from the tools -->
+        <!-- Save: a circle of denser glass — the fill sets it apart from the tools -->
         <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource PillButton}">
             <Setter Property="Foreground" Value="#FFFFFF"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Grid>
-                            <Border x:Name="fill" CornerRadius="17" Background="#57FFFFFF" BorderBrush="#80FFFFFF" BorderThickness="1"/>
+                            <Border x:Name="fill" CornerRadius="17" Background="#66FFFFFF"/>
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="fill" Property="Background" Value="#6BFFFFFF"/>
+                                <Setter TargetName="fill" Property="Background" Value="#7AFFFFFF"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter TargetName="fill" Property="Background" Value="#40FFFFFF"/>
@@ -194,7 +194,7 @@
         <Canvas IsHitTestVisible="False">
             <Rectangle x:Name="FrameShadow" Stroke="#66000000" StrokeThickness="3" Visibility="Collapsed"/>
             <Rectangle x:Name="FrameLine" Stroke="#FFFFFF" StrokeThickness="1.25" Visibility="Collapsed"/>
-            <Border x:Name="SizeBadge" Background="#D914141A" BorderBrush="{StaticResource PanelRim}" BorderThickness="1"
+            <Border x:Name="SizeBadge" Background="#D914141A"
                     CornerRadius="7" Padding="7,3" Visibility="Collapsed">
                 <TextBlock x:Name="TxtSize" Foreground="#FFFFFF" FontSize="11.5" FontWeight="SemiBold"/>
             </Border>
@@ -202,7 +202,7 @@
 
         <!-- 5: first-use hint -->
         <Border x:Name="HintBadge" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False"
-                CornerRadius="18" BorderBrush="{StaticResource GlassEdge}" BorderThickness="1" Effect="{StaticResource GlassShadow}">
+                CornerRadius="18" Effect="{StaticResource GlassShadow}">
             <Border CornerRadius="17" Background="{StaticResource GlassTint}" Padding="16,12,20,12">
                 <StackPanel Orientation="Horizontal">
                     <Image Source="{StaticResource BrandMark}" Width="34" Height="34" Margin="0,0,12,0" VerticalAlignment="Center"/>
@@ -217,7 +217,7 @@
 
         <!-- 6: the one bar: capture mode, tools (open on hover), voice + comment, save -->
         <Border x:Name="Toolbar" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,14,0,0"
-                CornerRadius="23" BorderBrush="{StaticResource GlassEdge}" BorderThickness="1" Effect="{StaticResource GlassShadow}"
+                CornerRadius="23" Effect="{StaticResource GlassShadow}"
                 SizeChanged="OnToolbarSizeChanged">
             <Border CornerRadius="22" Background="{StaticResource GlassTint}" Padding="5">
                 <StackPanel Orientation="Horizontal">
@@ -306,7 +306,7 @@
 
         <!-- 7: status pill under (or above) the bar: only while recording / recognizing / after a result or a problem -->
         <Border x:Name="StatusPill" HorizontalAlignment="Center" VerticalAlignment="Top" Visibility="Collapsed"
-                IsHitTestVisible="False" CornerRadius="15" BorderBrush="{StaticResource GlassEdge}" BorderThickness="1"
+                IsHitTestVisible="False" CornerRadius="15"
                 Effect="{StaticResource GlassShadow}">
             <Border CornerRadius="14" Background="{StaticResource GlassTint}" Padding="12,5,14,6">
                 <StackPanel Orientation="Horizontal">
@@ -324,8 +324,7 @@
 
         <!-- 8: flyouts of the toolbar (positioned from code next to their buttons) -->
         <Canvas x:Name="FlyoutLayer">
-            <Border x:Name="ToolFlyout" Visibility="Collapsed" CornerRadius="21" BorderBrush="{StaticResource GlassEdge}"
-                    BorderThickness="1" Effect="{StaticResource GlassShadow}">
+            <Border x:Name="ToolFlyout" Visibility="Collapsed" CornerRadius="21" Effect="{StaticResource GlassShadow}">
                 <Border CornerRadius="20" Background="{StaticResource GlassTint}" Padding="4">
                     <StackPanel Orientation="Horizontal">
                         <Button x:Name="BtnPen" Style="{StaticResource PillButton}" Click="OnToolClick" Tag="Pen" ToolTip="Олівець (P)">
@@ -359,8 +358,7 @@
                 </Border>
             </Border>
 
-            <Border x:Name="TimerFlyout" Visibility="Collapsed" CornerRadius="21" BorderBrush="{StaticResource GlassEdge}"
-                    BorderThickness="1" Effect="{StaticResource GlassShadow}">
+            <Border x:Name="TimerFlyout" Visibility="Collapsed" CornerRadius="21" Effect="{StaticResource GlassShadow}">
                 <Border CornerRadius="20" Background="{StaticResource GlassTint}" Padding="4">
                     <StackPanel Orientation="Horizontal">
                         <Button Style="{StaticResource DelayButton}" Content="3 с" Tag="3" Click="OnDelayClick"
@@ -373,8 +371,7 @@
                 </Border>
             </Border>
 
-            <Border x:Name="ColorFlyout" Visibility="Collapsed" CornerRadius="21" BorderBrush="{StaticResource GlassEdge}"
-                    BorderThickness="1" Effect="{StaticResource GlassShadow}">
+            <Border x:Name="ColorFlyout" Visibility="Collapsed" CornerRadius="21" Effect="{StaticResource GlassShadow}">
                 <Border CornerRadius="20" Background="{StaticResource GlassTint}" Padding="6,5">
                     <StackPanel Orientation="Horizontal">
                         <StackPanel x:Name="SwatchPanel" Orientation="Horizontal" VerticalAlignment="Center">

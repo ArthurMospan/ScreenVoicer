@@ -327,7 +327,7 @@ struct ToastView: View {
             .padding(.bottom, 1)
         }
         .frame(width: 376)
-        .darkCard(cornerRadius: 16)
+        .background(GlassBackground(cornerRadius: 16, blending: .behindWindow, tint: Color(argb: 0xB81C1C23), edge: false)) // matte glass, like the menu
         .onHover(perform: actions.hover)
     }
 

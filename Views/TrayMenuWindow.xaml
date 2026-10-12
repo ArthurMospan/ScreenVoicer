@@ -209,7 +209,7 @@
                     </DockPanel>
                 </Button>
                 <Popup x:Name="MicPopup" PlacementTarget="{Binding ElementName=MicRow}" Placement="Bottom" HorizontalOffset="-10"
-                       StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" Closed="OnDropdownClosed">
+                       StaysOpen="True" AllowsTransparency="True" PopupAnimation="Fade" Closed="OnDropdownClosed">
                     <Border Style="{StaticResource Dropdown}"><StackPanel x:Name="MicList"/></Border>
                 </Popup>
 
@@ -225,7 +225,7 @@
                     </DockPanel>
                 </Button>
                 <Popup x:Name="LanguagePopup" PlacementTarget="{Binding ElementName=LanguageRow}" Placement="Bottom" HorizontalOffset="-10"
-                       StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" Closed="OnDropdownClosed">
+                       StaysOpen="True" AllowsTransparency="True" PopupAnimation="Fade" Closed="OnDropdownClosed">
                     <Border Style="{StaticResource Dropdown}"><StackPanel x:Name="LanguageList"/></Border>
                 </Popup>
 
@@ -241,7 +241,7 @@
                     </DockPanel>
                 </Button>
                 <Popup x:Name="ModelPopup" PlacementTarget="{Binding ElementName=ModelRow}" Placement="Bottom" HorizontalOffset="-10"
-                       StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" Closed="OnDropdownClosed">
+                       StaysOpen="True" AllowsTransparency="True" PopupAnimation="Fade" Closed="OnDropdownClosed">
                     <Border Style="{StaticResource Dropdown}"><StackPanel x:Name="ModelList"/></Border>
                 </Popup>
 

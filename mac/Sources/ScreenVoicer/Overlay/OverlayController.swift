@@ -1271,12 +1271,13 @@ final class OverlayController: NSObject, NSTextFieldDelegate {
             }
 
             let share = shareItem
-            // The clean screenshot is on the clipboard; the toast offers the same picture with the comment written
-            // under it (one paste gives a messenger or an AI chat both) and the comment alone.
-            let shot = saved.path, said = comment
-            let copyButtons = said.isEmpty ? [] : [
-                ToastCopyButton(text: "З підписом") { CaptionCard.saveForClipboard(path: shot, caption: said).map { Clipboard.copyImage(path: $0) } ?? false },
-                ToastCopyButton(text: "Текст") { Clipboard.copy(said) }
+            // The clean screenshot is on the clipboard; «Копіювати з підписом» swaps in the same picture with the
+            // comment written under it (one paste gives a messenger or an AI chat both), «Копіювати» brings back the clean one.
+            let shot = saved.path, said = comment, again = markdown
+            let copyAgain = ToastCopyButton(text: "Копіювати") { Clipboard.copy(again, imagePath: shot) }
+            let copyButtons = said.isEmpty ? [copyAgain] : [
+                copyAgain,
+                ToastCopyButton(text: "Копіювати з підписом") { CaptionCard.saveForClipboard(path: shot, caption: said).map { Clipboard.copyImage(path: $0) } ?? false }
             ]
             ToastCenter.shared.show(ToastOptions(
                 title: copied ? "Скопійовано в буфер обміну" : "Збережено, але буфер обміну зайнятий",

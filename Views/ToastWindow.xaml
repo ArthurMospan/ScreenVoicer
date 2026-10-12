@@ -28,15 +28,16 @@
         </Style>
     </Window.Resources>
 
-    <!-- Room around the card for its shadow -->
-    <Border x:Name="Card" Margin="14" CornerRadius="16"
+    <!-- Room around the card for its shadow; matte glass like the tray menu: the blurred screen behind (set from code)
+         under a neutral frosted tint -->
+    <Border x:Name="Card" Margin="14" CornerRadius="16" Background="#1C1C23"
             Effect="{StaticResource CardShadow}" MouseEnter="OnCardMouseEnter" MouseLeave="OnCardMouseLeave">
-        <Border.Background>
-            <SolidColorBrush Color="#F51B1B21"/>
-        </Border.Background>
         <Border.RenderTransform>
             <TranslateTransform x:Name="Slide" Y="16"/>
         </Border.RenderTransform>
+        <Grid>
+        <Border x:Name="Backdrop" CornerRadius="16"/>
+        <Border CornerRadius="16" Background="#B81C1C23"/>
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -98,6 +99,7 @@
                     </Rectangle.RenderTransform>
                 </Rectangle>
             </Border>
+        </Grid>
         </Grid>
     </Border>
 </Window>
